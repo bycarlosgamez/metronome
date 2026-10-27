@@ -1,4 +1,4 @@
-import { setTitle } from "./session"
+import { ladderBpm, lengthSeconds, sessionTitle } from "./session"
 import type { Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -13,56 +13,91 @@ export type Segment = {
   durationSec: number
   color: SetColor | "slate"
   setIndex: number
+  cycleIndex: number
+  restRole?: "after" | "between"
+}
+
+type Resolved = {
+  id: string
+  bpm: number
+  durationSec: number
+  restSec: number
+  restRole?: "after" | "between"
+}
+
+function resolved(session: Session): Resolved[] {
+  if (session.type === "complex") {
+    return session.cycles.map((cycle, index) => {
+      const bpm = cycle.bpm ?? ladderBpm(session.bpm, session.bpmIncrease, session.every, index)
+      return { id: cycle.id, bpm, durationSec: lengthSeconds(cycle.length, session.meter, bpm), restSec: cycle.restSec }
+    })
+  }
+  const steps = session.simple.stepTempo ? session.simple.times : 1
+  const rounds = session.simple.repeatRound ? session.simple.rounds : 1
+  const items: Resolved[] = []
+  for (let round = 0; round < rounds; round += 1) {
+    for (let step = 0; step < steps; step += 1) {
+      for (let practice = 0; practice < session.simple.practices; practice += 1) {
+        const index = items.length
+        const bpm = ladderBpm(session.bpm, session.bpmIncrease, session.simple.practices, index)
+        const lastOfRound = step === steps - 1 && practice === session.simple.practices - 1
+        const lastOfSession = round === rounds - 1 && lastOfRound
+        items.push({
+          id: `simple-${index}`,
+          bpm,
+          durationSec: lengthSeconds(session.simple.length, session.meter, bpm),
+          restSec: lastOfSession ? 0 : lastOfRound ? session.simple.restBetweenSec : session.simple.restAfterSec,
+          restRole: lastOfSession ? undefined : lastOfRound ? "between" : "after",
+        })
+      }
+    }
+  }
+  return items
 }
 
 export function expandSession(session: Session): Segment[] {
-  const plays = session.sets.flatMap((set, setIndex) => {
-    const meter = session.perSetMeter ? set.meter : session.meter
-    return Array.from({ length: set.repeats }, (_, index) => {
-      const repetition = index + 1
-      const bpm = Math.min(300, set.bpm + index * session.bpmIncrease)
-      return { set, setIndex, repetition, bpm, meter }
-    })
-  })
-
+  const label = sessionTitle(session)
+  const plays = resolved(session)
   return plays.flatMap((play, index) => {
-    const label = setTitle(play.set)
     const segments: Segment[] = [
       {
         kind: "count-in",
-        setId: play.set.id,
+        setId: play.id,
         label,
-        repetition: play.repetition,
+        repetition: index + 1,
         bpm: play.bpm,
         meter: "4/4",
         durationSec: (4 * 60) / play.bpm,
-        color: play.set.color,
-        setIndex: play.setIndex,
+        color: session.color,
+        setIndex: index,
+        cycleIndex: index,
       },
       {
         kind: "play",
-        setId: play.set.id,
+        setId: play.id,
         label,
-        repetition: play.repetition,
+        repetition: index + 1,
         bpm: play.bpm,
-        meter: play.meter,
-        durationSec: play.set.durationSec,
-        color: play.set.color,
-        setIndex: play.setIndex,
+        meter: session.meter,
+        durationSec: play.durationSec,
+        color: session.color,
+        setIndex: index,
+        cycleIndex: index,
       },
     ]
-    const anotherPlayFollows = index < plays.length - 1
-    if (anotherPlayFollows && play.set.restSec > 0) {
+    if (index < plays.length - 1 && play.restSec > 0) {
       segments.push({
         kind: "rest",
-        setId: play.set.id,
+        setId: play.id,
         label: "Rest",
-        repetition: play.repetition,
+        repetition: index + 1,
         bpm: play.bpm,
-        meter: play.meter,
-        durationSec: play.set.restSec,
+        meter: session.meter,
+        durationSec: play.restSec,
         color: "slate",
-        setIndex: play.setIndex,
+        setIndex: index,
+        cycleIndex: index,
+        restRole: play.restRole,
       })
     }
     return segments

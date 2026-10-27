@@ -7,22 +7,37 @@ export type SetColor = (typeof COLORS)[number]
 export const CLICKS = ["click-1", "click-2", "click-3", "click-4"] as const
 export type ClickId = (typeof CLICKS)[number]
 
-export type PracticeSet = {
+export type Length =
+  | { unit: "time"; seconds: number }
+  | { unit: "bars"; bars: number }
+
+export type Cycle = {
   id: string
-  name: string
-  durationSec: number
-  bpm: number
+  length: Length
   restSec: number
-  repeats: number
-  color: SetColor
-  meter: Meter
+  bpm?: number
+}
+
+export type SimplePattern = {
+  practices: number
+  length: Length
+  restAfterSec: number
+  stepTempo: boolean
+  times: number
+  repeatRound: boolean
+  rounds: number
+  restBetweenSec: number
 }
 
 export type Session = {
   name: string
+  color: SetColor
   meter: Meter
-  perSetMeter: boolean
+  bpm: number
   bpmIncrease: number
+  every: number
   click: ClickId
-  sets: PracticeSet[]
+  type: "simple" | "complex"
+  simple: SimplePattern
+  cycles: Cycle[]
 }
