@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { Edit } from "./Edit"
 import { expandSession } from "./expandSession"
 import { formatClock } from "./format"
-import { createDefaultSession } from "./session"
+import { createDefaultSession, freshComplex } from "./session"
 
 describe("Edit", () => {
   it("edits the session card and the tempo card", async () => {
@@ -40,14 +40,21 @@ describe("Edit", () => {
     session.simple.practices = 3
     session.simple.stepTempo = true
     session.simple.times = 2
+    session.simple.restAfterSec = 30
     const onChange = vi.fn()
     render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
     await user.click(screen.getByRole("button", { name: "Complex" }))
     const next = onChange.mock.calls.at(-1)?.[0]
     expect(next.type).toBe("complex")
-    expect(next.every).toBe(3)
     expect(next.cycles).toHaveLength(6)
-    expect(next.cycles.at(-1).restSec).toBe(0)
+    expect(next.cycles.every((cycle: { bpm?: number; restSec: number }) => cycle.bpm === undefined && cycle.restSec === 30)).toBe(true)
+    expect(next.complex).toEqual({
+      increaseEvery: "interval",
+      repeatRound: false,
+      rounds: 2,
+      restBetweenSec: 30,
+    })
+    expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
   })
 
   it("returns to the same cycles when a complex session peeks at simple", async () => {
@@ -78,7 +85,6 @@ describe("Edit", () => {
     session.every = 1
     const onChange = vi.fn()
     const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
-    expect(screen.getByRole("textbox", { name: "Every" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Remove cycle 1" })).toBeDisabled()
     await user.click(screen.getByRole("button", { name: "Add cycle" }))
     const added = onChange.mock.calls.at(-1)?.[0]
@@ -108,19 +114,45 @@ describe("Edit", () => {
     expect(screen.getByText(`Total ${formatClock(totalSec)}`)).toBeInTheDocument()
   })
 
-  it("chooses a round increase and hides that choice on complex", async () => {
+  it("chooses a round increase for simple and for complex", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    const { rerender } = render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("group", { name: "Increase every" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Interval" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Round" }))
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      simple: expect.objectContaining({ increaseEvery: "round" }),
-    }))
+    const simpleRound = onChange.mock.calls.at(-1)?.[0]
+    expect(simpleRound.simple.increaseEvery).toBe("round")
+    rerender(<Edit session={simpleRound} onChange={onChange} onDone={() => {}} />)
     await user.click(screen.getByRole("button", { name: "Complex" }))
-    expect(screen.queryByRole("group", { name: "Increase every" })).not.toBeInTheDocument()
-    expect(screen.getByRole("textbox", { name: "Every" })).toBeInTheDocument()
+    const complex = onChange.mock.calls.at(-1)?.[0]
+    expect(complex.complex.increaseEvery).toBe("round")
+    rerender(<Edit session={complex} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("group", { name: "Increase every" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Round" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Interval", { selector: ".card-title" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "Rounds" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Repeat the round" }))
+    const repeated = onChange.mock.calls.at(-1)?.[0]
+    expect(repeated.complex.repeatRound).toBe(true)
+    rerender(<Edit session={repeated} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("textbox", { name: "Rounds" })).toHaveValue("2")
+    expect(screen.getByRole("textbox", { name: "Between" })).toHaveValue("0:30")
+  })
+
+  it("drops the complex pattern when simple is saved", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const onDone = vi.fn()
+    const session = createDefaultSession(() => "cycle-1")
+    session.complex.repeatRound = true
+    render(<Edit session={session} onChange={onChange} onDone={onDone} />)
+    await user.click(screen.getByRole("button", { name: "Done" }))
+    const saved = onChange.mock.calls.at(-1)?.[0]
+    expect(saved.type).toBe("simple")
+    expect(saved.complex).toEqual(freshComplex())
+    expect(onDone).toHaveBeenCalledOnce()
   })
 })

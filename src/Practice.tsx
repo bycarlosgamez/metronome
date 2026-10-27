@@ -86,26 +86,35 @@ export function Practice(props: {
     if (typed === null || target === null || typed === target.baseline) return
     const seconds = Math.max(1, parseDuration(typed))
     const session = props.session
-    if (target.kind === "rest") {
-      if (session.type === "complex") {
+    if (session.type === "complex") {
+      if (target.kind === "rest" && target.restRole === "between") {
         props.onChange(clampSession({
           ...session,
-          cycles: session.cycles.map((cycle, index) => index === target.cycleIndex ? { ...cycle, restSec: Math.max(0, parseDuration(typed)) } : cycle),
+          complex: { ...session.complex, restBetweenSec: Math.max(0, parseDuration(typed)) },
         }))
         return
       }
+      const cycleIndex = target.cycleIndex % session.cycles.length
+      if (target.kind === "rest") {
+        props.onChange(clampSession({
+          ...session,
+          cycles: session.cycles.map((cycle, index) => index === cycleIndex ? { ...cycle, restSec: Math.max(0, parseDuration(typed)) } : cycle),
+        }))
+        return
+      }
+      const length = { unit: "time" as const, seconds }
+      props.onChange(clampSession({
+        ...session,
+        cycles: session.cycles.map((cycle, index) => index === cycleIndex ? { ...cycle, length } : cycle),
+      }))
+      return
+    }
+    if (target.kind === "rest") {
       const key = target.restRole === "between" ? "restBetweenSec" : "restAfterSec"
       props.onChange(clampSession({ ...session, simple: { ...session.simple, [key]: Math.max(0, parseDuration(typed)) } }))
       return
     }
     const length = { unit: "time" as const, seconds }
-    if (session.type === "complex") {
-      props.onChange(clampSession({
-        ...session,
-        cycles: session.cycles.map((cycle, index) => index === target.cycleIndex ? { ...cycle, length } : cycle),
-      }))
-      return
-    }
     props.onChange(clampSession({ ...session, simple: { ...session.simple, length } }))
   }
 
@@ -116,12 +125,22 @@ export function Practice(props: {
     bpmTarget.current = null
     if (typed === null || target === null || Number(typed) === Number(target.baseline)) return
     const session = props.session
-    const cycle = session.cycles[target.cycleIndex]
+    const cycleIndex = target.cycleIndex % Math.max(1, session.cycles.length)
+    const cycle = session.cycles[cycleIndex]
     if (session.type === "complex" && cycle?.bpm !== undefined) {
       props.onChange(clampSession({
         ...session,
-        cycles: session.cycles.map((item, index) => index === target.cycleIndex ? { ...item, bpm: Number(typed) } : item),
+        cycles: session.cycles.map((item, index) => index === cycleIndex ? { ...item, bpm: Number(typed) } : item),
       }))
+      return
+    }
+    if (session.type === "complex") {
+      const count = Math.max(1, session.cycles.length)
+      const round = Math.floor(target.cycleIndex / count)
+      const index = target.cycleIndex % count
+      const step = session.complex.increaseEvery === "round" ? round : index
+      const bpm = Number(typed) - session.bpmIncrease * Math.max(0, step)
+      props.onChange(clampSession({ ...session, bpm }))
       return
     }
     const every = session.type === "simple" ? session.simple.practices : session.every

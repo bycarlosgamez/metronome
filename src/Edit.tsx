@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { expandSession } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
-import { clampSession, cyclesFromSimple, freshSimple, sessionTitle } from "./session"
+import { clampSession, cycleGroupFromSimple, cyclesFromSimple, freshComplex, freshSimple, sessionTitle } from "./session"
 import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type Length, type Meter, type Session } from "./types"
 
 function lengthText(length: Length): string {
@@ -113,25 +113,28 @@ function SimpleFields(props: { session: Session; commit(session: Session): void 
 
   return (
     <>
-      <div className="interval-row">
-        <DraftField label="Practices" value={String(pattern.practices)} onCommit={(text) => patch({ practices: Number(text) })} />
-        <LengthField
-          label="Length"
-          length={pattern.length}
-          onText={(text) => patch({ length: lengthFromText(pattern.length.unit, text) })}
-          onUnit={(length) => patch({ length })}
-        />
-        <DraftField label="Rest after" value={formatDuration(pattern.restAfterSec)} onCommit={(text) => patch({ restAfterSec: parseDuration(text) })} />
+      <div className="sub-card">
+        <p className="card-title">Interval</p>
+        <div className="interval-row">
+          <DraftField label="Practices" value={String(pattern.practices)} onCommit={(text) => patch({ practices: Number(text) })} />
+          <LengthField
+            label="Length"
+            length={pattern.length}
+            onText={(text) => patch({ length: lengthFromText(pattern.length.unit, text) })}
+            onUnit={(length) => patch({ length })}
+          />
+          <DraftField label="Rest after" value={formatDuration(pattern.restAfterSec)} onCommit={(text) => patch({ restAfterSec: parseDuration(text) })} />
+        </div>
+        <div className="switch-row">
+          <span>Repeat interval</span>
+          <button type="button" className="switch" aria-label="Repeat interval" aria-pressed={pattern.stepTempo} onClick={() => patch({ stepTempo: !pattern.stepTempo })}>
+            {pattern.stepTempo ? "On" : "Off"}
+          </button>
+        </div>
+        {pattern.stepTempo && (
+          <DraftField label="Times" value={String(pattern.times)} onCommit={(text) => patch({ times: Number(text) })} />
+        )}
       </div>
-      <div className="switch-row">
-        <span>Repeat interval</span>
-        <button type="button" className="switch" aria-label="Repeat interval" aria-pressed={pattern.stepTempo} onClick={() => patch({ stepTempo: !pattern.stepTempo })}>
-          {pattern.stepTempo ? "On" : "Off"}
-        </button>
-      </div>
-      {pattern.stepTempo && (
-        <DraftField label="Times" value={String(pattern.times)} onCommit={(text) => patch({ times: Number(text) })} />
-      )}
       <div className="switch-row">
         <span>Repeat the round</span>
         <button type="button" className="switch" aria-label="Repeat the round" aria-pressed={pattern.repeatRound} onClick={() => patch({ repeatRound: !pattern.repeatRound })}>
@@ -264,7 +267,11 @@ export function Edit(props: {
     if (session.type === "complex") {
       commit({ ...session, simple: freshSimple() })
     } else {
-      commit({ ...session, cycles: cyclesFromSimple(session, () => crypto.randomUUID()) })
+      commit({
+        ...session,
+        cycles: cyclesFromSimple(session, () => crypto.randomUUID()),
+        complex: freshComplex(),
+      })
     }
     props.onDone()
   }
@@ -282,11 +289,17 @@ export function Edit(props: {
       return
     }
     if (type === "complex") {
+      const pattern = session.simple
       commit({
         ...session,
         type: "complex",
-        every: session.simple.practices,
-        cycles: cyclesFromSimple(session, () => crypto.randomUUID()),
+        cycles: cycleGroupFromSimple(session, () => crypto.randomUUID()),
+        complex: {
+          increaseEvery: pattern.increaseEvery,
+          repeatRound: pattern.repeatRound,
+          rounds: pattern.rounds,
+          restBetweenSec: pattern.restBetweenSec,
+        },
       })
       return
     }
@@ -347,29 +360,6 @@ export function Edit(props: {
               ))}
             </select>
           </label>
-          <div className="increase-row">
-            <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
-            {session.type === "complex" ? (
-              <DraftField label="Every" value={String(session.every)} onCommit={(text) => commit({ ...session, every: Number(text) })} />
-            ) : (
-              <div className="type-switch" role="group" aria-label="Increase every">
-                <button
-                  type="button"
-                  aria-pressed={session.simple.increaseEvery !== "round"}
-                  onClick={() => commit({ ...session, simple: { ...session.simple, increaseEvery: "interval" } })}
-                >
-                  Interval
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={session.simple.increaseEvery === "round"}
-                  onClick={() => commit({ ...session, simple: { ...session.simple, increaseEvery: "round" } })}
-                >
-                  Round
-                </button>
-              </div>
-            )}
-          </div>
           <label>
             Click
             <select
@@ -384,15 +374,59 @@ export function Edit(props: {
           </label>
         </section>
       </div>
+      <section className="editor-card increase-card">
+        <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
+        <div className="type-switch" role="group" aria-label="Increase every">
+          <button
+            type="button"
+            aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) !== "round"}
+            onClick={() => commit(session.type === "complex"
+              ? { ...session, complex: { ...session.complex, increaseEvery: "interval" } }
+              : { ...session, simple: { ...session.simple, increaseEvery: "interval" } })}
+          >
+            Interval
+          </button>
+          <button
+            type="button"
+            aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) === "round"}
+            onClick={() => commit(session.type === "complex"
+              ? { ...session, complex: { ...session.complex, increaseEvery: "round" } }
+              : { ...session, simple: { ...session.simple, increaseEvery: "round" } })}
+          >
+            Round
+          </button>
+        </div>
+      </section>
       {session.type === "simple" ? (
         <section className="editor-builder">
-          <p className="card-title">Interval</p>
           <SimpleFields session={session} commit={commit} />
           <p className="total">Total {formatClock(totalSec)}</p>
         </section>
       ) : (
-        <section className="cycle-list">
-          <CycleList session={session} commit={commit} />
+        <section className="editor-builder">
+          <div className="sub-card">
+            <div className="cycle-list">
+              <CycleList session={session} commit={commit} />
+            </div>
+          </div>
+          <div className="switch-row">
+            <span>Repeat the round</span>
+            <button
+              type="button"
+              className="switch"
+              aria-label="Repeat the round"
+              aria-pressed={session.complex.repeatRound}
+              onClick={() => commit({ ...session, complex: { ...session.complex, repeatRound: !session.complex.repeatRound } })}
+            >
+              {session.complex.repeatRound ? "On" : "Off"}
+            </button>
+          </div>
+          {session.complex.repeatRound && (
+            <div className="pair-row">
+              <DraftField label="Rounds" value={String(session.complex.rounds)} onCommit={(text) => commit({ ...session, complex: { ...session.complex, rounds: Number(text) } })} />
+              <DraftField label="Between" value={formatDuration(session.complex.restBetweenSec)} onCommit={(text) => commit({ ...session, complex: { ...session.complex, restBetweenSec: parseDuration(text) } })} />
+            </div>
+          )}
           <p className="total">Total {formatClock(totalSec)}</p>
         </section>
       )}

@@ -331,7 +331,6 @@ describe("Practice", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "complex"
     session.bpmIncrease = 5
-    session.every = 2
     session.cycles = [0, 1, 2, 3].map((index) => ({
       id: `cycle-${index}`,
       length: { unit: "time" as const, seconds: 30 },
@@ -362,8 +361,48 @@ describe("Practice", () => {
     await user.type(bpm, "100")
     await user.tab()
     const next = onChange.mock.calls.at(-1)?.[0]
-    expect(next.bpm).toBe(100 - 5 * Math.floor(3 / 2))
+    expect(next.bpm).toBe(85)
     expect(next.cycles[3].bpm).toBeUndefined()
+  })
+
+  it("writes a complex between rest onto the round", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.complex.repeatRound = true
+    session.complex.rounds = 2
+    session.complex.restBetweenSec = 30
+    session.cycles = [0, 1].map((index) => ({
+      id: `cycle-${index}`,
+      length: { unit: "time" as const, seconds: 30 },
+      restSec: 5,
+    }))
+    const segments = expandSession(session)
+    const restIndex = segments.findIndex((segment) => segment.restRole === "between")
+    const elapsed = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "1:00")
+    await user.tab()
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.complex.restBetweenSec).toBe(60)
+    expect(next.cycles.map((cycle: { restSec: number }) => cycle.restSec)).toEqual([5, 5])
   })
 
   it("writes a cycle tempo without changing the session BPM", async () => {
