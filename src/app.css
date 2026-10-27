@@ -49,6 +49,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .color-dots button[aria-checked="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
 .editor-cards { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; align-items: stretch; padding: 20px 16px 0; }
 .editor-card { border: 1px solid var(--line); border-radius: var(--radius-card); padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.increase-row { display: flex; gap: 8px; }
+.increase-row > * { flex: 1; min-width: 0; }
 .editor-card .color-field { margin-bottom: 12px; }
 .type-switch { display: flex; gap: 8px; }
 .editor-builder { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 24px; }

@@ -253,4 +253,149 @@ describe("Practice", () => {
       cycles: [expect.objectContaining({ length: { unit: "time", seconds: 60 }, bpm: 90 })],
     }))
   })
+
+  it("commits a between rest without changing the rest after a practice", async () => {
+    const session = createDefaultSession(() => "set-1")
+    session.simple.practices = 2
+    session.simple.repeatRound = true
+    session.simple.rounds = 2
+    session.simple.restAfterSec = 5
+    session.simple.restBetweenSec = 30
+    const segments = expandSession(session)
+    const restIndex = segments.findIndex((segment) => segment.restRole === "between")
+    const elapsed = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "1:00")
+    await user.tab()
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.simple.restBetweenSec).toBe(60)
+    expect(next.simple.restAfterSec).toBe(5)
+  })
+
+  it("commits one cycle rest", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.cycles = [
+      { id: "a", length: { unit: "time", seconds: 30 }, restSec: 10 },
+      { id: "b", length: { unit: "time", seconds: 45 }, restSec: 0 },
+    ]
+    const segments = expandSession(session)
+    const restIndex = segments.findIndex((segment) => segment.kind === "rest" && segment.cycleIndex === 0)
+    const elapsed = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "0:20")
+    await user.tab()
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.cycles[0].restSec).toBe(20)
+    expect(next.cycles[1].restSec).toBe(0)
+    expect(next.bpm).toBe(session.bpm)
+  })
+
+  it("writes the session tempo so a later practice lands on the typed BPM", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.bpmIncrease = 5
+    session.every = 2
+    session.cycles = [0, 1, 2, 3].map((index) => ({
+      id: `cycle-${index}`,
+      length: { unit: "time" as const, seconds: 30 },
+      restSec: 0,
+    }))
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play" && segment.cycleIndex === 3)
+    const elapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    await user.click(bpm)
+    await user.clear(bpm)
+    await user.type(bpm, "100")
+    await user.tab()
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.bpm).toBe(100 - 5 * Math.floor(3 / 2))
+    expect(next.cycles[3].bpm).toBeUndefined()
+  })
+
+  it("writes a cycle tempo without changing the session BPM", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.cycles = [{ id: "cycle-1", length: { unit: "time", seconds: 60 }, restSec: 0, bpm: 90 }]
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play" && segment.cycleIndex === 0)
+    const elapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    await user.click(bpm)
+    await user.clear(bpm)
+    await user.type(bpm, "100")
+    await user.tab()
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.bpm).toBe(80)
+    expect(next.cycles[0].bpm).toBe(100)
+  })
 })

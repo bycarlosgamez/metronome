@@ -28,6 +28,7 @@ function DraftField(props: {
   const [text, setText] = useState(props.value)
   const textRef = useRef(text)
   const focused = useRef(false)
+  const [commitEpoch, setCommitEpoch] = useState(0)
   textRef.current = text
 
   useEffect(() => {
@@ -35,7 +36,7 @@ function DraftField(props: {
       textRef.current = props.value
       setText(props.value)
     }
-  }, [props.value])
+  }, [props.value, commitEpoch])
 
   return (
     <label>
@@ -54,6 +55,7 @@ function DraftField(props: {
         onBlur={() => {
           focused.current = false
           props.onCommit(textRef.current)
+          setCommitEpoch((epoch) => epoch + 1)
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur()
@@ -225,6 +227,15 @@ export function Edit(props: {
     props.onChange(clamped)
   }
 
+  function done() {
+    if (session.type === "complex") {
+      commit({ ...session, simple: freshSimple() })
+    } else {
+      commit({ ...session, cycles: cyclesFromSimple(session, () => crypto.randomUUID()) })
+    }
+    props.onDone()
+  }
+
   function choose(type: "simple" | "complex") {
     if (type === session.type) return
     if (openedAsComplex.current) {
@@ -255,7 +266,7 @@ export function Edit(props: {
     <main className="editor-screen">
       <header className="topbar">
         <h1 aria-label="Mentronome">{sessionTitle(session)}</h1>
-        <button type="button" className="quiet" onClick={props.onDone}>Done</button>
+        <button type="button" className="quiet" onClick={done}>Done</button>
       </header>
       <div className="editor-cards">
         <section className="editor-card">
@@ -301,10 +312,12 @@ export function Edit(props: {
               ))}
             </select>
           </label>
-          <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
-          {session.type === "complex" && (
-            <DraftField label="Every" value={String(session.every)} onCommit={(text) => commit({ ...session, every: Number(text) })} />
-          )}
+          <div className="increase-row">
+            <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
+            {session.type === "complex" && (
+              <DraftField label="Every" value={String(session.every)} onCommit={(text) => commit({ ...session, every: Number(text) })} />
+            )}
+          </div>
           <label>
             Click
             <select

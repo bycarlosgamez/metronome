@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { Edit } from "./Edit"
+import { expandSession } from "./expandSession"
+import { formatClock } from "./format"
 import { createDefaultSession } from "./session"
 
 describe("Edit", () => {
@@ -85,5 +87,24 @@ describe("Edit", () => {
     await user.click(screen.getByRole("button", { name: "Move cycle 2 up" }))
     const moved = onChange.mock.calls.at(-1)?.[0]
     expect(moved.cycles[0].id).toBe(added.cycles[1].id)
+  })
+
+  it("shows the stored value when a commit clamps back to it", async () => {
+    const user = userEvent.setup()
+    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)
+    const practices = screen.getByRole("textbox", { name: "Practices" })
+    await user.clear(practices)
+    await user.type(practices, "0")
+    await user.tab()
+    expect(practices).toHaveValue("1")
+  })
+
+  it("shows the total of every segment, including rests", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.simple.practices = 2
+    session.simple.restAfterSec = 5
+    const totalSec = expandSession(session).reduce((sum, segment) => sum + segment.durationSec, 0)
+    render(<Edit session={session} onChange={() => {}} onDone={() => {}} />)
+    expect(screen.getByText(`Total ${formatClock(totalSec)}`)).toBeInTheDocument()
   })
 })
