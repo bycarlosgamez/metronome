@@ -1,9 +1,21 @@
+import { snapshotAt } from "./clock"
+import { expandSession } from "./expandSession"
+import { Practice } from "./Practice"
+import { createDefaultSession } from "./session"
+
 export function App() {
+  const session = createDefaultSession()
+  const segments = expandSession(session)
   return (
-    <header>
-      <h1 aria-label="Mentronome">
-        MENTRO<span>NOME</span>
-      </h1>
-    </header>
+    <Practice
+      session={session}
+      segments={segments}
+      snapshot={snapshotAt(segments, 0)}
+      status="stopped"
+      onToggle={() => {}}
+      onJump={() => {}}
+      onReset={() => {}}
+      onEdit={() => {}}
+    />
   )
 }
