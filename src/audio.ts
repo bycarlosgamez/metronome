@@ -8,6 +8,8 @@ export type ClickBuffers = {
   restCue: AudioBuffer
 }
 
+const FRAME_LATE_SEC = 0.05
+
 const TONES: Record<ClickId, { normal: number; accent: number }> = {
   "click-1": { normal: 880, accent: 1760 },
   "click-2": { normal: 660, accent: 1320 },
@@ -42,7 +44,11 @@ function startBuffer(ctx: AudioContext, buffer: AudioBuffer, when: number): Audi
   const source = ctx.createBufferSource()
   source.buffer = buffer
   source.connect(ctx.destination)
-  source.start(when)
+  // A click more than a frame behind the audio clock is skipped. One that is only
+  // that late starts now, so start() never receives a negative or past time.
+  if (when >= ctx.currentTime - FRAME_LATE_SEC) {
+    source.start(Math.max(ctx.currentTime, when))
+  }
   return source
 }
 

@@ -14,6 +14,7 @@ function fakeContext() {
     started,
     buffers,
     ctx: {
+      currentTime: 0,
       createBufferSource() {
         let chosen = ""
         return {
