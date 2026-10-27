@@ -1,4 +1,4 @@
-import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type Length, type Meter, type Session, type SetColor, type SimplePattern } from "./types"
+import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -20,7 +20,19 @@ export function freshSimple(): SimplePattern {
     repeatRound: false,
     rounds: 2,
     restBetweenSec: 30,
+    increaseEvery: "interval",
   }
+}
+
+export function simplePlayedBpm(
+  bpm: number,
+  increase: number,
+  increaseEvery: IncreaseEvery,
+  round: number,
+  interval: number,
+): number {
+  const step = increaseEvery === "round" ? round : interval
+  return Math.min(300, clampBpm(bpm) + Math.max(0, integer(increase)) * Math.max(0, integer(step)))
 }
 
 export function createDefaultSession(nextId: () => string = () => crypto.randomUUID()): Session {
@@ -71,6 +83,7 @@ function clampSimple(pattern: SimplePattern | undefined): SimplePattern {
     repeatRound: Boolean(base.repeatRound),
     rounds: Math.max(1, integer(base.rounds)),
     restBetweenSec: Math.max(0, integer(base.restBetweenSec)),
+    increaseEvery: base.increaseEvery === "round" ? "round" : "interval",
   }
 }
 
@@ -111,11 +124,16 @@ export function cyclesFromSimple(session: Session, nextId: () => string): Cycle[
       for (let practice = 0; practice < pattern.practices; practice += 1) {
         const lastOfRound = step === steps - 1 && practice === pattern.practices - 1
         const lastOfSession = round === rounds - 1 && lastOfRound
-        cycles.push({
+        const index = cycles.length
+        const played = simplePlayedBpm(session.bpm, session.bpmIncrease, pattern.increaseEvery, round, step)
+        const ladder = ladderBpm(session.bpm, session.bpmIncrease, pattern.practices, index)
+        const cycle: Cycle = {
           id: nextId(),
           length: pattern.length,
           restSec: lastOfSession ? 0 : lastOfRound ? pattern.restBetweenSec : pattern.restAfterSec,
-        })
+        }
+        if (played !== ladder) cycle.bpm = played
+        cycles.push(cycle)
       }
     }
   }

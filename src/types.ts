@@ -18,6 +18,8 @@ export type Cycle = {
   bpm?: number
 }
 
+export type IncreaseEvery = "interval" | "round"
+
 export type SimplePattern = {
   practices: number
   length: Length
@@ -27,6 +29,7 @@ export type SimplePattern = {
   repeatRound: boolean
   rounds: number
   restBetweenSec: number
+  increaseEvery: IncreaseEvery
 }
 
 export type Session = {

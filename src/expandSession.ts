@@ -1,4 +1,4 @@
-import { ladderBpm, lengthSeconds, sessionTitle } from "./session"
+import { ladderBpm, lengthSeconds, sessionTitle, simplePlayedBpm } from "./session"
 import type { Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -39,7 +39,13 @@ function resolved(session: Session): Resolved[] {
     for (let step = 0; step < steps; step += 1) {
       for (let practice = 0; practice < session.simple.practices; practice += 1) {
         const index = items.length
-        const bpm = ladderBpm(session.bpm, session.bpmIncrease, session.simple.practices, index)
+        const bpm = simplePlayedBpm(
+          session.bpm,
+          session.bpmIncrease,
+          session.simple.increaseEvery,
+          round,
+          step,
+        )
         const lastOfRound = step === steps - 1 && practice === session.simple.practices - 1
         const lastOfSession = round === rounds - 1 && lastOfRound
         items.push({

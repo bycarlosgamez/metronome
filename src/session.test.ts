@@ -8,6 +8,7 @@ import {
   lengthSeconds,
   migrateLegacy,
   sessionTitle,
+  simplePlayedBpm,
 } from "./session"
 
 describe("session", () => {
@@ -33,7 +34,37 @@ describe("session", () => {
       repeatRound: false,
       rounds: 2,
       restBetweenSec: 30,
+      increaseEvery: "interval",
     })
+  })
+
+  it("restarts an interval climb and stores the bpm a ladder would miss", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.simple = {
+      practices: 1,
+      length: { unit: "time", seconds: 30 },
+      restAfterSec: 5,
+      stepTempo: true,
+      times: 3,
+      repeatRound: true,
+      rounds: 2,
+      restBetweenSec: 60,
+      increaseEvery: "interval",
+    }
+    expect(simplePlayedBpm(80, 5, "interval", 0, 2)).toBe(90)
+    expect(simplePlayedBpm(80, 5, "round", 2, 0)).toBe(90)
+    expect(simplePlayedBpm(290, 20, "interval", 0, 2)).toBe(300)
+    const cycles = cyclesFromSimple(session, () => "id")
+    expect(cycles.map((cycle) => cycle.bpm)).toEqual([
+      undefined, undefined, undefined, 80, 85, 90,
+    ])
+    const raw = createDefaultSession(() => "cycle-1")
+    delete (raw.simple as { increaseEvery?: string }).increaseEvery
+    expect(clampSession(raw).simple.increaseEvery).toBe("interval")
+    raw.simple.increaseEvery = "nope" as "interval"
+    expect(clampSession(raw).simple.increaseEvery).toBe("interval")
   })
 
   it("shows Practice for a blank name", () => {
@@ -92,6 +123,7 @@ describe("session", () => {
       repeatRound: true,
       rounds: 3,
       restBetweenSec: 60,
+      increaseEvery: "interval",
     }
     const cycles = cyclesFromSimple(session, () => "id")
     expect(cycles).toHaveLength(27)
@@ -99,7 +131,11 @@ describe("session", () => {
     expect(cycles[0].restSec).toBe(5)
     expect(cycles[8].restSec).toBe(60)
     expect(cycles[26].restSec).toBe(0)
-    expect(cycles.every((cycle) => cycle.bpm === undefined)).toBe(true)
+    expect(cycles.map((cycle) => cycle.bpm)).toEqual([
+      ...Array(9).fill(undefined),
+      ...[80, 80, 80, 85, 85, 85, 90, 90, 90],
+      ...[80, 80, 80, 85, 85, 85, 90, 90, 90],
+    ])
   })
 
   it("migrates one old set to one cycle at the same tempo", () => {

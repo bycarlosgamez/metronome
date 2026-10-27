@@ -15,6 +15,7 @@ function example() {
     repeatRound: true,
     rounds: 3,
     restBetweenSec: 60,
+    increaseEvery: "interval",
   }
   return session
 }
@@ -25,7 +26,7 @@ describe("expandSession", () => {
     const plays = segments.filter((segment) => segment.kind === "play")
     expect(plays).toHaveLength(27)
     expect(plays.map((segment) => segment.bpm)).toEqual(
-      Array.from({ length: 27 }, (_, index) => 80 + 5 * Math.floor(index / 3)),
+      Array.from({ length: 3 }, () => [80, 80, 80, 85, 85, 85, 90, 90, 90]).flat(),
     )
     const rests = segments.filter((segment) => segment.kind === "rest")
     expect(rests.filter((segment) => segment.durationSec === 5)).toHaveLength(24)
@@ -64,5 +65,37 @@ describe("expandSession", () => {
     ]
     const plays = expandSession(session).filter((segment) => segment.kind === "play")
     expect(plays.map((segment) => segment.bpm)).toEqual([80, 100])
+  })
+
+  it("holds one bpm for a round and steps on the next round", () => {
+    const session = example()
+    session.simple.practices = 1
+    session.simple.increaseEvery = "round"
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([
+      80, 80, 80, 85, 85, 85, 90, 90, 90,
+    ])
+  })
+
+  it("shares one bpm across the practices in an interval", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpmIncrease = 5
+    session.simple.practices = 3
+    session.simple.stepTempo = true
+    session.simple.times = 2
+    session.simple.increaseEvery = "interval"
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([80, 80, 80, 85, 85, 85])
+  })
+
+  it("caps a stepped simple bpm at 300", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 290
+    session.bpmIncrease = 20
+    session.simple.stepTempo = true
+    session.simple.times = 3
+    session.simple.increaseEvery = "interval"
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([290, 300, 300])
   })
 })
