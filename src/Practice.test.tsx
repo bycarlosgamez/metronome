@@ -31,6 +31,7 @@ describe("Practice", () => {
     expect(screen.getByTestId("stage-time")).toHaveTextContent("0:03")
     expect(screen.getByTestId("beat-1")).toHaveAttribute("data-current", "true")
     expect(screen.getByTestId("footer-set")).toHaveTextContent("1 / 1")
+    expect(document.querySelector('.strip article[data-current="true"]')).toHaveClass("color-red")
     await user.click(screen.getByRole("button", { name: "Edit" }))
     expect(onEdit).toHaveBeenCalledOnce()
   })

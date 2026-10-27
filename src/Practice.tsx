@@ -62,7 +62,11 @@ export function Practice(props: {
       </section>
       <div className="strip">
         {props.segments.map((item, index) => (
-          <article key={`${item.setId}-${item.kind}-${index}`} data-current={index === props.snapshot.segmentIndex}>
+          <article
+            key={`${item.setId}-${item.kind}-${index}`}
+            className={`color-${item.color}`}
+            data-current={index === props.snapshot.segmentIndex}
+          >
             <strong>{item.label}</strong>
             <span>
               {formatClock(Math.round(item.durationSec))}
