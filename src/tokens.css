@@ -1,0 +1,22 @@
+:root {
+  --page: #0c0c0c;
+  --surface: #1a1a1a;
+  --ink: #ffffff;
+  --ink-muted: #bdbdbd;
+  --ink-on-yellow: #1a1a1a;
+  --play: #ffffff;
+  --play-ink: #111111;
+  --line: #2e2e2e;
+  --red: #e23b32;
+  --orange: #f07820;
+  --yellow: #f0c429;
+  --green: #2ea85a;
+  --blue: #2f7fe0;
+  --pink: #e24b8a;
+  --rest: #4a5968;
+  --radius-stage: 28px;
+  --radius-card: 16px;
+  --radius-field: 12px;
+  --radius-pill: 999px;
+  --time-size: clamp(4.5rem, 18vw, 9rem);
+}
