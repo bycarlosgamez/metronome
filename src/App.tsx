@@ -58,12 +58,18 @@ export function App() {
     }
     const segment = segmentsRef.current[snapshot.segmentIndex]
     const into = segment.durationSec - remainingRef.current
-    const when = audio.currentTime - into
+    const idealWhen = audio.currentTime - into
+    // A frame can notice the boundary late. Never hand start() a negative time, and
+    // keep a click that is only late for that reason by starting it at the audio clock.
+    const boundarySlackSec = 0.05
+    let when = Math.max(0, idealWhen)
+    if (into <= boundarySlackSec) when = Math.max(when, audio.currentTime)
     const scheduled = scheduleSegment(audio, buffersRef.current, segment, when)
     const marks = segment.kind === "rest" ? [{ offsetSec: 0 }] : clicksInSegment(segment)
     const kept: AudioBufferSourceNode[] = []
     scheduled.forEach((node, index) => {
-      if (when + marks[index].offsetSec < audio.currentTime - 1e-9) {
+      const idealStart = idealWhen + marks[index].offsetSec
+      if (idealStart < audio.currentTime - boundarySlackSec) {
         try {
           node.stop()
         } catch {
