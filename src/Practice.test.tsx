@@ -153,6 +153,76 @@ describe("Practice", () => {
     expect(onSeek).toHaveBeenCalledWith(1)
   })
 
+  it("commits a duration draft to the practice that was focused", async () => {
+    const session = createDefaultSession(() => "set-1")
+    session.simple.practices = 2
+    session.simple.restAfterSec = 30
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play")
+    const restIndex = segments.findIndex((segment) => segment.kind === "rest")
+    const playElapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const restElapsed = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const props = {
+      session,
+      segments,
+      status: "playing" as const,
+      onToggle: () => {},
+      onJump: () => {},
+      onReset: () => {},
+      onEdit: () => {},
+      onChange,
+      onSeek: () => {},
+    }
+    const user = userEvent.setup()
+    const view = render(<Practice {...props} snapshot={snapshotAt(segments, playElapsed)} />)
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "1:30")
+    view.rerender(<Practice {...props} snapshot={snapshotAt(segments, restElapsed)} />)
+    expect(screen.getByTestId("stage-label")).toHaveTextContent("Rest")
+    await user.tab()
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      simple: expect.objectContaining({
+        length: { unit: "time", seconds: 90 },
+        restAfterSec: 30,
+      }),
+    }))
+  })
+
+  it("drops an unedited duration draft when playback moves to another segment", async () => {
+    const session = createDefaultSession(() => "set-1")
+    session.simple.practices = 2
+    session.simple.restAfterSec = 30
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play")
+    const restIndex = segments.findIndex((segment) => segment.kind === "rest")
+    const playElapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const restElapsed = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const props = {
+      session,
+      segments,
+      status: "playing" as const,
+      onToggle: () => {},
+      onJump: () => {},
+      onReset: () => {},
+      onEdit: () => {},
+      onChange,
+      onSeek: () => {},
+    }
+    const user = userEvent.setup()
+    const view = render(<Practice {...props} snapshot={snapshotAt(segments, playElapsed)} />)
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    expect(duration).toHaveValue("2:00")
+    view.rerender(<Practice {...props} snapshot={snapshotAt(segments, restElapsed)} />)
+    expect(duration).toHaveValue("0:30")
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it("keeps a complex cycle bpm when duration changes", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "complex"

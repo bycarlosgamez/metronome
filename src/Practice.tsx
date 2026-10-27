@@ -1,9 +1,27 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, sessionTitle } from "./session"
 import { METERS, type Meter, type Session } from "./types"
+
+type DraftTarget = {
+  segmentIndex: number
+  kind: Segment["kind"]
+  restRole?: Segment["restRole"]
+  cycleIndex: number
+  baseline: string
+}
+
+function draftTarget(segment: Segment, segmentIndex: number, baseline: string): DraftTarget {
+  return {
+    segmentIndex,
+    kind: segment.kind,
+    restRole: segment.restRole,
+    cycleIndex: segment.cycleIndex,
+    baseline,
+  }
+}
 
 export type PlaybackStatus = "stopped" | "playing" | "paused" | "no-audio"
 
@@ -27,25 +45,56 @@ export function Practice(props: {
   const storedSeconds = segment.kind === "rest" ? segment.durationSec : (practiceSegment ?? segment).durationSec
   const [timeText, setTimeText] = useState<string | null>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
+  const timeTarget = useRef<DraftTarget | null>(null)
+  const bpmTarget = useRef<DraftTarget | null>(null)
+  const timeTextRef = useRef(timeText)
+  const bpmTextRef = useRef(bpmText)
+  timeTextRef.current = timeText
+  bpmTextRef.current = bpmText
   const shownTime = timeText ?? clock
   const shownBpm = bpmText ?? String(segment.bpm)
   const stageColor = segment.kind === "rest" ? "yellow" : props.status === "playing" || props.status === "no-audio" ? "green" : "red"
 
+  useEffect(() => {
+    if (timeTarget.current && timeTextRef.current === timeTarget.current.baseline) {
+      timeTarget.current = null
+      setTimeText(null)
+    }
+    if (bpmTarget.current && bpmTextRef.current === bpmTarget.current.baseline) {
+      bpmTarget.current = null
+      setBpmText(null)
+    }
+  }, [props.snapshot.segmentIndex])
+
+  function rememberTime() {
+    const baseline = formatDuration(storedSeconds)
+    timeTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline)
+    setTimeText(baseline)
+  }
+
+  function rememberBpm() {
+    const baseline = String(segment.bpm)
+    bpmTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline)
+    setBpmText(baseline)
+  }
+
   function commitTime() {
     const typed = timeText
+    const target = timeTarget.current
     setTimeText(null)
-    if (typed === null || typed === formatDuration(storedSeconds)) return
+    timeTarget.current = null
+    if (typed === null || target === null || typed === target.baseline) return
     const seconds = Math.max(1, parseDuration(typed))
     const session = props.session
-    if (segment.kind === "rest") {
+    if (target.kind === "rest") {
       if (session.type === "complex") {
         props.onChange(clampSession({
           ...session,
-          cycles: session.cycles.map((cycle, index) => index === segment.cycleIndex ? { ...cycle, restSec: Math.max(0, parseDuration(typed)) } : cycle),
+          cycles: session.cycles.map((cycle, index) => index === target.cycleIndex ? { ...cycle, restSec: Math.max(0, parseDuration(typed)) } : cycle),
         }))
         return
       }
-      const key = segment.restRole === "between" ? "restBetweenSec" : "restAfterSec"
+      const key = target.restRole === "between" ? "restBetweenSec" : "restAfterSec"
       props.onChange(clampSession({ ...session, simple: { ...session.simple, [key]: Math.max(0, parseDuration(typed)) } }))
       return
     }
@@ -53,7 +102,7 @@ export function Practice(props: {
     if (session.type === "complex") {
       props.onChange(clampSession({
         ...session,
-        cycles: session.cycles.map((cycle, index) => index === segment.cycleIndex ? { ...cycle, length } : cycle),
+        cycles: session.cycles.map((cycle, index) => index === target.cycleIndex ? { ...cycle, length } : cycle),
       }))
       return
     }
@@ -62,19 +111,21 @@ export function Practice(props: {
 
   function commitBpm() {
     const typed = bpmText
+    const target = bpmTarget.current
     setBpmText(null)
-    if (typed === null || Number(typed) === segment.bpm) return
+    bpmTarget.current = null
+    if (typed === null || target === null || Number(typed) === Number(target.baseline)) return
     const session = props.session
-    const cycle = session.cycles[segment.cycleIndex]
+    const cycle = session.cycles[target.cycleIndex]
     if (session.type === "complex" && cycle?.bpm !== undefined) {
       props.onChange(clampSession({
         ...session,
-        cycles: session.cycles.map((item, index) => index === segment.cycleIndex ? { ...item, bpm: Number(typed) } : item),
+        cycles: session.cycles.map((item, index) => index === target.cycleIndex ? { ...item, bpm: Number(typed) } : item),
       }))
       return
     }
     const every = session.type === "simple" ? session.simple.practices : session.every
-    const bpm = Number(typed) - session.bpmIncrease * Math.floor(segment.cycleIndex / every)
+    const bpm = Number(typed) - session.bpmIncrease * Math.floor(target.cycleIndex / every)
     props.onChange(clampSession({ ...session, bpm }))
   }
 
@@ -94,8 +145,11 @@ export function Practice(props: {
           aria-label="Duration"
           value={shownTime}
           style={{ width: `${Math.max(shownTime.length, 4)}ch` }}
-          onFocus={() => setTimeText(formatDuration(storedSeconds))}
-          onChange={(event) => setTimeText(event.target.value)}
+          onFocus={rememberTime}
+          onChange={(event) => {
+            if (timeTarget.current === null) rememberTime()
+            setTimeText(event.target.value)
+          }}
           onBlur={commitTime}
           onKeyDown={(event) => {
             if (event.key === "Enter") event.currentTarget.blur()
@@ -108,8 +162,11 @@ export function Practice(props: {
                 aria-label="BPM"
                 inputMode="numeric"
                 value={shownBpm}
-                onFocus={() => setBpmText(String(segment.bpm))}
-                onChange={(event) => setBpmText(event.target.value)}
+                onFocus={rememberBpm}
+                onChange={(event) => {
+                  if (bpmTarget.current === null) rememberBpm()
+                  setBpmText(event.target.value)
+                }}
                 onBlur={commitBpm}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") event.currentTarget.blur()
