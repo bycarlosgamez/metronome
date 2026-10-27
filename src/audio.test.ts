@@ -34,8 +34,9 @@ function fakeContext() {
 describe("scheduleSegment", () => {
   it("schedules four count-in clicks and one rest cue", () => {
     const session = createDefaultSession(() => "set-1")
-    session.sets[0].bpm = 60
-    session.sets[0].repeats = 2
+    session.bpm = 60
+    session.simple.practices = 2
+    session.simple.restAfterSec = 30
     const segments = expandSession(session)
     const { ctx, buffers, started } = fakeContext()
     scheduleSegment(ctx, buffers as never, segments[0], 10)

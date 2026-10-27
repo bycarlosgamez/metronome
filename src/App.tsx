@@ -10,7 +10,6 @@ import type { Session } from "./types"
 export function App() {
   const [session, setSession] = useState(() => loadSession(window.localStorage))
   const [view, setView] = useState<"practice" | "edit">("practice")
-  const [selectedId, setSelectedId] = useState(() => session.sets[0].id)
   const segments = useMemo(() => expandSession(session), [session])
   const { elapsed, status, setStatus, elapsedRef, setElapsed } = usePlayback(segments)
   const snapshot = snapshotAt(segments, elapsed)
@@ -20,6 +19,8 @@ export function App() {
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
   const viewRef = useRef(view)
   const playGen = useRef(0)
+  const toggleRef = useRef<() => void>(() => {})
+  const [seekCount, setSeekCount] = useState(0)
   const segmentsRef = useRef(segments)
   const remainingRef = useRef(snapshot.segmentRemainingSec)
   const clickIdRef = useRef(session.click)
@@ -79,7 +80,24 @@ export function App() {
     return () => {
       stopNodes()
     }
-  }, [snapshot.segmentIndex, status])
+  }, [snapshot.segmentIndex, status, segments, seekCount])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== " " || event.repeat || viewRef.current === "edit") return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
+      ) {
+        return
+      }
+      event.preventDefault()
+      toggleRef.current()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   async function onToggle() {
     if (status === "playing" || status === "no-audio") {
@@ -105,6 +123,18 @@ export function App() {
     setStatus(audioRef.current.state === "running" ? "playing" : "no-audio")
   }
 
+  toggleRef.current = () => {
+    void onToggle()
+  }
+
+  function onSeek(index: number) {
+    if (index < 0 || index >= segments.length) return
+    const start = segments.slice(0, index).reduce((sum, segment) => sum + segment.durationSec, 0)
+    stopNodes()
+    writeElapsed(start)
+    setSeekCount((count) => count + 1)
+  }
+
   function onJump(direction: -1 | 1) {
     const index = snapshotAt(segments, elapsedRef.current).segmentIndex + direction
     if (index < 0 || index >= segments.length) return
@@ -125,7 +155,6 @@ export function App() {
     stopNodes()
     writeElapsed(0)
     setStatus("stopped")
-    setSelectedId(session.sets[0].id)
     setView("edit")
   }
 
@@ -136,13 +165,7 @@ export function App() {
 
   if (view === "edit") {
     return (
-      <Edit
-        session={session}
-        selectedId={selectedId}
-        onChange={onChange}
-        onSelect={setSelectedId}
-        onDone={() => setView("practice")}
-      />
+      <Edit session={session} onChange={onChange} onDone={() => setView("practice")} />
     )
   }
 
@@ -158,6 +181,8 @@ export function App() {
       onJump={onJump}
       onReset={onReset}
       onEdit={onEdit}
+      onChange={onChange}
+      onSeek={onSeek}
     />
   )
 }

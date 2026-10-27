@@ -21,7 +21,8 @@ describe("clock", () => {
 
   it("reports no beat during a rest", () => {
     const session = createDefaultSession(() => "set-1")
-    session.sets[0].repeats = 2
+    session.simple.practices = 2
+    session.simple.restAfterSec = 30
     const segments = expandSession(session)
     const restIndex = segments.findIndex((segment) => segment.kind === "rest")
     const restStart = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
@@ -30,7 +31,8 @@ describe("clock", () => {
 
   it("places four accented-on-one count-in clicks and no rest clicks", () => {
     const session = createDefaultSession(() => "set-1")
-    session.sets[0].repeats = 2
+    session.simple.practices = 2
+    session.simple.restAfterSec = 30
     const segments = expandSession(session)
     const countIn = clicksInSegment(segments[0])
     expect(countIn).toHaveLength(4)

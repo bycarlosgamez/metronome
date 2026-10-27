@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { App } from "./App"
 import { clicksInSegment } from "./clock"
 import { expandSession } from "./expandSession"
+import { migrateLegacy } from "./session"
 import { SESSION_KEY } from "./store"
-import type { Session } from "./types"
 
 class FakeAudioContext {
   state = "running"
@@ -40,13 +40,26 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Mentronome" })).toBeInTheDocument()
   })
 
+  it("plays and pauses with the space bar", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard(" ")
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+    await user.keyboard(" ")
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+    await user.click(screen.getByRole("textbox", { name: "BPM" }))
+    await user.keyboard(" ")
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+  })
+
   it("stops playback when Edit opens", async () => {
     vi.stubGlobal("AudioContext", FakeAudioContext)
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole("button", { name: "Play" }))
     await user.click(screen.getByRole("button", { name: "Edit" }))
-    expect(screen.getByRole("button", { name: "Add set" })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Length" })).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Done" }))
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
   })
@@ -67,8 +80,8 @@ describe("App", () => {
       tick?.(10_000)
     })
     await user.click(screen.getByRole("button", { name: "Edit" }))
-    await user.clear(screen.getByLabelText("Duration"))
-    await user.type(screen.getByLabelText("Duration"), "0:01")
+    await user.clear(screen.getByLabelText("Length"))
+    await user.type(screen.getByLabelText("Length"), "0:01")
     await user.tab()
     await user.click(screen.getByRole("button", { name: "Done" }))
     expect(screen.getByText("Elapsed").nextElementSibling).toHaveTextContent("0:00")
@@ -211,7 +224,7 @@ describe("App", () => {
         return node
       }
     }
-    const session: Session = {
+    const saved = {
       name: "Practice",
       meter: "4/4",
       perSetMeter: false,
@@ -230,10 +243,10 @@ describe("App", () => {
         },
       ],
     }
-    const play = expandSession(session).find((segment) => segment.kind === "play")!
+    const play = expandSession(migrateLegacy(saved)!).find((segment) => segment.kind === "play")!
     const marks = clicksInSegment(play)
     const next = marks.find((mark) => mark.offsetSec > intoSec)!
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(saved))
     vi.spyOn(performance, "now").mockReturnValue(0)
     vi.stubGlobal("AudioContext", ClockBehindAudioContext)
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {

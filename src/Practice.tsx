@@ -1,8 +1,9 @@
+import { useState } from "react"
 import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
-import { formatClock } from "./format"
-import { sessionTitle } from "./session"
-import type { Session } from "./types"
+import { formatClock, formatDuration, parseDuration } from "./format"
+import { clampSession, sessionTitle } from "./session"
+import { METERS, type Meter, type Session } from "./types"
 
 export type PlaybackStatus = "stopped" | "playing" | "paused" | "no-audio"
 
@@ -15,10 +16,68 @@ export function Practice(props: {
   onJump(direction: -1 | 1): void
   onReset(): void
   onEdit(): void
+  onChange(session: Session): void
+  onSeek(index: number): void
 }) {
   const segment = props.segments[props.snapshot.segmentIndex]
   const nextPlay = props.segments.slice(props.snapshot.segmentIndex + 1).find((item) => item.kind === "play")
   const beatCount = segment.kind === "count-in" ? 4 : Number(segment.meter.split("/")[0])
+  const clock = formatClock(Math.ceil(props.snapshot.segmentRemainingSec - 1e-9))
+  const practiceSegment = props.segments.find((item) => item.cycleIndex === segment.cycleIndex && item.kind === "play")
+  const storedSeconds = segment.kind === "rest" ? segment.durationSec : (practiceSegment ?? segment).durationSec
+  const [timeText, setTimeText] = useState<string | null>(null)
+  const [bpmText, setBpmText] = useState<string | null>(null)
+  const shownTime = timeText ?? clock
+  const shownBpm = bpmText ?? String(segment.bpm)
+  const stageColor = segment.kind === "rest" ? "yellow" : props.status === "playing" || props.status === "no-audio" ? "green" : "red"
+
+  function commitTime() {
+    const typed = timeText
+    setTimeText(null)
+    if (typed === null || typed === formatDuration(storedSeconds)) return
+    const seconds = Math.max(1, parseDuration(typed))
+    const session = props.session
+    if (segment.kind === "rest") {
+      if (session.type === "complex") {
+        props.onChange(clampSession({
+          ...session,
+          cycles: session.cycles.map((cycle, index) => index === segment.cycleIndex ? { ...cycle, restSec: Math.max(0, parseDuration(typed)) } : cycle),
+        }))
+        return
+      }
+      const key = segment.restRole === "between" ? "restBetweenSec" : "restAfterSec"
+      props.onChange(clampSession({ ...session, simple: { ...session.simple, [key]: Math.max(0, parseDuration(typed)) } }))
+      return
+    }
+    const length = { unit: "time" as const, seconds }
+    if (session.type === "complex") {
+      props.onChange(clampSession({
+        ...session,
+        cycles: session.cycles.map((cycle, index) => index === segment.cycleIndex ? { ...cycle, length } : cycle),
+      }))
+      return
+    }
+    props.onChange(clampSession({ ...session, simple: { ...session.simple, length } }))
+  }
+
+  function commitBpm() {
+    const typed = bpmText
+    setBpmText(null)
+    if (typed === null || Number(typed) === segment.bpm) return
+    const session = props.session
+    const cycle = session.cycles[segment.cycleIndex]
+    if (session.type === "complex" && cycle?.bpm !== undefined) {
+      props.onChange(clampSession({
+        ...session,
+        cycles: session.cycles.map((item, index) => index === segment.cycleIndex ? { ...item, bpm: Number(typed) } : item),
+      }))
+      return
+    }
+    const every = session.type === "simple" ? session.simple.practices : session.every
+    const bpm = Number(typed) - session.bpmIncrease * Math.floor(segment.cycleIndex / every)
+    props.onChange(clampSession({ ...session, bpm }))
+  }
+
   return (
     <main className="practice">
       <header className="topbar">
@@ -27,14 +86,37 @@ export function Practice(props: {
           Edit
         </button>
       </header>
-      <section className={`stage color-${segment.color}`} data-kind={segment.kind}>
+      <section className={`stage color-${stageColor}`} data-kind={segment.kind}>
         <p data-testid="stage-label">{segment.label}</p>
-        <p className="stage-time" data-testid="stage-time">
-          {formatClock(Math.ceil(props.snapshot.segmentRemainingSec - 1e-9))}
-        </p>
+        <input
+          className="stage-time"
+          data-testid="stage-time"
+          aria-label="Duration"
+          value={shownTime}
+          style={{ width: `${Math.max(shownTime.length, 4)}ch` }}
+          onFocus={() => setTimeText(formatDuration(storedSeconds))}
+          onChange={(event) => setTimeText(event.target.value)}
+          onBlur={commitTime}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur()
+          }}
+        />
         {segment.kind !== "rest" && (
           <>
-            <p>{segment.bpm} BPM</p>
+            <p className="stage-meta">
+              <input
+                aria-label="BPM"
+                inputMode="numeric"
+                value={shownBpm}
+                onFocus={() => setBpmText(String(segment.bpm))}
+                onChange={(event) => setBpmText(event.target.value)}
+                onBlur={commitBpm}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur()
+                }}
+              />
+              BPM
+            </p>
             <div className="beats">
               {Array.from({ length: beatCount }, (_, index) => {
                 const beat = index + 1
@@ -50,7 +132,21 @@ export function Practice(props: {
                 )
               })}
             </div>
-            <p>{segment.kind === "count-in" ? "4/4" : segment.meter}</p>
+            <select
+              className="stage-meter"
+              aria-label="Meter"
+              value={props.session.meter}
+              onChange={(event) => {
+                const meter = event.target.value as Meter
+                props.onChange(clampSession({ ...props.session, meter }))
+              }}
+            >
+              {METERS.map((meter) => (
+                <option key={meter} value={meter}>
+                  {meter}
+                </option>
+              ))}
+            </select>
           </>
         )}
         {segment.kind === "rest" && nextPlay && (
@@ -58,23 +154,23 @@ export function Practice(props: {
             Next · {nextPlay.label} at {nextPlay.bpm}
           </p>
         )}
+        <div className="controls">
+          <div className="control-row">
+            <button type="button" className="jump" aria-label="Previous" onClick={() => props.onJump(-1)}>‹</button>
+            <button
+              type="button"
+              className="play-toggle"
+              aria-label={props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
+              onClick={props.onToggle}
+            >
+              {props.status === "playing" || props.status === "no-audio" ? "❚❚" : "▶"}
+            </button>
+            <button type="button" className="jump" aria-label="Next" onClick={() => props.onJump(1)}>›</button>
+          </div>
+          <button type="button" aria-label="Reset" onClick={props.onReset}>Reset</button>
+        </div>
         {props.status === "no-audio" && <p role="status">Sound is unavailable. The countdown is still running.</p>}
       </section>
-      <div className="strip">
-        {props.segments.map((item, index) => (
-          <article
-            key={`${item.setId}-${item.kind}-${index}`}
-            className={`color-${item.color}`}
-            data-current={index === props.snapshot.segmentIndex}
-          >
-            <strong>{item.label}</strong>
-            <span>
-              {formatClock(Math.round(item.durationSec))}
-              {item.kind === "play" ? ` · ${item.bpm}` : ""}
-            </span>
-          </article>
-        ))}
-      </div>
       <footer className="transport">
         <div>
           <span>Elapsed</span>
@@ -83,27 +179,32 @@ export function Practice(props: {
         <div>
           <span>Set</span>
           <strong data-testid="footer-set">
-            {segment.setIndex + 1} / {props.session.sets.length}
+            {props.snapshot.segmentIndex + 1} / {props.segments.length}
           </strong>
         </div>
         <div>
           <span>Left</span>
           <strong>{formatClock(Math.ceil(props.snapshot.remainingSec - 1e-9))}</strong>
         </div>
-        <div className="controls">
-          <button type="button" aria-label="Previous" onClick={() => props.onJump(-1)}>‹</button>
+      </footer>
+      <div className="strip">
+        {props.segments.map((item, index) => (
           <button
             type="button"
-            className="play-toggle"
-            aria-label={props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
-            onClick={props.onToggle}
+            key={`${item.setId}-${item.kind}-${index}`}
+            className={`color-${item.color}`}
+            data-current={index === props.snapshot.segmentIndex}
+            aria-current={index === props.snapshot.segmentIndex ? "true" : undefined}
+            onClick={() => props.onSeek(index)}
           >
-            {props.status === "playing" || props.status === "no-audio" ? "❚❚" : "▶"}
+            <strong>{item.label}</strong>
+            <span>
+              {formatClock(Math.round(item.durationSec))}
+              {item.kind === "play" ? ` · ${item.bpm}` : ""}
+            </span>
           </button>
-          <button type="button" aria-label="Next" onClick={() => props.onJump(1)}>›</button>
-          <button type="button" aria-label="Reset" onClick={props.onReset}>Reset</button>
-        </div>
-      </footer>
+        ))}
+      </div>
     </main>
   )
 }

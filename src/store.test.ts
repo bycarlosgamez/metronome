@@ -31,11 +31,33 @@ describe("store", () => {
     storage.setItem(SESSION_KEY, "{")
     const loaded = loadSession(storage)
     expect(loaded.name).toBe("Practice")
-    expect(loaded.sets).toHaveLength(1)
-    expect(loaded.sets[0].name).toBe("Set 1")
+    expect(loaded.type).toBe("simple")
+    expect(loaded.bpm).toBe(80)
+    expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
   })
 
   it("loads the first-visit session when nothing is saved", () => {
-    expect(loadSession(memory()).sets[0].bpm).toBe(80)
+    const loaded = loadSession(memory())
+    expect(loaded.type).toBe("simple")
+    expect(loaded.bpm).toBe(80)
+    expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
+  })
+
+  it("migrates an old set list", () => {
+    const storage = memory()
+    storage.setItem(SESSION_KEY, JSON.stringify({
+      name: "Evening",
+      meter: "3/4",
+      perSetMeter: false,
+      bpmIncrease: 0,
+      click: "click-1",
+      sets: [{ id: "set-1", name: "Set 1", durationSec: 90, bpm: 100, restSec: 10, repeats: 1, color: "green", meter: "3/4" }],
+    }))
+    const loaded = loadSession(storage)
+    expect(loaded.type).toBe("complex")
+    expect(loaded.name).toBe("Evening")
+    expect(loaded.bpm).toBe(100)
+    expect(loaded.cycles[0]).toMatchObject({ length: { unit: "time", seconds: 90 }, restSec: 0 })
+    expect(loaded.color).toBe("green")
   })
 })
