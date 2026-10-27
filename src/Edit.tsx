@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { formatDuration, parseDuration } from "./format"
 import { clampSession, createSetAfter, sessionTitle, setTitle } from "./session"
-import { CLICKS, COLORS, METERS, type ClickId, type Meter, type PracticeSet, type Session, type SetColor } from "./types"
+import { CLICKS, COLORS, METERS, type ClickId, type Meter, type PracticeSet, type Session } from "./types"
 
 export function Edit(props: {
   session: Session
@@ -44,11 +44,8 @@ export function Edit(props: {
   return (
     <main>
       <header className="topbar">
-        <h1 aria-label="Mentronome">
-          MENTRO<span>NOME</span>
-        </h1>
-        <p className="session-name">{sessionTitle(props.session)}</p>
-        <button type="button" onClick={props.onDone}>
+        <h1 aria-label="Mentronome">{sessionTitle(props.session)}</h1>
+        <button type="button" className="quiet" onClick={props.onDone}>
           Done
         </button>
       </header>
@@ -172,15 +169,22 @@ export function Edit(props: {
               onBlur={() => patchSet({ repeats: Number(repeats) })}
             />
           </Field>
-          <Field label="Color">
-            <select value={selected.color} onChange={(event) => patchSet({ color: event.target.value as SetColor })}>
+          <div className="color-field">
+            <span id="set-color">Color</span>
+            <div className="color-dots" role="radiogroup" aria-labelledby="set-color">
               {COLORS.map((color) => (
-                <option key={color} value={color}>
-                  {color}
-                </option>
+                <button
+                  key={color}
+                  type="button"
+                  role="radio"
+                  aria-label={color}
+                  aria-checked={selected.color === color}
+                  className={`color-${color}`}
+                  onClick={() => patchSet({ color })}
+                />
               ))}
-            </select>
-          </Field>
+            </div>
+          </div>
           {props.session.perSetMeter && (
             <Field label="Set meter">
               <select value={selected.meter} onChange={(event) => patchSet({ meter: event.target.value as Meter })}>

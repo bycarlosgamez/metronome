@@ -43,4 +43,18 @@ describe("Edit", () => {
     )
     expect(screen.getByLabelText("Set meter")).toBeInTheDocument()
   })
+
+  it("sets the set color from a dot and shows the session title", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "set-1")
+    const onChange = vi.fn()
+    render(<Edit session={session} selectedId="set-1" onChange={onChange} onSelect={() => {}} onDone={() => {}} />)
+
+    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
+    expect(screen.getByRole("radio", { name: "red" })).toHaveAttribute("aria-checked", "true")
+    await user.click(screen.getByRole("radio", { name: "blue" }))
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      sets: [expect.objectContaining({ color: "blue" })],
+    }))
+  })
 })

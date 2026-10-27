@@ -29,7 +29,16 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .play-toggle { width: 48px; height: 48px; border: 0; border-radius: 50%; background: var(--play); color: var(--play-ink); }
 .controls button:not(.play-toggle) { background: transparent; border: 0; }
 .editor { display: block; }
+.editor-list, .editor-form { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 24px; }
+.editor-list > button { border: 0; border-radius: var(--radius-card); padding: 12px; text-align: left; }
+.editor-list > button:not([class*="color-"]) { align-self: flex-start; border-radius: var(--radius-pill); background: var(--surface); padding: 8px 12px; }
 .editor-list button[aria-current="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.editor label, .color-field { display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.8rem; }
+.editor input, .editor select { background: var(--surface); border: 0; border-radius: var(--radius-field); padding: 12px; color: var(--ink); }
+.color-dots { display: flex; gap: 8px; }
+.color-dots button { width: 28px; height: 28px; border: 0; border-radius: 50%; padding: 0; }
+.color-dots button[aria-checked="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.back-to-sets { align-self: flex-start; background: transparent; border: 0; color: var(--ink-muted); padding: 0; }
 @media (max-width: 799px) {
   .controls { flex-basis: 100%; justify-content: flex-end; }
   .editor-form { display: none; }
