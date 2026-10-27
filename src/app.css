@@ -23,3 +23,12 @@ button[aria-label="Play"], button[aria-label="Pause"] { background: #ff5a1f; col
 @media (min-width: 800px) {
   .session-name { display: block; }
 }
+.editor { display: block; }
+.editor-form { display: none; }
+.editor[data-pane="form"] .editor-list { display: none; }
+.editor[data-pane="form"] .editor-form { display: block; }
+@media (min-width: 800px) {
+  .editor { display: grid; grid-template-columns: 1fr 1fr; }
+  .editor-list, .editor-form { display: block; }
+  .back-to-sets { display: none; }
+}
