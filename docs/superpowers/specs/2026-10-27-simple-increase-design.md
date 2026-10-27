@@ -1,6 +1,6 @@
 # Simple BPM increase
 
-Simple can raise the BPM on each interval or on each round. Repeating the other level plays that pattern again from the session BPM. Complex still uses Every.
+Simple can raise the BPM on each interval or on each round. Repeating the other level plays that pattern again from the session BPM. Complex now uses that same choice; see `2026-10-27-complex-increase-design.md`.
 
 ## Goals
 
@@ -13,7 +13,7 @@ Simple can raise the BPM on each interval or on each round. Repeating the other 
 ## Non-goals
 
 - A second increase amount. There is still one BPM increase.
-- Changing Complex. Every stays beside BPM increase, and this choice stays hidden there.
+- Changing how Complex climbs. That choice is specified in `2026-10-27-complex-increase-design.md`.
 - Changing rests, count-in, the 300 cap, or the practice page.
 
 ## What Simple stores
@@ -50,13 +50,15 @@ Three practices in the interval share the interval BPM. Interval, two interval r
 
 The choice sits in the BPM increase row, only while Simple is selected. The group name is Increase every. The buttons are Interval and Round. The pressed button uses the same selected style as Simple and Complex.
 
-Complex keeps Every in that row and does not show Increase every.
+Complex no longer keeps Every in that row. The later Complex spec gives it the same Interval and Round choice.
 
 ## Switching to Complex
 
-Every becomes the Practices count, as it does now. A cycle stores the BPM that practice would play only when that BPM differs from `min(300, session BPM + BPM increase × floor(cycle index / Practices))`. Other cycles omit their own BPM and follow the ladder. Lengths and rests are unchanged: units stay, each rest is the rest that will play, and the final rest is 0.
+The later Complex spec replaces this switch. It builds one cycle per practice and copies the round settings. It does not copy Times.
 
 ## Tests
+
+The Complex lines below describe the behavior this spec originally required. `2026-10-27-complex-increase-design.md` replaces them.
 
 - Interval, Times 3, one round, one practice: 80, 85, 90.
 - That pattern with Rounds 2: 80, 85, 90, 80, 85, 90.
