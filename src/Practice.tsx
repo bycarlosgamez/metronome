@@ -22,11 +22,8 @@ export function Practice(props: {
   return (
     <main className="practice">
       <header className="topbar">
-        <h1 aria-label="Mentronome">
-          MENTRO<span>NOME</span>
-        </h1>
-        <p className="session-name">{sessionTitle(props.session)}</p>
-        <button type="button" onClick={props.onEdit}>
+        <h1 aria-label="Mentronome">{sessionTitle(props.session)}</h1>
+        <button type="button" className="quiet" onClick={props.onEdit}>
           Edit
         </button>
       </header>
@@ -93,10 +90,11 @@ export function Practice(props: {
           <button type="button" aria-label="Previous" onClick={() => props.onJump(-1)}>‹</button>
           <button
             type="button"
+            className="play-toggle"
             aria-label={props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
             onClick={props.onToggle}
           >
-            {props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
+            {props.status === "playing" || props.status === "no-audio" ? "❚❚" : "▶"}
           </button>
           <button type="button" aria-label="Next" onClick={() => props.onJump(1)}>›</button>
           <button type="button" aria-label="Reset" onClick={props.onReset}>Reset</button>

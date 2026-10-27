@@ -25,6 +25,8 @@ describe("Practice", () => {
       />,
     )
     expect(screen.getByRole("heading", { name: "Mentronome" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
+    expect(screen.getByRole("button", { name: "Play" })).toHaveClass("play-toggle")
     expect(screen.getByTestId("stage-label")).toHaveTextContent("Set 1")
     expect(screen.getByTestId("stage-time")).toHaveTextContent("0:03")
     expect(screen.getByTestId("beat-1")).toHaveAttribute("data-current", "true")
