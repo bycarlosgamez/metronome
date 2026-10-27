@@ -20,7 +20,7 @@ class FakeAudioContext {
   }
   createBufferSource() {
     return {
-      buffer: null,
+      buffer: null as AudioBuffer | null,
       connect() {},
       start() {},
       stop() {},
@@ -49,6 +49,73 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Add set" })).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Done" }))
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+  })
+
+  it("returns elapsed to the start when Edit opens", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    await act(async () => {
+      tick?.(10_000)
+    })
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+    await user.clear(screen.getByLabelText("Duration"))
+    await user.type(screen.getByLabelText("Duration"), "0:01")
+    await user.tab()
+    await user.click(screen.getByRole("button", { name: "Done" }))
+    expect(screen.getByText("Elapsed").nextElementSibling).toHaveTextContent("0:00")
+  })
+
+  it("starts again from the beginning when Play is pressed at the end", async () => {
+    window.localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({
+        name: "Practice",
+        meter: "4/4",
+        perSetMeter: false,
+        bpmIncrease: 0,
+        click: "click-1",
+        sets: [
+          {
+            id: "set-1",
+            name: "Set 1",
+            durationSec: 1,
+            bpm: 80,
+            restSec: 0,
+            repeats: 1,
+            color: "red",
+            meter: "4/4",
+          },
+        ],
+      }),
+    )
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    await act(async () => {
+      tick?.(10_000)
+    })
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    await act(async () => {
+      tick?.(10_100)
+    })
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 
   it("starts the downbeat when playback enters a segment a few milliseconds late", async () => {

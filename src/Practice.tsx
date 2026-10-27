@@ -91,8 +91,12 @@ export function Practice(props: {
         </div>
         <div className="controls">
           <button type="button" aria-label="Previous" onClick={() => props.onJump(-1)}>‹</button>
-          <button type="button" aria-label={props.status === "playing" ? "Pause" : "Play"} onClick={props.onToggle}>
-            {props.status === "playing" ? "Pause" : "Play"}
+          <button
+            type="button"
+            aria-label={props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
+            onClick={props.onToggle}
+          >
+            {props.status === "playing" || props.status === "no-audio" ? "Pause" : "Play"}
           </button>
           <button type="button" aria-label="Next" onClick={() => props.onJump(1)}>›</button>
           <button type="button" aria-label="Reset" onClick={props.onReset}>Reset</button>

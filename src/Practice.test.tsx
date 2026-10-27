@@ -56,4 +56,23 @@ describe("Practice", () => {
     expect(screen.getByTestId("next-up")).toHaveTextContent("Next · Set 1 at 85")
     expect(screen.queryByTestId("beat-1")).not.toBeInTheDocument()
   })
+
+  it("labels the transport Pause when sound is unavailable", () => {
+    const session = createDefaultSession(() => "set-1")
+    const segments = expandSession(session)
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="no-audio"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent("Sound is unavailable. The countdown is still running.")
+  })
 })

@@ -9,7 +9,7 @@ export function Edit(props: {
   onChange(session: Session): void
   onSelect(id: string): void
   onDone(): void
-}): JSX.Element {
+}) {
   const [pane, setPane] = useState<"list" | "form">("list")
   const selected = props.session.sets.find((set) => set.id === props.selectedId) ?? props.session.sets[0]
   const [duration, setDuration] = useState(() => formatDuration(selected.durationSec))

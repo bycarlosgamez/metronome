@@ -88,6 +88,8 @@ export function App() {
       setStatus("paused")
       return
     }
+    const total = segmentsRef.current.reduce((sum, segment) => sum + segment.durationSec, 0)
+    if (elapsedRef.current >= total) writeElapsed(0)
     const gen = (playGen.current += 1)
     try {
       if (!audioRef.current) {
@@ -121,6 +123,7 @@ export function App() {
   function onEdit() {
     playGen.current += 1
     stopNodes()
+    writeElapsed(0)
     setStatus("stopped")
     setSelectedId(session.sets[0].id)
     setView("edit")
@@ -167,6 +170,13 @@ function usePlayback(segments: Segment[]) {
   statusRef.current = status
   const totalRef = useRef(0)
   totalRef.current = segments.reduce((sum, segment) => sum + segment.durationSec, 0)
+
+  useEffect(() => {
+    if (elapsedRef.current > totalRef.current) {
+      elapsedRef.current = totalRef.current
+      setElapsed(totalRef.current)
+    }
+  }, [segments])
 
   function assignStatus(next: PlaybackStatus) {
     statusRef.current = next
