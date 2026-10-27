@@ -5,24 +5,85 @@ import { Edit } from "./Edit"
 import { createDefaultSession } from "./session"
 
 describe("Edit", () => {
-  it("writes simple length when Length blurs", async () => {
+  it("edits the session card and the tempo card", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
+    await user.click(screen.getByRole("radio", { name: "blue" }))
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ color: "blue" }))
+    await user.clear(screen.getByRole("textbox", { name: "BPM" }))
+    await user.type(screen.getByRole("textbox", { name: "BPM" }), "12")
+    await user.tab()
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ bpm: 40 }))
+    expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Click" })).toBeInTheDocument()
+  })
+
+  it("hides the repeat fields until the switches are on", async () => {
+    const user = userEvent.setup()
+    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)
+    expect(screen.queryByRole("textbox", { name: "Times" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "Rounds" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Step the tempo" }))
+    expect(screen.getByRole("textbox", { name: "Times" })).toHaveValue("2")
+    await user.click(screen.getByRole("button", { name: "Repeat the round" }))
+    expect(screen.getByRole("textbox", { name: "Rounds" })).toHaveValue("2")
+    expect(screen.getByRole("textbox", { name: "Between" })).toHaveValue("0:30")
+  })
+
+  it("builds complex cycles from the simple pattern", async () => {
     const user = userEvent.setup()
     const session = createDefaultSession(() => "cycle-1")
+    session.simple.practices = 3
+    session.simple.stepTempo = true
+    session.simple.times = 2
     const onChange = vi.fn()
-    const onDone = vi.fn()
-    render(<Edit session={session} onChange={onChange} onDone={onDone} />)
+    render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Complex" }))
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.type).toBe("complex")
+    expect(next.every).toBe(3)
+    expect(next.cycles).toHaveLength(6)
+    expect(next.cycles.at(-1).restSec).toBe(0)
+  })
 
-    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
-    const length = screen.getByRole("textbox", { name: "Length" })
-    expect(length).toHaveValue("2:00")
-    await user.clear(length)
-    await user.type(length, "0:00")
-    await user.tab()
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      simple: expect.objectContaining({ length: { unit: "time", seconds: 1 } }),
-    }))
+  it("returns to the same cycles when a complex session peeks at simple", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.cycles = [
+      { id: "a", length: { unit: "time", seconds: 30 }, restSec: 5 },
+      { id: "b", length: { unit: "bars", bars: 4 }, restSec: 0 },
+    ]
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Simple" }))
+    const preview = onChange.mock.calls.at(-1)?.[0]
+    expect(preview.type).toBe("simple")
+    expect(preview.simple.practices).toBe(1)
+    expect(preview.cycles).toHaveLength(2)
+    rerender(<Edit session={preview} onChange={onChange} onDone={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Complex" }))
+    const back = onChange.mock.calls.at(-1)?.[0]
+    expect(back.cycles.map((cycle: { id: string }) => cycle.id)).toEqual(["a", "b"])
+  })
 
-    await user.click(screen.getByRole("button", { name: "Done" }))
-    expect(onDone).toHaveBeenCalledOnce()
+  it("adds, moves, and refuses to remove the last cycle", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.every = 1
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("textbox", { name: "Every" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Remove cycle 1" })).toBeDisabled()
+    await user.click(screen.getByRole("button", { name: "Add cycle" }))
+    const added = onChange.mock.calls.at(-1)?.[0]
+    expect(added.cycles).toHaveLength(2)
+    rerender(<Edit session={added} onChange={onChange} onDone={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Move cycle 2 up" }))
+    const moved = onChange.mock.calls.at(-1)?.[0]
+    expect(moved.cycles[0].id).toBe(added.cycles[1].id)
   })
 })
