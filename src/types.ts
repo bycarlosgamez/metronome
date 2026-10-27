@@ -32,6 +32,13 @@ export type SimplePattern = {
   increaseEvery: IncreaseEvery
 }
 
+export type ComplexPattern = {
+  increaseEvery: IncreaseEvery
+  repeatRound: boolean
+  rounds: number
+  restBetweenSec: number
+}
+
 export type Session = {
   name: string
   color: SetColor
@@ -42,5 +49,6 @@ export type Session = {
   click: ClickId
   type: "simple" | "complex"
   simple: SimplePattern
+  complex: ComplexPattern
   cycles: Cycle[]
 }

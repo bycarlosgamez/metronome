@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   clampSession,
   createDefaultSession,
+  cycleGroupFromSimple,
   cyclesFromSimple,
+  freshComplex,
   freshSimple,
   ladderBpm,
   lengthSeconds,
@@ -23,6 +25,7 @@ describe("session", () => {
       click: "click-1",
       type: "simple",
       simple: freshSimple(),
+      complex: freshComplex(),
       cycles: [{ id: "cycle-1", length: { unit: "time", seconds: 120 }, restSec: 30 }],
     })
     expect(freshSimple()).toEqual({
@@ -36,6 +39,31 @@ describe("session", () => {
       restBetweenSec: 30,
       increaseEvery: "interval",
     })
+  })
+
+  it("loads a missing complex choice as interval and builds one round of repeated intervals", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    delete (session as { complex?: unknown }).complex
+    expect(clampSession(session).complex).toEqual(freshComplex())
+    session.complex = freshComplex()
+    session.complex.increaseEvery = "nope" as "interval"
+    expect(clampSession(session).complex.increaseEvery).toBe("interval")
+    session.simple = {
+      practices: 2,
+      length: { unit: "time", seconds: 30 },
+      restAfterSec: 5,
+      stepTempo: true,
+      times: 3,
+      repeatRound: true,
+      rounds: 2,
+      restBetweenSec: 60,
+      increaseEvery: "round",
+    }
+    const cycles = cycleGroupFromSimple(session, () => "id")
+    expect(cycles).toHaveLength(6)
+    expect(cycles.every((cycle) => cycle.bpm === undefined)).toBe(true)
+    expect(cycles.every((cycle) => cycle.restSec === 5)).toBe(true)
+    expect(cycles[0].length).toEqual({ unit: "time", seconds: 30 })
   })
 
   it("restarts an interval climb and stores the bpm a ladder would miss", () => {

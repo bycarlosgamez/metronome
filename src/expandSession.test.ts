@@ -98,4 +98,75 @@ describe("expandSession", () => {
     const plays = expandSession(session).filter((segment) => segment.kind === "play")
     expect(plays.map((segment) => segment.bpm)).toEqual([290, 300, 300])
   })
+
+  it("restarts a complex interval climb and uses between for the round", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.complex = {
+      increaseEvery: "interval",
+      repeatRound: true,
+      rounds: 2,
+      restBetweenSec: 60,
+    }
+    session.cycles = [0, 1, 2].map((index) => ({
+      id: `cycle-${index}`,
+      length: { unit: "time" as const, seconds: 30 },
+      restSec: 5,
+    }))
+    const segments = expandSession(session)
+    const plays = segments.filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([80, 85, 90, 80, 85, 90])
+    const rests = segments.filter((segment) => segment.kind === "rest")
+    expect(rests.map((segment) => segment.durationSec)).toEqual([5, 5, 60, 5, 5])
+    expect(segments.at(-1)?.kind).toBe("play")
+  })
+
+  it("holds one bpm across a complex round", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.complex.increaseEvery = "round"
+    session.complex.repeatRound = true
+    session.complex.rounds = 3
+    session.cycles = [0, 1, 2].map((index) => ({
+      id: `cycle-${index}`,
+      length: { unit: "time" as const, seconds: 30 },
+      restSec: 0,
+    }))
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([
+      80, 80, 80, 85, 85, 85, 90, 90, 90,
+    ])
+  })
+
+  it("keeps one cycle tempo and steps the neighbors", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.cycles = [
+      { id: "a", length: { unit: "time", seconds: 30 }, restSec: 0 },
+      { id: "b", length: { unit: "time", seconds: 30 }, restSec: 0, bpm: 100 },
+      { id: "c", length: { unit: "time", seconds: 30 }, restSec: 0 },
+    ]
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([80, 100, 90])
+  })
+
+  it("caps a stepped complex bpm at 300", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.bpm = 290
+    session.bpmIncrease = 20
+    session.cycles = [0, 1, 2].map((index) => ({
+      id: `cycle-${index}`,
+      length: { unit: "time" as const, seconds: 30 },
+      restSec: 0,
+    }))
+    const plays = expandSession(session).filter((segment) => segment.kind === "play")
+    expect(plays.map((segment) => segment.bpm)).toEqual([290, 300, 300])
+  })
 })

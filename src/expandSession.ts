@@ -1,4 +1,4 @@
-import { ladderBpm, lengthSeconds, sessionTitle, simplePlayedBpm } from "./session"
+import { lengthSeconds, sessionTitle, simplePlayedBpm } from "./session"
 import type { Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -27,10 +27,24 @@ type Resolved = {
 
 function resolved(session: Session): Resolved[] {
   if (session.type === "complex") {
-    return session.cycles.map((cycle, index) => {
-      const bpm = cycle.bpm ?? ladderBpm(session.bpm, session.bpmIncrease, session.every, index)
-      return { id: cycle.id, bpm, durationSec: lengthSeconds(cycle.length, session.meter, bpm), restSec: cycle.restSec }
-    })
+    const pattern = session.complex
+    const rounds = pattern.repeatRound ? pattern.rounds : 1
+    const items: Resolved[] = []
+    for (let round = 0; round < rounds; round += 1) {
+      session.cycles.forEach((cycle, index) => {
+        const lastOfRound = index === session.cycles.length - 1
+        const lastOfSession = round === rounds - 1 && lastOfRound
+        const bpm = cycle.bpm ?? simplePlayedBpm(session.bpm, session.bpmIncrease, pattern.increaseEvery, round, index)
+        items.push({
+          id: cycle.id,
+          bpm,
+          durationSec: lengthSeconds(cycle.length, session.meter, bpm),
+          restSec: lastOfSession ? 0 : lastOfRound ? pattern.restBetweenSec : cycle.restSec,
+          restRole: lastOfSession ? undefined : lastOfRound ? "between" : "after",
+        })
+      })
+    }
+    return items
   }
   const steps = session.simple.stepTempo ? session.simple.times : 1
   const rounds = session.simple.repeatRound ? session.simple.rounds : 1

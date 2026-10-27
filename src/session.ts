@@ -1,4 +1,4 @@
-import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern } from "./types"
+import { CLICKS, COLORS, METERS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -24,6 +24,41 @@ export function freshSimple(): SimplePattern {
   }
 }
 
+export function freshComplex(): ComplexPattern {
+  return {
+    increaseEvery: "interval",
+    repeatRound: false,
+    rounds: 2,
+    restBetweenSec: 30,
+  }
+}
+
+function clampComplex(pattern: ComplexPattern | undefined): ComplexPattern {
+  const base = pattern ?? freshComplex()
+  return {
+    increaseEvery: base.increaseEvery === "round" ? "round" : "interval",
+    repeatRound: Boolean(base.repeatRound),
+    rounds: Math.max(1, integer(base.rounds)),
+    restBetweenSec: Math.max(0, integer(base.restBetweenSec)),
+  }
+}
+
+export function cycleGroupFromSimple(session: Session, nextId: () => string): Cycle[] {
+  const pattern = clampSimple(session.simple)
+  const steps = pattern.stepTempo ? pattern.times : 1
+  const cycles: Cycle[] = []
+  for (let step = 0; step < steps; step += 1) {
+    for (let practice = 0; practice < pattern.practices; practice += 1) {
+      cycles.push({
+        id: nextId(),
+        length: { ...pattern.length },
+        restSec: pattern.restAfterSec,
+      })
+    }
+  }
+  return cycles
+}
+
 export function simplePlayedBpm(
   bpm: number,
   increase: number,
@@ -46,6 +81,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     click: "click-1",
     type: "simple",
     simple: freshSimple(),
+    complex: freshComplex(),
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
   }
 }
@@ -110,6 +146,7 @@ export function clampSession(session: Session): Session {
     click: CLICKS.includes(session.click) ? session.click : "click-1",
     type: session.type === "complex" ? "complex" : "simple",
     simple: clampSimple(session.simple),
+    complex: clampComplex(session.complex),
     cycles,
   }
 }
@@ -184,6 +221,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     click: CLICKS.includes(legacy.click as ClickId) ? (legacy.click as ClickId) : "click-1",
     type: "complex",
     simple: freshSimple(),
+    complex: freshComplex(),
     cycles: plays.map((play) => ({
       id: nextId(),
       length: { unit: "time", seconds: play.seconds },
