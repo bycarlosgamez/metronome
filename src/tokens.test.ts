@@ -8,6 +8,7 @@ describe("tokens", () => {
   it("defines the restyle values", () => {
     expect(css).toContain("--page: #0c0c0c;")
     expect(css).toContain("--surface: #1a1a1a;")
+    expect(css).toContain("--surface-raised: #2a2a2a;")
     expect(css).toContain("--ink: #ffffff;")
     expect(css).toContain("--ink-muted: #bdbdbd;")
     expect(css).toContain("--ink-on-yellow: #1a1a1a;")
