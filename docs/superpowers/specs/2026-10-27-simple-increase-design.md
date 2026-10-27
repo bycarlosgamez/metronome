@@ -54,7 +54,7 @@ Complex no longer keeps Every in that row. The later Complex spec gives it the s
 
 ## Switching to Complex
 
-The later Complex spec replaces this switch. It builds one cycle per practice and copies the round settings. It does not copy Times.
+The later Complex spec replaces this switch. It turns one round of the repeated intervals into the cycle group, including Times, and copies the round settings.
 
 ## Tests
 
