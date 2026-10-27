@@ -27,7 +27,7 @@ describe("Edit", () => {
     render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)
     expect(screen.queryByRole("textbox", { name: "Times" })).not.toBeInTheDocument()
     expect(screen.queryByRole("textbox", { name: "Rounds" })).not.toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Step the tempo" }))
+    await user.click(screen.getByRole("button", { name: "Repeat interval" }))
     expect(screen.getByRole("textbox", { name: "Times" })).toHaveValue("2")
     await user.click(screen.getByRole("button", { name: "Repeat the round" }))
     expect(screen.getByRole("textbox", { name: "Rounds" })).toHaveValue("2")
@@ -106,5 +106,21 @@ describe("Edit", () => {
     const totalSec = expandSession(session).reduce((sum, segment) => sum + segment.durationSec, 0)
     render(<Edit session={session} onChange={() => {}} onDone={() => {}} />)
     expect(screen.getByText(`Total ${formatClock(totalSec)}`)).toBeInTheDocument()
+  })
+
+  it("chooses a round increase and hides that choice on complex", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("group", { name: "Increase every" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Interval" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Round" }))
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      simple: expect.objectContaining({ increaseEvery: "round" }),
+    }))
+    await user.click(screen.getByRole("button", { name: "Complex" }))
+    expect(screen.queryByRole("group", { name: "Increase every" })).not.toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Every" })).toBeInTheDocument()
   })
 })

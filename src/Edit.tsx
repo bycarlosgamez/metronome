@@ -19,11 +19,19 @@ function lengthWithUnit(length: Length, unit: "time" | "bars"): Length {
   return { unit: "time", seconds: 1 }
 }
 
+const CLICK_LABELS: Record<ClickId, string> = {
+  "click-1": "Click 1",
+  "click-2": "Click 2",
+  "click-3": "Click 3",
+  "click-4": "Click 4",
+}
+
 function DraftField(props: {
   label: string
   value: string
   onCommit(text: string): void
   type?: "text" | "number"
+  bare?: boolean
 }) {
   const [text, setText] = useState(props.value)
   const textRef = useRef(text)
@@ -38,49 +46,61 @@ function DraftField(props: {
     }
   }, [props.value, commitEpoch])
 
+  const input = (
+    <input
+      type={props.type ?? "text"}
+      aria-label={props.label}
+      value={text}
+      onFocus={() => {
+        focused.current = true
+      }}
+      onChange={(event) => {
+        textRef.current = event.target.value
+        setText(event.target.value)
+      }}
+      onBlur={() => {
+        focused.current = false
+        props.onCommit(textRef.current)
+        setCommitEpoch((epoch) => epoch + 1)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur()
+      }}
+    />
+  )
+  if (props.bare) return input
   return (
     <label>
       {props.label}
-      <input
-        type={props.type ?? "text"}
-        aria-label={props.label}
-        value={text}
-        onFocus={() => {
-          focused.current = true
-        }}
-        onChange={(event) => {
-          textRef.current = event.target.value
-          setText(event.target.value)
-        }}
-        onBlur={() => {
-          focused.current = false
-          props.onCommit(textRef.current)
-          setCommitEpoch((epoch) => epoch + 1)
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur()
-        }}
-      />
+      {input}
     </label>
   )
 }
 
-function LengthUnitSelect(props: { length: Length; onChange(length: Length): void }) {
+function LengthField(props: {
+  label: string
+  length: Length
+  onText(text: string): void
+  onUnit(length: Length): void
+}) {
   return (
-    <label>
-      Length unit
-      <select
-        aria-label="Length unit"
-        value={props.length.unit}
-        onChange={(event) => {
-          const unit = event.target.value === "bars" ? "bars" : "time"
-          props.onChange(lengthWithUnit(props.length, unit))
-        }}
-      >
-        <option value="time">time</option>
-        <option value="bars">bars</option>
-      </select>
-    </label>
+    <div className="stacked-field">
+      <span className="field-label">{props.label}</span>
+      <div className="length-box">
+        <DraftField bare label={props.label} value={lengthText(props.length)} onCommit={props.onText} />
+        <select
+          aria-label={`${props.label} unit`}
+          value={props.length.unit}
+          onChange={(event) => {
+            const unit = event.target.value === "bars" ? "bars" : "time"
+            props.onUnit(lengthWithUnit(props.length, unit))
+          }}
+        >
+          <option value="time">time</option>
+          <option value="bars">bars</option>
+        </select>
+      </div>
+    </div>
   )
 }
 
@@ -93,24 +113,36 @@ function SimpleFields(props: { session: Session; commit(session: Session): void 
 
   return (
     <>
-      <DraftField label="Practices" value={String(pattern.practices)} onCommit={(text) => patch({ practices: Number(text) })} />
-      <DraftField label="Length" value={lengthText(pattern.length)} onCommit={(text) => patch({ length: lengthFromText(pattern.length.unit, text) })} />
-      <LengthUnitSelect length={pattern.length} onChange={(length) => patch({ length })} />
-      <DraftField label="Rest after" value={formatDuration(pattern.restAfterSec)} onCommit={(text) => patch({ restAfterSec: parseDuration(text) })} />
-      <button type="button" aria-pressed={pattern.stepTempo} onClick={() => patch({ stepTempo: !pattern.stepTempo })}>
-        Step the tempo
-      </button>
+      <div className="interval-row">
+        <DraftField label="Practices" value={String(pattern.practices)} onCommit={(text) => patch({ practices: Number(text) })} />
+        <LengthField
+          label="Length"
+          length={pattern.length}
+          onText={(text) => patch({ length: lengthFromText(pattern.length.unit, text) })}
+          onUnit={(length) => patch({ length })}
+        />
+        <DraftField label="Rest after" value={formatDuration(pattern.restAfterSec)} onCommit={(text) => patch({ restAfterSec: parseDuration(text) })} />
+      </div>
+      <div className="switch-row">
+        <span>Repeat interval</span>
+        <button type="button" className="switch" aria-label="Repeat interval" aria-pressed={pattern.stepTempo} onClick={() => patch({ stepTempo: !pattern.stepTempo })}>
+          {pattern.stepTempo ? "On" : "Off"}
+        </button>
+      </div>
       {pattern.stepTempo && (
         <DraftField label="Times" value={String(pattern.times)} onCommit={(text) => patch({ times: Number(text) })} />
       )}
-      <button type="button" aria-pressed={pattern.repeatRound} onClick={() => patch({ repeatRound: !pattern.repeatRound })}>
-        Repeat the round
-      </button>
+      <div className="switch-row">
+        <span>Repeat the round</span>
+        <button type="button" className="switch" aria-label="Repeat the round" aria-pressed={pattern.repeatRound} onClick={() => patch({ repeatRound: !pattern.repeatRound })}>
+          {pattern.repeatRound ? "On" : "Off"}
+        </button>
+      </div>
       {pattern.repeatRound && (
-        <>
+        <div className="pair-row">
           <DraftField label="Rounds" value={String(pattern.rounds)} onCommit={(text) => patch({ rounds: Number(text) })} />
           <DraftField label="Between" value={formatDuration(pattern.restBetweenSec)} onCommit={(text) => patch({ restBetweenSec: parseDuration(text) })} />
-        </>
+        </div>
       )}
     </>
   )
@@ -156,14 +188,14 @@ function CycleList(props: { session: Session; commit(session: Session): void }) 
     <>
       {session.cycles.map((cycle, index) => (
         <div className="cycle-row" key={cycle.id}>
-          <span>{index + 1}</span>
+          <span className="cycle-index">{index + 1}</span>
           <div>
-            <DraftField
-              label="Length"
-              value={lengthText(cycle.length)}
-              onCommit={(text) => replace(index, { ...cycle, length: lengthFromText(cycle.length.unit, text) })}
+            <LengthField
+              label="Practice"
+              length={cycle.length}
+              onText={(text) => replace(index, { ...cycle, length: lengthFromText(cycle.length.unit, text) })}
+              onUnit={(length) => replace(index, { ...cycle, length })}
             />
-            <LengthUnitSelect length={cycle.length} onChange={(length) => replace(index, { ...cycle, length })} />
             {cycle.bpm !== undefined && (
               <DraftField
                 label={`Cycle ${index + 1} BPM`}
@@ -184,26 +216,27 @@ function CycleList(props: { session: Session; commit(session: Session): void }) 
                 Use session tempo
               </button>
             )}
-            <button type="button" disabled={index === 0} onClick={() => move(index, -1)}>
-              {`Move cycle ${index + 1} up`}
+            <button type="button" aria-label={`Move cycle ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
+              Up
             </button>
-            <button type="button" disabled={index === session.cycles.length - 1} onClick={() => move(index, 1)}>
-              {`Move cycle ${index + 1} down`}
+            <button type="button" aria-label={`Move cycle ${index + 1} down`} disabled={index === session.cycles.length - 1} onClick={() => move(index, 1)}>
+              Down
             </button>
             <button
               type="button"
+              aria-label={`Remove cycle ${index + 1}`}
               disabled={session.cycles.length === 1}
               onClick={() => {
                 if (session.cycles.length === 1) return
                 commit({ ...session, cycles: session.cycles.filter((_, i) => i !== index) })
               }}
             >
-              {`Remove cycle ${index + 1}`}
+              Remove
             </button>
           </div>
         </div>
       ))}
-      <button type="button" onClick={add}>Add cycle</button>
+      <button type="button" className="add-cycle" onClick={add}>Add cycle</button>
     </>
   )
 }
@@ -270,6 +303,7 @@ export function Edit(props: {
       </header>
       <div className="editor-cards">
         <section className="editor-card">
+          <p className="card-title">Session</p>
           <label>
             Name
             <input
@@ -299,6 +333,7 @@ export function Edit(props: {
           </div>
         </section>
         <section className="editor-card">
+          <p className="card-title">Tempo</p>
           <DraftField label="BPM" value={String(session.bpm)} onCommit={(text) => commit({ ...session, bpm: Number(text) })} />
           <label>
             Meter
@@ -314,8 +349,25 @@ export function Edit(props: {
           </label>
           <div className="increase-row">
             <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
-            {session.type === "complex" && (
+            {session.type === "complex" ? (
               <DraftField label="Every" value={String(session.every)} onCommit={(text) => commit({ ...session, every: Number(text) })} />
+            ) : (
+              <div className="type-switch" role="group" aria-label="Increase every">
+                <button
+                  type="button"
+                  aria-pressed={session.simple.increaseEvery !== "round"}
+                  onClick={() => commit({ ...session, simple: { ...session.simple, increaseEvery: "interval" } })}
+                >
+                  Interval
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={session.simple.increaseEvery === "round"}
+                  onClick={() => commit({ ...session, simple: { ...session.simple, increaseEvery: "round" } })}
+                >
+                  Round
+                </button>
+              </div>
             )}
           </div>
           <label>
@@ -326,16 +378,24 @@ export function Edit(props: {
               onChange={(event) => commit({ ...session, click: event.target.value as ClickId })}
             >
               {CLICKS.map((click) => (
-                <option key={click} value={click}>{click}</option>
+                <option key={click} value={click}>{CLICK_LABELS[click]}</option>
               ))}
             </select>
           </label>
         </section>
       </div>
-      <section className="editor-builder">
-        {session.type === "simple" ? <SimpleFields session={session} commit={commit} /> : <CycleList session={session} commit={commit} />}
-        <p>Total {formatClock(totalSec)}</p>
-      </section>
+      {session.type === "simple" ? (
+        <section className="editor-builder">
+          <p className="card-title">Interval</p>
+          <SimpleFields session={session} commit={commit} />
+          <p className="total">Total {formatClock(totalSec)}</p>
+        </section>
+      ) : (
+        <section className="cycle-list">
+          <CycleList session={session} commit={commit} />
+          <p className="total">Total {formatClock(totalSec)}</p>
+        </section>
+      )}
     </main>
   )
 }
