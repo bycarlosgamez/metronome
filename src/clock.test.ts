@@ -6,6 +6,7 @@ import { createDefaultSession } from "./session"
 describe("clock", () => {
   it("starts on the first count-in beat and enters the playing stretch after that bar", () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     const segments = expandSession(session)
     const countIn = (4 * 60) / 80
     const start = snapshotAt(segments, 0)
@@ -86,9 +87,6 @@ describe("clock", () => {
     session.subdivision = "eighth"
     session.slots = ["click-1", "click-1"]
     const segments = expandSession(session)
-    const countIn = clicksInSegment(segments[0])
-    expect(countIn).toHaveLength(4)
-    expect(countIn.map((click) => click.offsetSec)).toEqual([0, 0.75, 1.5, 2.25])
 
     const play = segments.find((segment) => segment.kind === "play")!
     const clicks = clicksInSegment(play)
@@ -97,7 +95,7 @@ describe("clock", () => {
     expect(clicks[1]).toMatchObject({ beat: 1, accent: false, click: "click-1" })
     expect(clicks[2].offsetSec).toBeCloseTo(0.75)
     expect(clicks[2]).toMatchObject({ beat: 2, accent: false })
-    expect(snapshotAt(segments, segments[0].durationSec + 0.4).beat).toBe(1)
+    expect(snapshotAt(segments, 0.4).beat).toBe(1)
 
     session.slots = ["click-1", "off"]
     const beatsOnly = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
@@ -115,14 +113,13 @@ describe("clock", () => {
     expect(fourEight[1].offsetSec - fourEight[0].offsetSec).toBeCloseTo(60 / 80)
   })
 
-  it("splits one beat into five quintuplet clicks and leaves the count-in plain", () => {
+  it("splits one beat into five quintuplet clicks", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
     session.time.increaseEvery = "time"
     session.subdivision = "quintuplet"
     session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
     const segments = expandSession(session)
-    expect(clicksInSegment(segments[0])).toHaveLength(4)
     const play = segments.find((segment) => segment.kind === "play")!
     expect(clicksInSegment(play).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
     expect(clicksInSegment(play)[0].accent).toBe(true)

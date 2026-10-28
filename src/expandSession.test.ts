@@ -174,17 +174,16 @@ describe("expandSession", () => {
     expect(plays.map((segment) => segment.bpm)).toEqual([290, 300, 300])
   })
 
-  it("plays a time session as one count-in and one climb by clock time", () => {
+  it("plays a time session as one climb by clock time with no count-in", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
     session.bpm = 80
     session.bpmIncrease = 5
     session.time = { seconds: 120, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const segments = expandSession(session)
-    expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
-    expect(segments[0]).toMatchObject({ bpm: 80, meter: "4/4", durationSec: 3 })
-    expect(segments[1]).toMatchObject({ bpm: 80, durationSec: 270, meter: "4/4" })
-    expect(segments[1].steps).toEqual([
+    expect(segments.map((segment) => segment.kind)).toEqual(["play"])
+    expect(segments[0]).toMatchObject({ bpm: 80, durationSec: 270, meter: "4/4" })
+    expect(segments[0].steps).toEqual([
       { atSec: 0, bpm: 80 },
       { atSec: 30, bpm: 85 },
       { atSec: 60, bpm: 90 },
@@ -254,14 +253,13 @@ describe("expandSession", () => {
     expect(play?.steps?.map((step) => step.bpm)).toEqual([290, 300])
   })
 
-  it("plays an Off session as a count-in plus one endless play", () => {
+  it("plays an Off session as one endless play with no count-in", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
     const segments = expandSession(session)
-    expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
-    expect(clicksInSegment(segments[0])).toHaveLength(4)
-    expect(segments[1].durationSec).toBe(Number.POSITIVE_INFINITY)
-    expect(segments[1].steps).toEqual([{ atSec: 0, bpm: 60 }])
+    expect(segments.map((segment) => segment.kind)).toEqual(["play"])
+    expect(segments[0].durationSec).toBe(Number.POSITIVE_INFINITY)
+    expect(segments[0].steps).toEqual([{ atSec: 0, bpm: 60 }])
   })
 
   it("holds the tempo and stops at the end when the amount is 0", () => {

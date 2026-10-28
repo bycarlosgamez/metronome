@@ -385,7 +385,7 @@ describe("App", () => {
     await user.clear(bpm)
     await user.type(bpm, "100")
     await user.tab()
-    expect(screen.getByTestId("bpm-elapsed")).toHaveTextContent("0:12")
+    expect(screen.getByTestId("bpm-elapsed")).toHaveTextContent("0:13")
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 })

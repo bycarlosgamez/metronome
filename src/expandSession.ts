@@ -93,8 +93,9 @@ export function expandSession(session: Session): Segment[] {
   const label = sessionTitle(session)
   const plays = resolved(session)
   return plays.flatMap((play, index) => {
-    const segments: Segment[] = [
-      {
+    const segments: Segment[] = []
+    if (session.type !== "time") {
+      segments.push({
         kind: "count-in",
         setId: play.id,
         label,
@@ -106,23 +107,23 @@ export function expandSession(session: Session): Segment[] {
         setIndex: index,
         cycleIndex: index,
         click: session.click,
-      },
-      {
-        kind: "play",
-        setId: play.id,
-        label,
-        repetition: index + 1,
-        bpm: play.bpm,
-        meter: session.meter,
-        durationSec: play.durationSec,
-        color: session.color,
-        setIndex: index,
-        cycleIndex: index,
-        click: session.click,
-        slots: session.slots,
-        ...(play.steps ? { steps: play.steps } : {}),
-      },
-    ]
+      })
+    }
+    segments.push({
+      kind: "play",
+      setId: play.id,
+      label,
+      repetition: index + 1,
+      bpm: play.bpm,
+      meter: session.meter,
+      durationSec: play.durationSec,
+      color: session.color,
+      setIndex: index,
+      cycleIndex: index,
+      click: session.click,
+      slots: session.slots,
+      ...(play.steps ? { steps: play.steps } : {}),
+    })
     if (index < plays.length - 1 && play.restSec > 0) {
       segments.push({
         kind: "rest",
