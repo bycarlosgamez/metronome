@@ -23,8 +23,12 @@ export function BpmSheet(props: {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
   const [targetText, setTargetText] = useState<string | null>(null)
+  const [stepText, setStepText] = useState<string | null>(null)
+  const [everyText, setEveryText] = useState<string | null>(null)
   const bpmRef = useRef<string | null>(null)
   const targetRef = useRef<string | null>(null)
+  const stepRef = useRef<string | null>(null)
+  const everyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!props.open) return
@@ -70,6 +74,7 @@ export function BpmSheet(props: {
   return (
     <div
       ref={overlayRef}
+      inert={!props.open}
       className={`sheet-overlay${props.open ? " open" : ""}`}
       aria-modal={props.open}
       role="dialog"
@@ -156,13 +161,19 @@ export function BpmSheet(props: {
                 <input
                   id="bpm-sheet-step"
                   inputMode="numeric"
-                  value={String(props.session.bpmIncrease)}
-                  onChange={(e) => {
-                    const n = Math.max(0, Math.round(Number(e.target.value)))
-                    if (Number.isFinite(n)) {
+                  value={stepText ?? String(props.session.bpmIncrease)}
+                  onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                  onBlur={() => {
+                    const typed = stepRef.current
+                    setStepText(null)
+                    stepRef.current = null
+                    if (typed === null) return
+                    const n = Math.max(0, Math.round(Number(typed)))
+                    if (Number.isFinite(n) && n !== props.session.bpmIncrease) {
                       props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
                     }
                   }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
                 />
               </div>
               <div className="increase-field">
@@ -172,10 +183,17 @@ export function BpmSheet(props: {
                 <input
                   id="bpm-sheet-every"
                   inputMode="numeric"
-                  value={String(increaseEvery === "bars" ? everyBars : everySec)}
-                  onChange={(e) => {
-                    const n = Math.max(1, Math.round(Number(e.target.value)))
-                    if (Number.isFinite(n)) {
+                  value={everyText ?? String(increaseEvery === "bars" ? everyBars : everySec)}
+                  onChange={(e) => { everyRef.current = e.target.value; setEveryText(e.target.value) }}
+                  onBlur={() => {
+                    const typed = everyRef.current
+                    setEveryText(null)
+                    everyRef.current = null
+                    if (typed === null) return
+                    const n = Math.max(1, Math.round(Number(typed)))
+                    if (!Number.isFinite(n)) return
+                    const current = increaseEvery === "bars" ? everyBars : everySec
+                    if (n !== current) {
                       props.onChange(clampSession({
                         ...props.session,
                         time: increaseEvery === "bars"
@@ -184,6 +202,7 @@ export function BpmSheet(props: {
                       }))
                     }
                   }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
                 />
               </div>
             </div>

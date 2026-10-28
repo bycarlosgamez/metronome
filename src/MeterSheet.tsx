@@ -22,6 +22,7 @@ export function MeterSheet(props: {
   return (
     <div
       ref={overlayRef}
+      inert={!props.open}
       className={`sheet-overlay${props.open ? " open" : ""}`}
       aria-modal={props.open}
       role="dialog"
