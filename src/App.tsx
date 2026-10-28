@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { createClickBuffers, scheduleSegment, type ClickBuffers } from "./audio"
+import { createClickSounds, scheduleSegment, type ClickSounds } from "./audio"
 import { clicksInSegment, snapshotAt, stepIndexAt } from "./clock"
 import { Edit } from "./Edit"
 import { expandSession, type Segment } from "./expandSession"
@@ -14,8 +14,7 @@ export function App() {
   const { elapsed, status, setStatus, elapsedRef, setElapsed } = usePlayback(segments)
   const snapshot = snapshotAt(segments, elapsed)
   const audioRef = useRef<AudioContext | null>(null)
-  const buffersRef = useRef<ClickBuffers | null>(null)
-  const clickRef = useRef(session.click)
+  const buffersRef = useRef<ClickSounds | null>(null)
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
   const viewRef = useRef(view)
   const playGen = useRef(0)
@@ -23,11 +22,9 @@ export function App() {
   const [seekCount, setSeekCount] = useState(0)
   const segmentsRef = useRef(segments)
   const remainingRef = useRef(snapshot.segmentRemainingSec)
-  const clickIdRef = useRef(session.click)
   viewRef.current = view
   segmentsRef.current = segments
   remainingRef.current = snapshot.segmentRemainingSec
-  clickIdRef.current = session.click
 
   function stopNodes() {
     for (const node of nodesRef.current) {
@@ -52,11 +49,7 @@ export function App() {
     }
     const audio = audioRef.current
     if (!audio) return
-    const click = clickIdRef.current
-    if (!buffersRef.current || clickRef.current !== click) {
-      buffersRef.current = createClickBuffers(audio, click)
-      clickRef.current = click
-    }
+    if (!buffersRef.current) buffersRef.current = createClickSounds(audio)
     const segment = segmentsRef.current[snapshot.segmentIndex]
     const into = segment.durationSec - remainingRef.current
     const idealWhen = audio.currentTime - into

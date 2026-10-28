@@ -1,5 +1,6 @@
 import type { Segment } from "./expandSession"
 import { beatsInMeter } from "./session"
+import type { ClickId } from "./types"
 
 export type ClockSnapshot = {
   segmentIndex: number
@@ -9,7 +10,7 @@ export type ClockSnapshot = {
   remainingSec: number
 }
 
-export type ClickMark = { offsetSec: number; beat: number; accent: boolean }
+export type ClickMark = { offsetSec: number; beat: number; accent: boolean; click: ClickId }
 
 export function snapshotAt(segments: Segment[], elapsedSec: number): ClockSnapshot {
   const total = segments.reduce((sum, segment) => sum + segment.durationSec, 0)
@@ -50,18 +51,23 @@ export function bpmAt(segment: Segment, offsetSec: number): number {
 
 export function clicksInSegment(segment: Segment): ClickMark[] {
   if (segment.kind === "rest") return []
+  const slots = segment.kind === "count-in" || !segment.slots?.length ? [segment.click] : segment.slots
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
   const marks: ClickMark[] = []
   let offsetSec = 0
-  let index = 0
+  let beatIndex = 0
   while (offsetSec < segment.durationSec - 1e-9) {
-    const bpm = bpmAt(segment, offsetSec)
-    const beat = (index % beats) + 1
-    marks.push({ offsetSec, beat, accent: beat === 1 })
-    const next = offsetSec + 60 / bpm
-    if (!(next > offsetSec)) break
-    offsetSec = next
-    index += 1
+    const beatDur = 60 / bpmAt(segment, offsetSec)
+    if (!(beatDur > 0)) break
+    const beat = (beatIndex % beats) + 1
+    const slotDur = beatDur / slots.length
+    slots.forEach((slot, index) => {
+      const at = offsetSec + index * slotDur
+      if (at >= segment.durationSec - 1e-9 || slot === "off") return
+      marks.push({ offsetSec: at, beat, accent: beat === 1 && index === 0, click: slot })
+    })
+    offsetSec += beatDur
+    beatIndex += 1
   }
   return marks
 }

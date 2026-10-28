@@ -590,4 +590,29 @@ describe("Practice", () => {
     await user.tab()
     expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(60)
   })
+
+  it("shows one dot per beat while the eighths play", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.subdivision = "eighth"
+    session.slots = ["click-1", "click-2"]
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play")
+    const elapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed + 0.4)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getAllByTestId(/beat-/)).toHaveLength(4)
+    expect(screen.getByTestId("beat-1")).toHaveAttribute("data-current", "true")
+  })
 })

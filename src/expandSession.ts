@@ -1,5 +1,5 @@
 import { lengthSeconds, sessionTitle, simplePlayedBpm, timeSteps } from "./session"
-import type { Meter, Session, SetColor } from "./types"
+import type { ClickId, Meter, Session, SetColor, Slot } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
 
@@ -14,6 +14,8 @@ export type Segment = {
   color: SetColor | "slate"
   setIndex: number
   cycleIndex: number
+  click: ClickId
+  slots?: Slot[]
   restRole?: "after" | "between"
   steps?: { atSec: number; bpm: number }[]
 }
@@ -103,6 +105,7 @@ export function expandSession(session: Session): Segment[] {
         color: session.color,
         setIndex: index,
         cycleIndex: index,
+        click: session.click,
       },
       {
         kind: "play",
@@ -115,6 +118,8 @@ export function expandSession(session: Session): Segment[] {
         color: session.color,
         setIndex: index,
         cycleIndex: index,
+        click: session.click,
+        slots: session.slots,
         ...(play.steps ? { steps: play.steps } : {}),
       },
     ]
@@ -130,6 +135,7 @@ export function expandSession(session: Session): Segment[] {
         color: "slate",
         setIndex: index,
         cycleIndex: index,
+        click: session.click,
         restRole: play.restRole,
       })
     }

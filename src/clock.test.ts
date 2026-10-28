@@ -58,6 +58,7 @@ describe("clock", () => {
       color: "red",
       setIndex: 0,
       cycleIndex: 0,
+      click: "click-1",
       steps: [
         { atSec: 0, bpm: 80 },
         { atSec: 1, bpm: 85 },
@@ -73,5 +74,41 @@ describe("clock", () => {
     expect(snapshotAt([segment], 1.5).beat).toBe(3)
     expect(snapshotAt([segment], 1 + 1e-6).beat).toBe(2)
     expect(snapshotAt([segment], 1.5 + 1e-6).beat).toBe(3)
+  })
+
+  it("divides a beat into eighths and skips an off slot", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 80
+    session.meter = "4/4"
+    session.subdivision = "eighth"
+    session.slots = ["click-1", "click-1"]
+    const segments = expandSession(session)
+    const countIn = clicksInSegment(segments[0])
+    expect(countIn).toHaveLength(4)
+    expect(countIn.map((click) => click.offsetSec)).toEqual([0, 0.75, 1.5, 2.25])
+
+    const play = segments.find((segment) => segment.kind === "play")!
+    const clicks = clicksInSegment(play)
+    expect(clicks[0]).toMatchObject({ offsetSec: 0, beat: 1, accent: true, click: "click-1" })
+    expect(clicks[1].offsetSec).toBeCloseTo(0.375)
+    expect(clicks[1]).toMatchObject({ beat: 1, accent: false, click: "click-1" })
+    expect(clicks[2].offsetSec).toBeCloseTo(0.75)
+    expect(clicks[2]).toMatchObject({ beat: 2, accent: false })
+    expect(snapshotAt(segments, segments[0].durationSec + 0.4).beat).toBe(1)
+
+    session.slots = ["click-1", "off"]
+    const beatsOnly = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    expect(beatsOnly.slice(0, 4).map((click) => click.offsetSec)).toEqual([0, 0.75, 1.5, 2.25])
+
+    session.meter = "6/8"
+    session.subdivision = "quarter"
+    session.slots = ["click-1"]
+    const six = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    expect(six.slice(0, 6).map((click) => click.beat)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(six[1].offsetSec - six[0].offsetSec).toBeCloseTo(60 / 80)
+
+    session.meter = "4/8"
+    const fourEight = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    expect(fourEight[1].offsetSec - fourEight[0].offsetSec).toBeCloseTo(60 / 80)
   })
 })

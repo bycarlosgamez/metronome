@@ -1,6 +1,6 @@
 import { clicksInSegment } from "./clock"
 import type { Segment } from "./expandSession"
-import type { ClickId } from "./types"
+import { CLICKS, type ClickId } from "./types"
 
 export type ClickBuffers = {
   normal: AudioBuffer
@@ -26,18 +26,25 @@ export function createClickBuffers(ctx: AudioContext, click: ClickId): ClickBuff
   }
 }
 
-export function scheduleSegment(
-  ctx: AudioContext,
-  buffers: ClickBuffers,
-  segment: Segment,
-  when: number,
-): AudioBufferSourceNode[] {
-  if (segment.kind === "rest") {
-    return [startBuffer(ctx, buffers.restCue, when)]
-  }
-  return clicksInSegment(segment).map((click) =>
-    startBuffer(ctx, click.accent ? buffers.accent : buffers.normal, when + click.offsetSec),
-  )
+export type ClickSounds = {
+  clicks: Record<ClickId, { normal: AudioBuffer; accent: AudioBuffer }>
+  restCue: AudioBuffer
+}
+
+export function createClickSounds(ctx: AudioContext): ClickSounds {
+  const clicks = Object.fromEntries(CLICKS.map((click) => {
+    const buffers = createClickBuffers(ctx, click)
+    return [click, { normal: buffers.normal, accent: buffers.accent }]
+  })) as ClickSounds["clicks"]
+  return { clicks, restCue: createClickBuffers(ctx, "click-1").restCue }
+}
+
+export function scheduleSegment(ctx: AudioContext, sounds: ClickSounds, segment: Segment, when: number) {
+  if (segment.kind === "rest") return [startBuffer(ctx, sounds.restCue, when)]
+  return clicksInSegment(segment).map((mark) => {
+    const buffers = sounds.clicks[mark.click]
+    return startBuffer(ctx, mark.accent ? buffers.accent : buffers.normal, when + mark.offsetSec)
+  })
 }
 
 function startBuffer(ctx: AudioContext, buffer: AudioBuffer, when: number): AudioBufferSourceNode {
