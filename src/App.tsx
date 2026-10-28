@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClickSounds, scheduleClicks, scheduleSegment, type ClickSounds } from "./audio"
-import { clickWindow, clicksInSegment, snapshotAt, stepIndexAt } from "./clock"
+import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt, stepIndexAt } from "./clock"
 import { Edit } from "./Edit"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
@@ -82,7 +82,7 @@ export function App() {
       nodesRef.current = keep(scheduled, marks)
       return () => stopNodes()
     }
-    let until = into
+    let until = scheduleOrigin(into)
     const place = () => {
       const from = until
       const window = clickWindow(segment, from)

@@ -77,6 +77,10 @@ export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segmen
   return marks
 }
 
+export function scheduleOrigin(intoSec: number): number {
+  return Math.max(0, intoSec - 0.05)
+}
+
 export function clickWindow(segment: Segment, fromSec: number): { untilSec: number; marks: ClickMark[] } {
   let untilSec = Math.max(0, fromSec)
   let guard = 0

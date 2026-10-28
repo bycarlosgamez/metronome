@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { clickWindow, clicksInSegment, snapshotAt } from "./clock"
+import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt } from "./clock"
 import { expandSession, type Segment } from "./expandSession"
 import { createDefaultSession } from "./session"
 
@@ -139,5 +139,14 @@ describe("clock", () => {
     const second = clickWindow(play, first.untilSec)
     expect(second.marks.map((mark) => mark.offsetSec)).toEqual([2, 3])
     expect(clicksInSegment(play)).toEqual([])
+  })
+
+  it("includes a downbeat that is still inside the scheduling grace", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 80
+    const play = expandSession(session).find((segment) => segment.kind === "play")!
+    const origin = scheduleOrigin(0.02)
+    expect(origin).toBe(0)
+    expect(clickWindow(play, origin).marks[0].offsetSec).toBe(0)
   })
 })
