@@ -48,7 +48,12 @@ describe("Edit", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "1 click" }), "click-4")
     const next = onChange.mock.calls.at(-1)?.[0]
     expect(next.click).toBe("click-4")
-    expect(next.slots[0]).toBe("click-4")
+    expect(next.slots).toEqual(["click-4", "off", "click-2"])
+    rerender(<Edit session={{ ...muted, slots: [...muted.slots] }} onChange={onChange} onDone={() => {}} />)
+    await user.selectOptions(screen.getByRole("combobox", { name: "1 click" }), "off")
+    const cleared = onChange.mock.calls.at(-1)?.[0]
+    expect(cleared.click).toBe("click-2")
+    expect(cleared.slots[0]).toBe("off")
   })
 
   it("hides the repeat fields until the switches are on", async () => {

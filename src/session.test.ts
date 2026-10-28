@@ -262,5 +262,7 @@ describe("session", () => {
     session.click = "click-2"
     session.slots = ["click-3"]
     expect(clampSession(session).slots).toEqual(["click-3", "click-2"])
+    session.slots = ["off", "nope"]
+    expect(clampSession(session).slots).toEqual(["off", "click-2"])
   })
 })

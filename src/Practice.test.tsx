@@ -617,4 +617,74 @@ describe("Practice", () => {
     expect(screen.getAllByTestId(/beat-/)).toHaveLength(4)
     expect(screen.getByTestId("beat-1")).toHaveAttribute("data-current", "true")
   })
+
+  it("shows one dot per beat in a 16/8 play bar", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.meter = "16/8"
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play")
+    const elapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getAllByTestId(/beat-/)).toHaveLength(16)
+  })
+
+  it("shows sixteenth syllables on the stage and leaves a beat unlabeled", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.subdivision = "sixteenth"
+    session.slots = ["click-1", "click-1", "click-1", "click-1"]
+    const segments = expandSession(session)
+    const view = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByText("e")).toBeVisible()
+    expect(screen.getByText("&")).toBeVisible()
+    expect(screen.getByText("a")).toBeVisible()
+    expect(screen.getByRole("combobox", { name: "e click" })).toHaveAccessibleName("e click")
+    expect(screen.getByRole("combobox", { name: "& click" })).toHaveAccessibleName("& click")
+    expect(screen.getByRole("combobox", { name: "a click" })).toHaveAccessibleName("a click")
+
+    session.subdivision = "quarter"
+    session.slots = ["click-1"]
+    const beatSegments = expandSession(session)
+    view.rerender(
+      <Practice
+        session={session}
+        segments={beatSegments}
+        snapshot={snapshotAt(beatSegments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("combobox", { name: "Beat click" })).toHaveAccessibleName("Beat click")
+    expect(document.querySelector(".slot-row [aria-hidden='true']")).toBeNull()
+  })
 })

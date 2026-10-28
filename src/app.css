@@ -14,11 +14,10 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .stage p { margin: 0; }
 .stage-time { font-size: var(--time-size); font-weight: 700; letter-spacing: -0.04em; line-height: 0.9; margin: 0; background: transparent; border: 0; color: inherit; text-align: center; padding: 0; }
 .stage p.stage-meta { margin: 0 0 16px; display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
-.stage-meta input, .stage-meter { background: transparent; border: 0; color: inherit; font: inherit; text-align: center; padding: 0; }
-.stage-meta input { width: 3.5ch; }
-.stage-meter { appearance: none; margin-top: -8px; }
-.stage-time:focus, .stage-meta input:focus, .stage-meter:focus, .stage label > select:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }
-.beats { display: flex; gap: 8px; }
+.stage-meta input { background: transparent; border: 0; color: inherit; font: inherit; text-align: center; padding: 0; width: 3.5ch; }
+.stage select { appearance: none; background: transparent; border: 0; color: inherit; width: auto; text-align: center; }
+.stage-time:focus, .stage-meta input:focus, .stage select:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }
+.beats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .beats span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, 0.22); }
 .beats span[data-current="true"] { background: var(--ink); color: var(--play-ink); }
 .strip { display: flex; gap: 8px; overflow-x: auto; padding: 20px 16px 28px; }
@@ -105,10 +104,9 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   background-size: 12px 12px;
 }
 .stage .signature { justify-content: center; }
-.stage .signature select { background: transparent; color: inherit; border: 0; text-align: center; }
 .stage label { display: flex; align-items: center; justify-content: center; gap: 8px; }
-.stage label > select { background: transparent; color: inherit; border: 0; width: auto; appearance: none; text-align: center; }
 .slot-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .editor-screen .slot-row select {
   width: auto;
   appearance: none;
@@ -120,4 +118,3 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   background-size: 12px 12px;
 }
 .stage .slot-row { justify-content: center; }
-.stage .slot-row select { width: auto; background-color: transparent; color: inherit; border: 0; }

@@ -48,22 +48,24 @@ export function Signature(props: { session: Session; onChange(session: Session):
       </label>
       <div className="slot-row">
         {labels[props.session.subdivision].map((label, index) => (
-          <select
-            key={label}
-            aria-label={`${label} click`}
-            value={props.session.slots[index]}
-            onChange={(event) => {
-              const slot = event.target.value as Slot
-              const slots = props.session.slots.map((current, slotIndex) => slotIndex === index ? slot : current)
-              const click = index === 0 && slot !== "off" ? slot : props.session.click
-              props.onChange({ ...props.session, slots, click })
-            }}
-          >
-            {CLICKS.map((click) => (
-              <option key={click} value={click}>{`Click ${click.slice(-1)}`}</option>
-            ))}
-            <option value="off">Off</option>
-          </select>
+          <div key={label} className="slot">
+            <select
+              aria-label={`${label} click`}
+              value={props.session.slots[index]}
+              onChange={(event) => {
+                const slot = event.target.value as Slot
+                const slots = props.session.slots.map((current, slotIndex) => slotIndex === index ? slot : current)
+                const click = index === 0 && slot !== "off" ? slot : props.session.click
+                props.onChange({ ...props.session, slots, click })
+              }}
+            >
+              {CLICKS.map((click) => (
+                <option key={click} value={click}>{`Click ${click.slice(-1)}`}</option>
+              ))}
+              <option value="off">Off</option>
+            </select>
+            {props.session.subdivision !== "quarter" && <span aria-hidden="true">{label}</span>}
+          </div>
         ))}
       </div>
     </>
