@@ -32,6 +32,48 @@ function BarsIcon() {
   )
 }
 
+function amountValue(text: string): number {
+  const parsed = Number(text)
+  if (!Number.isFinite(parsed)) return 0
+  return Math.max(0, Math.round(parsed))
+}
+
+function ClimbField(props: {
+  label: string
+  value: string
+  onCommit(text: string): void
+}) {
+  const [text, setText] = useState<string | null>(null)
+  const textRef = useRef<string | null>(null)
+  return (
+    <label>
+      {props.label}
+      <input
+        aria-label={props.label}
+        value={text ?? props.value}
+        onFocus={() => {
+          textRef.current = props.value
+          setText(props.value)
+        }}
+        onChange={(event) => {
+          textRef.current = event.target.value
+          setText(event.target.value)
+        }}
+        onBlur={() => {
+          const typed = textRef.current
+          textRef.current = null
+          setText(null)
+          if (typed === null || typed === props.value) return
+          props.onCommit(typed)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur()
+        }}
+      />
+    </label>
+  )
+}
+
 export function StagePicks(props: { session: Session; onChange(session: Session): void }) {
   const [open, setOpen] = useState<"meter" | "subdivision" | "increase" | null>(null)
   const meterDescriptionId = useId()
@@ -162,48 +204,38 @@ export function StagePicks(props: { session: Session; onChange(session: Session)
           ))}
           {increaseEvery !== "off" && (
             <>
-              <label>
-                Amount
-                <input
-                  aria-label="Amount"
-                  value={String(props.session.bpmIncrease)}
-                  onChange={(event) => {
-                    props.onChange({
-                      ...props.session,
-                      bpmIncrease: Math.max(0, Math.round(Number(event.target.value))),
-                    })
-                  }}
-                />
-              </label>
-              <label>
-                Every
-                <input
-                  aria-label="Every"
-                  value={increaseEvery === "bars" ? String(props.session.time.everyBars) : formatDuration(props.session.time.everySec)}
-                  onChange={(event) => {
-                    const value = event.target.value
-                    props.onChange({
-                      ...props.session,
-                      time: increaseEvery === "bars"
-                        ? { ...props.session.time, everyBars: Math.max(1, Math.round(Number(value))) }
-                        : { ...props.session.time, everySec: parseDuration(value) },
-                    })
-                  }}
-                />
-              </label>
-              <label>
-                End
-                <input
-                  aria-label="End"
-                  value={formatDuration(props.session.time.seconds)}
-                  onChange={(event) => {
-                    props.onChange({
-                      ...props.session,
-                      time: { ...props.session.time, seconds: parseDuration(event.target.value) },
-                    })
-                  }}
-                />
-              </label>
+              <ClimbField
+                label="Amount"
+                value={String(props.session.bpmIncrease)}
+                onCommit={(text) => {
+                  props.onChange({
+                    ...props.session,
+                    bpmIncrease: amountValue(text),
+                  })
+                }}
+              />
+              <ClimbField
+                label="Every"
+                value={increaseEvery === "bars" ? String(props.session.time.everyBars) : formatDuration(props.session.time.everySec)}
+                onCommit={(text) => {
+                  props.onChange({
+                    ...props.session,
+                    time: increaseEvery === "bars"
+                      ? { ...props.session.time, everyBars: Math.max(1, Math.round(Number(text))) }
+                      : { ...props.session.time, everySec: parseDuration(text) },
+                  })
+                }}
+              />
+              <ClimbField
+                label="End"
+                value={formatDuration(props.session.time.seconds)}
+                onCommit={(text) => {
+                  props.onChange({
+                    ...props.session,
+                    time: { ...props.session.time, seconds: parseDuration(text) },
+                  })
+                }}
+              />
             </>
           )}
         </div>

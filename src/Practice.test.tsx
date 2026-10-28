@@ -5,6 +5,7 @@ import { snapshotAt } from "./clock"
 import { expandSession } from "./expandSession"
 import { Practice } from "./Practice"
 import { createDefaultSession } from "./session"
+import type { Session } from "./types"
 
 describe("Practice", () => {
   it("shows the first count-in while stopped", async () => {
@@ -807,10 +808,55 @@ describe("Practice", () => {
     expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
     expect(screen.getByRole("textbox", { name: "End" })).toHaveValue("2:00")
     expect(screen.getByText("Left")).toBeInTheDocument()
+
+    const show = (next: Session) => {
+      const nextSegments = expandSession(next)
+      rerender(
+        <Practice
+          session={next}
+          segments={nextSegments}
+          snapshot={snapshotAt(nextSegments, 0)}
+          status="stopped"
+          onToggle={() => {}}
+          onJump={() => {}}
+          onReset={() => {}}
+          onEdit={() => {}}
+          onChange={onChange}
+          onSeek={() => {}}
+        />,
+      )
+    }
+    onChange.mockImplementation(show)
+
+    const end = screen.getByRole("textbox", { name: "End" })
+    await user.clear(end)
+    await user.type(end, "1:00")
+    await user.tab()
+    const ended = onChange.mock.calls.at(-1)?.[0]
+    expect(ended.time.seconds).toBe(60)
+    show(ended)
+    expect(screen.getByRole("textbox", { name: "End" })).toHaveValue("1:00")
+
+    const every = screen.getByRole("textbox", { name: "Every" })
+    await user.clear(every)
+    await user.type(every, "0:45")
+    await user.tab()
+    const everyTime = onChange.mock.calls.at(-1)?.[0]
+    expect(everyTime.time.everySec).toBe(45)
+
+    await user.click(screen.getByRole("button", { name: "Bars", exact: true }))
+    const bars = onChange.mock.calls.at(-1)?.[0]
+    show(bars)
+    const everyBars = screen.getByRole("textbox", { name: "Every" })
+    await user.clear(everyBars)
+    await user.type(everyBars, "8")
+    await user.tab()
+    expect(onChange.mock.calls.at(-1)?.[0].time.everyBars).toBe(8)
+
     await user.click(screen.getByRole("button", { name: "Off", exact: true }))
     const stopped = onChange.mock.calls.at(-1)?.[0]
     expect(stopped.time.increaseEvery).toBe("off")
-    expect(stopped.time.seconds).toBe(120)
+    expect(stopped.time.seconds).toBe(60)
     expect(screen.queryByRole("button", { name: "Time", exact: true })).not.toBeInTheDocument()
   })
 
