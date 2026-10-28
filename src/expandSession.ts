@@ -1,4 +1,4 @@
-import { lengthSeconds, sessionTitle, simplePlayedBpm, timeSteps } from "./session"
+import { lengthSeconds, sessionTitle, simplePlayedBpm, timeDurationSec, timeSteps } from "./session"
 import type { ClickId, Meter, Session, SetColor, Slot } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -30,21 +30,12 @@ type Resolved = {
 }
 
 function resolved(session: Session): Resolved[] {
-  if (session.type === "time" && session.time.increaseEvery === "off") {
-    return [{
-      id: "time",
-      bpm: session.bpm,
-      durationSec: Number.POSITIVE_INFINITY,
-      restSec: 0,
-      steps: [{ atSec: 0, bpm: session.bpm }],
-    }]
-  }
   if (session.type === "time") {
     const steps = timeSteps(session)
     return [{
       id: "time",
       bpm: steps[0]?.bpm ?? session.bpm,
-      durationSec: Math.max(1, Math.round(session.time.seconds)),
+      durationSec: timeDurationSec(session),
       restSec: 0,
       steps,
     }]

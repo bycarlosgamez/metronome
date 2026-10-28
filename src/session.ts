@@ -81,9 +81,9 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
 }
 
 export function timeDurationSec(session: Session): number {
-  if (session.time.increaseEvery === "off") return Number.POSITIVE_INFINITY
-  const steps = timeSteps(session)
   const pattern = clampTime(session.time)
+  if (pattern.increaseEvery === "off") return Number.POSITIVE_INFINITY
+  const steps = timeSteps(session)
   const lastStep = steps[steps.length - 1]
   const window =
     pattern.increaseEvery === "bars"

@@ -254,7 +254,7 @@ describe("Edit", () => {
     expect(timed.time.seconds).toBe(120)
     rerender(<Edit session={timed} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("textbox", { name: "Duration" })).toHaveValue("2:00")
-    expect(screen.getByText("Total 2:03")).toBeInTheDocument()
+    expect(screen.getByText("Total 0:33")).toBeInTheDocument()
     expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
 
     await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Bars" }))
