@@ -415,6 +415,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0 0 16px;
+  text-align: center;
 }
 .sheet-divider { border: none; border-top: 1px solid var(--line); margin: 16px 0; }
 
