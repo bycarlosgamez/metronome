@@ -477,7 +477,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   display: flex;
   gap: 12px;
   align-items: stretch;
-  width: 100%;
+  justify-content: center;
 }
 .bpm-sheet-card {
   background: var(--surface-raised);
