@@ -238,6 +238,62 @@ describe("Edit", () => {
     expect(onDone).toHaveBeenCalledOnce()
   })
 
+  it("commits typed Every and Duration values on a time session", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    const every = screen.getByRole("textbox", { name: "Every" })
+    await user.clear(every)
+    await user.type(every, "0:45")
+    await user.tab()
+    const afterEvery = onChange.mock.calls.at(-1)?.[0]
+    expect(afterEvery.time.everySec).toBe(45)
+    rerender(<Edit session={afterEvery} onChange={onChange} onDone={() => {}} />)
+
+    await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Bars" }))
+    const bars = onChange.mock.calls.at(-1)?.[0]
+    rerender(<Edit session={bars} onChange={onChange} onDone={() => {}} />)
+    const everyBars = screen.getByRole("textbox", { name: "Every" })
+    await user.clear(everyBars)
+    await user.type(everyBars, "8")
+    await user.tab()
+    const afterBars = onChange.mock.calls.at(-1)?.[0]
+    expect(afterBars.time.everyBars).toBe(8)
+    rerender(<Edit session={afterBars} onChange={onChange} onDone={() => {}} />)
+
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.clear(duration)
+    await user.type(duration, "3:00")
+    await user.tab()
+    expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(180)
+  })
+
+  it("keeps a complex cycle edit after returning from time", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Complex" }))
+    const complex = onChange.mock.calls.at(-1)?.[0]
+    rerender(<Edit session={complex} onChange={onChange} onDone={() => {}} />)
+    const practice = screen.getByRole("textbox", { name: "Practice" })
+    await user.clear(practice)
+    await user.type(practice, "0:45")
+    await user.tab()
+    const edited = onChange.mock.calls.at(-1)?.[0]
+    expect(edited.cycles[0].length).toEqual({ unit: "time", seconds: 45 })
+    rerender(<Edit session={edited} onChange={onChange} onDone={() => {}} />)
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Time" }))
+    const time = onChange.mock.calls.at(-1)?.[0]
+    rerender(<Edit session={time} onChange={onChange} onDone={() => {}} />)
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Complex" }))
+    const back = onChange.mock.calls.at(-1)?.[0]
+    expect(back.cycles[0].length).toEqual({ unit: "time", seconds: 45 })
+  })
+
   it("freshens time when complex is saved", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClickBuffers, scheduleSegment, type ClickBuffers } from "./audio"
-import { clicksInSegment, snapshotAt } from "./clock"
+import { clicksInSegment, snapshotAt, stepIndexAt } from "./clock"
 import { Edit } from "./Edit"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
@@ -159,6 +159,33 @@ export function App() {
   }
 
   function onChange(next: Session) {
+    if (session.type === "time" && next.type === "time" && next.bpm !== session.bpm) {
+      const current = snapshotAt(segments, elapsedRef.current)
+      const currentSegment = segments[current.segmentIndex]
+      const into = Math.max(0, currentSegment.durationSec - current.segmentRemainingSec)
+      const nextSegments = expandSession(next)
+      const total = nextSegments.reduce((sum, segment) => sum + segment.durationSec, 0)
+      let nextElapsed = elapsedRef.current
+      if (currentSegment.kind === "play") {
+        const step = stepIndexAt(currentSegment, into)
+        const steps = currentSegment.steps ?? [{ atSec: 0, bpm: currentSegment.bpm }]
+        const atSec = steps[step]?.atSec ?? 0
+        const endSec = steps[step + 1]?.atSec ?? currentSegment.durationSec
+        const window = endSec - atSec
+        const fraction = window > 0 ? (into - atSec) / window : 0
+        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
+        const nextPlay = nextSegments.find((segment) => segment.kind === "play")
+        const nextSteps = nextPlay?.steps ?? [{ atSec: 0, bpm: nextPlay?.bpm ?? next.bpm }]
+        const nextAt = nextSteps[step]?.atSec ?? 0
+        const nextEnd = nextSteps[step + 1]?.atSec ?? nextPlay?.durationSec ?? 0
+        nextElapsed = (nextCountIn?.durationSec ?? 0) + nextAt + fraction * (nextEnd - nextAt)
+      } else if (currentSegment.kind === "count-in" && currentSegment.durationSec > 0) {
+        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
+        nextElapsed = (into / currentSegment.durationSec) * (nextCountIn?.durationSec ?? 0)
+      }
+      stopNodes()
+      writeElapsed(Math.min(total, Math.max(0, nextElapsed)))
+    }
     setSession(next)
     saveSession(next, window.localStorage)
   }

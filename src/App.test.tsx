@@ -272,6 +272,38 @@ describe("App", () => {
     expect(playNodes.some((node) => node.started && node.when < 0)).toBe(false)
   })
 
+  it("keeps a typed Time BPM on the step that was sounding", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.meter = "4/4"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.time = { seconds: 180, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    const countInSec = (4 * 60) / 80
+    await act(async () => {
+      tick?.((countInSec + 30) * 1000)
+    })
+    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    expect(bpm).toHaveValue("90")
+    await user.click(bpm)
+    await user.clear(bpm)
+    await user.type(bpm, "150")
+    await user.tab()
+    expect(screen.getByRole("textbox", { name: "BPM" })).toHaveValue("150")
+  })
+
   it("saves Complex and a fresh Simple pattern when Done is clicked", async () => {
     const user = userEvent.setup()
     render(<App />)

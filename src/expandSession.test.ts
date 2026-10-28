@@ -221,7 +221,12 @@ describe("expandSession", () => {
     session.bpmIncrease = 0
     session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const flat = expandSession(session).find((segment) => segment.kind === "play")
-    expect(flat?.steps?.every((step) => step.bpm === 80)).toBe(true)
+    expect(flat?.steps).toEqual([
+      { atSec: 0, bpm: 80 },
+      { atSec: 30, bpm: 80 },
+      { atSec: 60, bpm: 80 },
+      { atSec: 90, bpm: 80 },
+    ])
 
     session.bpmIncrease = 5
     session.time.everySec = 180

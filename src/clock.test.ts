@@ -70,5 +70,8 @@ describe("clock", () => {
     expect(clicks[2].beat).toBe(3)
     expect(clicks[3].offsetSec - clicks[2].offsetSec).toBeCloseTo(60 / 85)
     expect(clicks.at(-1)!.offsetSec).toBeLessThan(3)
+    expect(snapshotAt([segment], 1.5).beat).toBe(3)
+    expect(snapshotAt([segment], 1 + 1e-6).beat).toBe(2)
+    expect(snapshotAt([segment], 1.5 + 1e-6).beat).toBe(3)
   })
 })

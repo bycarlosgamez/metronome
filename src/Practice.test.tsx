@@ -528,6 +528,36 @@ describe("Practice", () => {
     expect(onChange.mock.calls.at(-1)?.[0].bpm).toBe(90)
   })
 
+  it("writes a time duration from the count-in", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.time.seconds = 120
+    const segments = expandSession(session)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByTestId("stage-label")).toHaveTextContent("Practice")
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "1:00")
+    await user.tab()
+    expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(60)
+  })
+
   it("writes a time duration from the practice page", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
