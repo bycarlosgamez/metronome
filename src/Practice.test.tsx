@@ -860,6 +860,50 @@ describe("Practice", () => {
     expect(screen.queryByRole("button", { name: "Time", exact: true })).not.toBeInTheDocument()
   })
 
+  it("saves a typed End when Play closes the Time panel", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    const segments = expandSession(session)
+    const onChange = vi.fn()
+    const { rerender } = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: "BPM increase" }))
+    await user.click(screen.getByRole("button", { name: "Time", exact: true }))
+    const timed = onChange.mock.calls.at(-1)?.[0]
+    const timedSegments = expandSession(timed)
+    rerender(
+      <Practice
+        session={timed}
+        segments={timedSegments}
+        snapshot={snapshotAt(timedSegments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const end = screen.getByRole("textbox", { name: "End" })
+    await user.clear(end)
+    await user.type(end, "3:00")
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(180)
+  })
+
   it("describes the current time signature and subdivision", async () => {
     const user = userEvent.setup()
     const session = createDefaultSession(() => "cycle-1")

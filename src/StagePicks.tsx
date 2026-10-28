@@ -91,7 +91,10 @@ export function StagePicks(props: { session: Session; onChange(session: Session)
   useEffect(() => {
     if (!open) return
     function onPointer(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(null)
+      if (rootRef.current?.contains(event.target as Node)) return
+      const active = document.activeElement
+      if (active instanceof HTMLElement && rootRef.current?.contains(active)) active.blur()
+      setOpen(null)
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(null)
