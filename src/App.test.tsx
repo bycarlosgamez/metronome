@@ -278,7 +278,7 @@ describe("App", () => {
     expect(playNodes.some((node) => node.started && node.when < 0)).toBe(false)
   })
 
-  it("keeps a typed Time BPM on the step that was sounding", async () => {
+  it("updates start BPM from the BPM sheet while playing a Time session", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
     session.meter = "4/4"
@@ -301,9 +301,9 @@ describe("App", () => {
     await act(async () => {
       tick?.((countInSec + 30) * 1000)
     })
+    await user.click(screen.getByRole("button", { name: "Edit BPM settings" }))
     const bpm = screen.getByRole("textbox", { name: "BPM" })
-    expect(bpm).toHaveValue("90")
-    await user.click(bpm)
+    expect(bpm).toHaveValue("80")
     await user.clear(bpm)
     await user.type(bpm, "150")
     await user.tab()
