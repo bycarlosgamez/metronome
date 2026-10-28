@@ -77,6 +77,12 @@ describe("Edit", () => {
     expect(sextuplet.slots).toHaveLength(6)
     rerender(<Edit session={sextuplet} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("combobox", { name: "li click" })).toBeInTheDocument()
+    const slotRow = document.querySelector(".slot-row")
+    if (!(slotRow instanceof HTMLElement)) throw new Error("missing slot row")
+    const captions = ["1 click", "ta click", "la click", "ta click", "li click", "ta click"]
+    const combos = within(slotRow).getAllByRole("combobox")
+    expect(combos).toHaveLength(captions.length)
+    captions.forEach((name, index) => expect(combos[index]).toHaveAccessibleName(name))
   })
 
   it("hides the repeat fields until the switches are on", async () => {

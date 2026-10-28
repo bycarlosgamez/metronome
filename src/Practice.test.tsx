@@ -724,6 +724,49 @@ describe("Practice", () => {
     }
   })
 
+  it("describes the current time signature and subdivision", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    const segments = expandSession(session)
+    const { rerender } = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Time signature" })).toHaveAccessibleDescription("4/4")
+    expect(screen.getByRole("button", { name: "Subdivision" })).toHaveAccessibleDescription("Quarter")
+    const next = { ...session, meter: "7/8" as const, subdivision: "quintuplet" as const }
+    const nextSegments = expandSession(next)
+    rerender(
+      <Practice
+        session={next}
+        segments={nextSegments}
+        snapshot={snapshotAt(nextSegments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Time signature" })).toHaveAccessibleDescription("7/8")
+    expect(screen.getByRole("button", { name: "Subdivision" })).toHaveAccessibleDescription("Quintuplet")
+    await user.click(screen.getByRole("button", { name: "Subdivision" }))
+    expect(screen.getByRole("button", { name: "Quintuplet" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Quarter" })).toHaveAttribute("aria-pressed", "false")
+  })
+
   it("chooses a quintuplet from the subdivision panel", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
