@@ -34,7 +34,10 @@ describe("Practice", () => {
     expect(screen.getByTestId("stage-time")).toHaveValue("0:03")
     expect(screen.getByTestId("beat-1")).toHaveAttribute("data-current", "true")
     expect(screen.getByTestId("footer-set")).toHaveTextContent("1 / 2")
-    expect(document.querySelector('.strip button[data-current="true"]')).toHaveClass("color-red")
+    expect(document.querySelector(".strip")).not.toBeInTheDocument()
+    expect(screen.queryByText("Left")).not.toBeInTheDocument()
+    expect(screen.getByText("Elapsed")).toBeInTheDocument()
+    expect(screen.getByTestId("footer-set")).toHaveTextContent("1 / 2")
     await user.click(screen.getByRole("button", { name: "Edit" }))
     expect(onEdit).toHaveBeenCalledOnce()
   })
@@ -160,7 +163,7 @@ describe("Practice", () => {
 
   it("moves the stage when a minicard is clicked", async () => {
     const session = createDefaultSession(() => "set-1")
-    session.time.increaseEvery = "time"
+    session.type = "simple"
     const segments = expandSession(session)
     const onSeek = vi.fn()
     const user = userEvent.setup()
@@ -563,6 +566,7 @@ describe("Practice", () => {
   it("writes a time duration from the count-in", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
+    session.time.increaseEvery = "time"
     session.time.seconds = 120
     const segments = expandSession(session)
     const onChange = vi.fn()
@@ -593,6 +597,7 @@ describe("Practice", () => {
   it("writes a time duration from the practice page", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
+    session.time.increaseEvery = "time"
     session.time.seconds = 120
     const segments = expandSession(session)
     const playIndex = segments.findIndex((segment) => segment.kind === "play")
@@ -715,6 +720,7 @@ describe("Practice", () => {
       screen.getByTestId("stage-time"),
       screen.getByRole("button", { name: "Time signature" }),
       screen.getByRole("button", { name: "Subdivision" }),
+      screen.getByRole("button", { name: "BPM increase" }),
       screen.getByRole("textbox", { name: "BPM" }),
       screen.getByTestId("beat-1"),
       screen.getByRole("button", { name: "Play" }),
@@ -723,6 +729,89 @@ describe("Practice", () => {
     for (let index = 1; index < nodes.length; index += 1) {
       expect(nodes[index - 1].compareDocumentPosition(nodes[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
+  })
+
+  it("hides the cards only for a Time session", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    const segments = expandSession(session)
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={() => {}}
+        onSeek={() => {}}
+      />,
+    )
+    expect(document.querySelector(".strip")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "BPM increase" })).not.toBeInTheDocument()
+  })
+
+  it("counts an Off play upward and edits the climb from the third button", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 80
+    const segments = expandSession(session)
+    const countIn = segments[0].durationSec
+    const onChange = vi.fn()
+    const { rerender } = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, countIn + 2)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const clock = screen.getByTestId("stage-time")
+    expect(clock).toHaveAccessibleName("Played")
+    expect(clock).toHaveValue("0:02")
+    await user.click(clock)
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+    const increase = screen.getByRole("button", { name: "BPM increase" })
+    expect(increase).toHaveAccessibleDescription("Off")
+    expect(increase).toHaveTextContent("∞")
+    await user.click(increase)
+    await user.click(screen.getByRole("button", { name: "Time", exact: true }))
+    const timed = onChange.mock.calls.at(-1)?.[0]
+    expect(timed.time.increaseEvery).toBe("time")
+    expect(timed.time.seconds).toBe(120)
+    rerender(
+      <Practice
+        session={timed}
+        segments={expandSession(timed)}
+        snapshot={snapshotAt(expandSession(timed), 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Time", exact: true })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("textbox", { name: "Amount" })).toHaveValue("0")
+    expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
+    expect(screen.getByRole("textbox", { name: "End" })).toHaveValue("2:00")
+    expect(screen.getByText("Left")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Off", exact: true }))
+    const stopped = onChange.mock.calls.at(-1)?.[0]
+    expect(stopped.time.increaseEvery).toBe("off")
+    expect(stopped.time.seconds).toBe(120)
+    expect(screen.queryByRole("button", { name: "Time", exact: true })).not.toBeInTheDocument()
   })
 
   it("describes the current time signature and subdivision", async () => {

@@ -43,7 +43,10 @@ export function Practice(props: {
   const segment = props.segments[props.snapshot.segmentIndex]
   const nextPlay = props.segments.slice(props.snapshot.segmentIndex + 1).find((item) => item.kind === "play")
   const beatCount = segment.kind === "count-in" ? 4 : Number(segment.meter.split("/")[0])
-  const clock = formatClock(Math.ceil(props.snapshot.segmentRemainingSec - 1e-9))
+  const endless = props.session.type === "time" && props.session.time.increaseEvery === "off"
+  const playedSec = Math.max(0, props.snapshot.elapsedSec - props.segments.slice(0, props.snapshot.segmentIndex).reduce((sum, item) => sum + (Number.isFinite(item.durationSec) ? item.durationSec : 0), 0))
+  const countingUp = endless && segment.kind === "play"
+  const clock = countingUp ? formatClock(playedSec) : formatClock(Math.ceil(props.snapshot.segmentRemainingSec - 1e-9))
   const practiceSegment = props.segments.find((item) => item.cycleIndex === segment.cycleIndex && item.kind === "play")
   const storedSeconds = segment.kind === "rest" ? segment.durationSec : (practiceSegment ?? segment).durationSec
   const [timeText, setTimeText] = useState<string | null>(null)
@@ -179,11 +182,16 @@ export function Practice(props: {
         <input
           className="stage-time"
           data-testid="stage-time"
-          aria-label="Duration"
+          aria-label={countingUp ? "Played" : "Duration"}
+          readOnly={endless}
           value={shownTime}
           style={{ width: `${Math.max(shownTime.length, 4)}ch` }}
-          onFocus={rememberTime}
+          onFocus={() => {
+            if (endless) return
+            rememberTime()
+          }}
           onChange={(event) => {
+            if (endless) return
             if (timeTarget.current === null) rememberTime()
             setTimeText(event.target.value)
           }}
@@ -262,29 +270,33 @@ export function Practice(props: {
             {props.snapshot.segmentIndex + 1} / {props.segments.length}
           </strong>
         </div>
-        <div>
-          <span>Left</span>
-          <strong>{formatClock(Math.ceil(props.snapshot.remainingSec - 1e-9))}</strong>
-        </div>
+        {!endless && (
+          <div>
+            <span>Left</span>
+            <strong>{formatClock(Math.ceil(props.snapshot.remainingSec - 1e-9))}</strong>
+          </div>
+        )}
       </footer>
-      <div className="strip">
-        {props.segments.map((item, index) => (
-          <button
-            type="button"
-            key={`${item.setId}-${item.kind}-${index}`}
-            className={`color-${item.color}`}
-            data-current={index === props.snapshot.segmentIndex}
-            aria-current={index === props.snapshot.segmentIndex ? "true" : undefined}
-            onClick={() => props.onSeek(index)}
-          >
-            <strong>{item.label}</strong>
-            <span>
-              {formatClock(Math.round(item.durationSec))}
-              {item.kind === "play" ? ` · ${item.bpm}` : ""}
-            </span>
-          </button>
-        ))}
-      </div>
+      {props.session.type !== "time" && (
+        <div className="strip">
+          {props.segments.map((item, index) => (
+            <button
+              type="button"
+              key={`${item.setId}-${item.kind}-${index}`}
+              className={`color-${item.color}`}
+              data-current={index === props.snapshot.segmentIndex}
+              aria-current={index === props.snapshot.segmentIndex ? "true" : undefined}
+              onClick={() => props.onSeek(index)}
+            >
+              <strong>{item.label}</strong>
+              <span>
+                {formatClock(Math.round(item.durationSec))}
+                {item.kind === "play" ? ` · ${item.bpm}` : ""}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </main>
   )
 }
