@@ -471,11 +471,18 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .subdiv-opt[aria-pressed="true"] .subdiv-opt__name { color: var(--ink); }
 
 /* BPM sheet */
+.bpm-sheet-cols {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 100%;
+}
+.bpm-sheet-left { flex: 0 0 auto; }
+.bpm-sheet-right { flex: 1; min-width: 0; }
 .bpm-input-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 8px;
 }
 .bpm-sheet-input {
   font-size: 52px;
@@ -506,7 +513,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   cursor: pointer;
 }
 .bpm-stepper:hover { color: var(--ink); border-color: var(--surface-high); }
-.increase-mode-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; justify-content: center; }
+.increase-mode-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .increase-mode-btn {
   padding: 8px 20px;
   background: var(--surface-raised);
@@ -521,7 +528,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border-color: var(--blue);
   color: var(--ink);
 }
-.increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; justify-content: center; }
+.increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .increase-field { display: flex; flex-direction: column; gap: 5px; }
 .increase-field label { font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .increase-field input {

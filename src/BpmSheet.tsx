@@ -83,57 +83,59 @@ export function BpmSheet(props: {
     >
       <div className="sheet">
         <div className="sheet-handle" />
-        <p className="sheet-title">BPM</p>
 
-        <div className="bpm-input-row">
-          <input
-            className="bpm-sheet-input"
-            aria-label="BPM"
-            inputMode="numeric"
-            value={bpmText ?? String(props.session.bpm)}
-            onFocus={() => {
-              bpmRef.current = String(props.session.bpm)
-              setBpmText(String(props.session.bpm))
-            }}
-            onChange={(e) => {
-              bpmRef.current = e.target.value
-              setBpmText(e.target.value)
-            }}
-            onBlur={commitBpm}
-            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-          />
-          <div className="bpm-steppers">
-            <button
-              type="button"
-              className="bpm-stepper"
-              aria-label="Increase BPM"
-              onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
-            >+</button>
-            <button
-              type="button"
-              className="bpm-stepper"
-              aria-label="Decrease BPM"
-              onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
-            >−</button>
+        <div className="bpm-sheet-cols">
+          <div className="bpm-sheet-left">
+            <p className="sheet-title">BPM</p>
+            <div className="bpm-input-row">
+              <input
+                className="bpm-sheet-input"
+                aria-label="BPM"
+                inputMode="numeric"
+                value={bpmText ?? String(props.session.bpm)}
+                onFocus={() => {
+                  bpmRef.current = String(props.session.bpm)
+                  setBpmText(String(props.session.bpm))
+                }}
+                onChange={(e) => {
+                  bpmRef.current = e.target.value
+                  setBpmText(e.target.value)
+                }}
+                onBlur={commitBpm}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+              />
+              <div className="bpm-steppers">
+                <button
+                  type="button"
+                  className="bpm-stepper"
+                  aria-label="Increase BPM"
+                  onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
+                >+</button>
+                <button
+                  type="button"
+                  className="bpm-stepper"
+                  aria-label="Decrease BPM"
+                  onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
+                >−</button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <hr className="sheet-divider" />
-        <p className="sheet-title">Increase to target</p>
-
-        <div className="increase-mode-row">
-          {(["off", "bars"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className="increase-mode-btn"
-              aria-pressed={increaseEvery === mode}
-              onClick={() => chooseMode(mode)}
-            >
-              {mode === "off" ? "Off" : "Bars"}
-            </button>
-          ))}
-        </div>
+          <div className="bpm-sheet-right">
+            <p className="sheet-title">Increase to target</p>
+            <div className="increase-mode-row">
+              {(["off", "bars"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className="increase-mode-btn"
+                  aria-pressed={increaseEvery === mode}
+                  onClick={() => chooseMode(mode)}
+                >
+                  {mode === "off" ? "Off" : "Bars"}
+                </button>
+              ))}
+            </div>
 
         {increaseEvery !== "off" && (
           <>
@@ -206,6 +208,8 @@ export function BpmSheet(props: {
             <DerivedDuration session={props.session} />
           </>
         )}
+          </div>
+        </div>
       </div>
     </div>
   )
