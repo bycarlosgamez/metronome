@@ -264,5 +264,12 @@ describe("session", () => {
     expect(clampSession(session).slots).toEqual(["click-3", "click-2"])
     session.slots = ["off", "nope"]
     expect(clampSession(session).slots).toEqual(["off", "click-2"])
+    session.subdivision = "quintuplet"
+    session.slots = ["click-1"]
+    session.click = "click-3"
+    expect(clampSession(session).slots).toEqual(["click-1", "click-3", "click-3", "click-3", "click-3"])
+    session.subdivision = "sextuplet"
+    session.slots = ["off", "click-1", "click-1", "click-1", "click-1", "click-1", "click-4"]
+    expect(clampSession(session).slots).toEqual(["off", "click-1", "click-1", "click-1", "click-1", "click-1"])
   })
 })

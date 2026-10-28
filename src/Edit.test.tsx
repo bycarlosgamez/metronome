@@ -56,6 +56,27 @@ describe("Edit", () => {
     expect(cleared.slots[0]).toBe("off")
   })
 
+  it("shows a caption for each quintuplet and sextuplet slot", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    await user.selectOptions(screen.getByRole("combobox", { name: "Subdivision" }), "quintuplet")
+    const quintuplet = onChange.mock.calls.at(-1)?.[0]
+    expect(quintuplet.subdivision).toBe("quintuplet")
+    expect(quintuplet.slots).toEqual(["click-1", "click-1", "click-1", "click-1", "click-1"])
+    rerender(<Edit session={quintuplet} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("combobox", { name: "ta click" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "ka click" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "di click" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "mi click" })).toBeInTheDocument()
+    expect(screen.getByText("ta")).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole("combobox", { name: "Subdivision" }), "sextuplet")
+    const sextuplet = onChange.mock.calls.at(-1)?.[0]
+    expect(sextuplet.slots).toHaveLength(6)
+    rerender(<Edit session={sextuplet} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("combobox", { name: "li click" })).toBeInTheDocument()
+  })
+
   it("hides the repeat fields until the switches are on", async () => {
     const user = userEvent.setup()
     render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)

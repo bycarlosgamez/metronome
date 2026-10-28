@@ -3,7 +3,7 @@ export type Meter = string
 export const BEATS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] as const
 export const NOTES = [1, 2, 4, 8] as const
 
-export const SUBDIVISIONS = ["quarter", "eighth", "triplet", "sixteenth"] as const
+export const SUBDIVISIONS = ["quarter", "eighth", "triplet", "sixteenth", "quintuplet", "sextuplet"] as const
 export type Subdivision = (typeof SUBDIVISIONS)[number]
 
 export type Slot = ClickId | "off"

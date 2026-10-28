@@ -137,6 +137,8 @@ export const SUBDIVISION_SLOTS: Record<Subdivision, number> = {
   eighth: 2,
   triplet: 3,
   sixteenth: 4,
+  quintuplet: 5,
+  sextuplet: 6,
 }
 
 export function clampMeter(meter: string | undefined): Meter {

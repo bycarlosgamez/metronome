@@ -6,6 +6,17 @@ const labels = {
   eighth: ["1", "&"],
   triplet: ["1", "trip", "let"],
   sixteenth: ["1", "e", "&", "a"],
+  quintuplet: ["1", "ta", "ka", "di", "mi"],
+  sextuplet: ["1", "ta", "la", "ta", "li", "ta"],
+}
+
+const names = {
+  quarter: "Beat",
+  eighth: "Eighth",
+  triplet: "Triplet",
+  sixteenth: "Sixteenth",
+  quintuplet: "Quintuplet",
+  sextuplet: "Sextuplet",
 }
 
 export function Signature(props: { session: Session; onChange(session: Session): void }) {
@@ -41,14 +52,14 @@ export function Signature(props: { session: Session; onChange(session: Session):
         >
           {SUBDIVISIONS.map((subdivision) => (
             <option key={subdivision} value={subdivision}>
-              {{ quarter: "Beat", eighth: "Eighth", triplet: "Triplet", sixteenth: "Sixteenth" }[subdivision]}
+              {names[subdivision]}
             </option>
           ))}
         </select>
       </label>
       <div className="slot-row">
         {labels[props.session.subdivision].map((label, index) => (
-          <div key={label} className="slot">
+          <div key={`${label}-${index}`} className="slot">
             <select
               aria-label={`${label} click`}
               value={props.session.slots[index]}

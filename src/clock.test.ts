@@ -111,4 +111,17 @@ describe("clock", () => {
     const fourEight = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
     expect(fourEight[1].offsetSec - fourEight[0].offsetSec).toBeCloseTo(60 / 80)
   })
+
+  it("splits one beat into five quintuplet clicks and leaves the count-in plain", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 60
+    session.subdivision = "quintuplet"
+    session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
+    const segments = expandSession(session)
+    expect(clicksInSegment(segments[0])).toHaveLength(4)
+    const play = segments.find((segment) => segment.kind === "play")!
+    expect(clicksInSegment(play).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
+    expect(clicksInSegment(play)[0].accent).toBe(true)
+    expect(clicksInSegment(play)[1].accent).toBe(false)
+  })
 })
