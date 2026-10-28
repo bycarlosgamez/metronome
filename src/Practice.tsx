@@ -81,7 +81,7 @@ export function Practice(props: {
                   {Array.from({ length: subCount }, (_, si) => (
                     <div
                       key={si}
-                      className={`beat-sub${isLit && si === activeSubSlot ? " lit" : ""}`}
+                      className={`beat-sub${isPlaying && si === activeSubSlot ? " lit" : ""}`}
                     />
                   ))}
                 </div>
