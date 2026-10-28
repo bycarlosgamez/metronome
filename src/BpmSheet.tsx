@@ -85,7 +85,8 @@ export function BpmSheet(props: {
         <div className="sheet-handle" />
 
         <div className="bpm-sheet-cols">
-          <div className="bpm-sheet-left">
+          {/* BPM card */}
+          <div className="bpm-sheet-card">
             <p className="sheet-title">BPM</p>
             <div className="bpm-input-row">
               <input
@@ -121,7 +122,8 @@ export function BpmSheet(props: {
             </div>
           </div>
 
-          <div className="bpm-sheet-right">
+          {/* Increase to target card */}
+          <div className="bpm-sheet-card bpm-sheet-target-card">
             <p className="sheet-title">Increase to target</p>
             <div className="increase-mode-row">
               {(["off", "bars"] as const).map((mode) => (
@@ -137,77 +139,75 @@ export function BpmSheet(props: {
               ))}
             </div>
 
-        {increaseEvery !== "off" && (
-          <>
-            <div className="increase-fields">
-              <div className="increase-field target">
-                <label htmlFor="bpm-sheet-target">Target BPM</label>
-                <input
-                  id="bpm-sheet-target"
-                  inputMode="numeric"
-                  value={targetText ?? String(targetBpm)}
-                  onFocus={() => {
-                    targetRef.current = String(targetBpm)
-                    setTargetText(String(targetBpm))
-                  }}
-                  onChange={(e) => {
-                    targetRef.current = e.target.value
-                    setTargetText(e.target.value)
-                  }}
-                  onBlur={commitTarget}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
+            {increaseEvery !== "off" && (
+              <div className="increase-content">
+                <div className="increase-fields">
+                  <div className="increase-field target">
+                    <label htmlFor="bpm-sheet-target">Target BPM</label>
+                    <input
+                      id="bpm-sheet-target"
+                      inputMode="numeric"
+                      value={targetText ?? String(targetBpm)}
+                      onFocus={() => {
+                        targetRef.current = String(targetBpm)
+                        setTargetText(String(targetBpm))
+                      }}
+                      onChange={(e) => {
+                        targetRef.current = e.target.value
+                        setTargetText(e.target.value)
+                      }}
+                      onBlur={commitTarget}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                  <div className="increase-field">
+                    <label htmlFor="bpm-sheet-step">Step</label>
+                    <input
+                      id="bpm-sheet-step"
+                      inputMode="numeric"
+                      value={stepText ?? String(props.session.bpmIncrease)}
+                      onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                      onBlur={() => {
+                        const typed = stepRef.current
+                        setStepText(null)
+                        stepRef.current = null
+                        if (typed === null) return
+                        const n = Math.max(0, Math.round(Number(typed)))
+                        if (Number.isFinite(n) && n !== props.session.bpmIncrease) {
+                          props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                  <div className="increase-field">
+                    <label htmlFor="bpm-sheet-every">Every (bars)</label>
+                    <input
+                      id="bpm-sheet-every"
+                      inputMode="numeric"
+                      value={everyText ?? String(everyBars)}
+                      onChange={(e) => { everyRef.current = e.target.value; setEveryText(e.target.value) }}
+                      onBlur={() => {
+                        const typed = everyRef.current
+                        setEveryText(null)
+                        everyRef.current = null
+                        if (typed === null) return
+                        const n = Math.max(1, Math.round(Number(typed)))
+                        if (!Number.isFinite(n)) return
+                        if (n !== everyBars) {
+                          props.onChange(clampSession({
+                            ...props.session,
+                            time: { ...props.session.time, everyBars: n },
+                          }))
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                </div>
+                <DerivedDuration session={props.session} />
               </div>
-              <div className="increase-field">
-                <label htmlFor="bpm-sheet-step">Step</label>
-                <input
-                  id="bpm-sheet-step"
-                  inputMode="numeric"
-                  value={stepText ?? String(props.session.bpmIncrease)}
-                  onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                  onBlur={() => {
-                    const typed = stepRef.current
-                    setStepText(null)
-                    stepRef.current = null
-                    if (typed === null) return
-                    const n = Math.max(0, Math.round(Number(typed)))
-                    if (Number.isFinite(n) && n !== props.session.bpmIncrease) {
-                      props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
-                    }
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-              </div>
-              <div className="increase-field">
-                <label htmlFor="bpm-sheet-every">
-                  Every (bars)
-                </label>
-                <input
-                  id="bpm-sheet-every"
-                  inputMode="numeric"
-                  value={everyText ?? String(everyBars)}
-                  onChange={(e) => { everyRef.current = e.target.value; setEveryText(e.target.value) }}
-                  onBlur={() => {
-                    const typed = everyRef.current
-                    setEveryText(null)
-                    everyRef.current = null
-                    if (typed === null) return
-                    const n = Math.max(1, Math.round(Number(typed)))
-                    if (!Number.isFinite(n)) return
-                    if (n !== everyBars) {
-                      props.onChange(clampSession({
-                        ...props.session,
-                        time: { ...props.session.time, everyBars: n },
-                      }))
-                    }
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-              </div>
-            </div>
-            <DerivedDuration session={props.session} />
-          </>
-        )}
+            )}
           </div>
         </div>
       </div>
