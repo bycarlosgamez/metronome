@@ -62,14 +62,14 @@ export function BpmSheet(props: {
     }))
   }
 
-  function chooseMode(mode: "off" | "time" | "bars") {
+  function chooseMode(mode: "off" | "bars") {
     props.onChange(clampSession({
       ...props.session,
       time: { ...props.session.time, increaseEvery: mode },
     }))
   }
 
-  const { increaseEvery, targetBpm, everySec, everyBars } = props.session.time
+  const { increaseEvery, targetBpm, everyBars } = props.session.time
 
   return (
     <div
@@ -122,7 +122,7 @@ export function BpmSheet(props: {
         <p className="sheet-title">Increase to target</p>
 
         <div className="increase-mode-row">
-          {(["off", "time", "bars"] as const).map((mode) => (
+          {(["off", "bars"] as const).map((mode) => (
             <button
               key={mode}
               type="button"
@@ -130,7 +130,7 @@ export function BpmSheet(props: {
               aria-pressed={increaseEvery === mode}
               onClick={() => chooseMode(mode)}
             >
-              {mode === "off" ? "Off" : mode === "time" ? "Time" : "Bars"}
+              {mode === "off" ? "Off" : "Bars"}
             </button>
           ))}
         </div>
@@ -178,12 +178,12 @@ export function BpmSheet(props: {
               </div>
               <div className="increase-field">
                 <label htmlFor="bpm-sheet-every">
-                  Every ({increaseEvery === "bars" ? "bars" : "sec"})
+                  Every (bars)
                 </label>
                 <input
                   id="bpm-sheet-every"
                   inputMode="numeric"
-                  value={everyText ?? String(increaseEvery === "bars" ? everyBars : everySec)}
+                  value={everyText ?? String(everyBars)}
                   onChange={(e) => { everyRef.current = e.target.value; setEveryText(e.target.value) }}
                   onBlur={() => {
                     const typed = everyRef.current
@@ -192,13 +192,10 @@ export function BpmSheet(props: {
                     if (typed === null) return
                     const n = Math.max(1, Math.round(Number(typed)))
                     if (!Number.isFinite(n)) return
-                    const current = increaseEvery === "bars" ? everyBars : everySec
-                    if (n !== current) {
+                    if (n !== everyBars) {
                       props.onChange(clampSession({
                         ...props.session,
-                        time: increaseEvery === "bars"
-                          ? { ...props.session.time, everyBars: n }
-                          : { ...props.session.time, everySec: n },
+                        time: { ...props.session.time, everyBars: n },
                       }))
                     }
                   }}

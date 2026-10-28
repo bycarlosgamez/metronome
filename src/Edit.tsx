@@ -391,13 +391,6 @@ export function Edit(props: {
               </button>
               <button
                 type="button"
-                aria-pressed={session.time.increaseEvery === "time"}
-                onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "time" } })}
-              >
-                Time
-              </button>
-              <button
-                type="button"
                 aria-pressed={session.time.increaseEvery === "bars"}
                 onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "bars" } })}
               >
@@ -430,12 +423,10 @@ export function Edit(props: {
         {session.type === "time" && session.time.increaseEvery !== "off" && (
           <DraftField
             label="Every"
-            value={session.time.increaseEvery === "bars" ? String(session.time.everyBars) : formatDuration(session.time.everySec)}
+            value={String(session.time.everyBars)}
             onCommit={(text) => commit({
               ...session,
-              time: session.time.increaseEvery === "bars"
-                ? { ...session.time, everyBars: Number(text) }
-                : { ...session.time, everySec: parseDuration(text) },
+              time: { ...session.time, everyBars: Number(text) },
             })}
           />
         )}

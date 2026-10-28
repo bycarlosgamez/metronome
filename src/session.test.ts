@@ -73,8 +73,8 @@ describe("session", () => {
       everySec: 1,
       everyBars: 1,
     })
-    session.time.increaseEvery = "time"
-    expect(clampSession(session).time.increaseEvery).toBe("time")
+    session.time.increaseEvery = "time" as "bars" // legacy value migrates to bars
+    expect(clampSession(session).time.increaseEvery).toBe("bars")
     session.time.increaseEvery = "bars"
     expect(clampSession(session).time.increaseEvery).toBe("bars")
 
@@ -273,24 +273,26 @@ describe("session", () => {
       expect(steps).toEqual([{ atSec: 0, bpm: 120 }])
     })
 
-    it("ramps up to targetBpm every N seconds", () => {
+    it("ramps up to targetBpm every N bars", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 10
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      session.meter = "4/4"
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
-      expect(steps).toEqual([
-        { atSec: 0, bpm: 80 },
-        { atSec: 30, bpm: 90 },
-        { atSec: 60, bpm: 100 },
-      ])
+      // window at 80bpm = 4*4*60/80 = 12s; window at 90bpm = 4*4*60/90 ≈ 10.67s
+      expect(steps).toHaveLength(3)
+      expect(steps[0]).toEqual({ atSec: 0, bpm: 80 })
+      expect(steps[1]).toEqual({ atSec: 12, bpm: 90 })
+      expect(steps[2].bpm).toBe(100)
+      expect(steps[2].atSec).toBeCloseTo(12 + 4 * 4 * 60 / 90)
     })
 
     it("caps final bpm at targetBpm not above", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 15
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps[steps.length - 1].bpm).toBe(100)
     })
@@ -307,10 +309,11 @@ describe("session", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 10
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
-      // steps: [{atSec:0,bpm:80},{atSec:30,bpm:90},{atSec:60,bpm:100}]
-      // duration = 60 + 30 = 90
-      expect(timeDurationSec(session)).toBe(90)
+      session.meter = "4/4"
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+      // window at 80bpm = 12s, at 90bpm ≈ 10.67s, final window at 100bpm = 9.6s
+      // steps: [80@0, 90@12, 100@~22.67], duration = round(~22.67 + 9.6) = 32
+      expect(timeDurationSec(session)).toBe(32)
     })
   })
 

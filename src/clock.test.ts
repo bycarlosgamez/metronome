@@ -83,7 +83,7 @@ describe("clock", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 80
     session.meter = "4/4"
-    session.time.increaseEvery = "time"
+    session.time.increaseEvery = "bars"
     session.subdivision = "eighth"
     session.slots = ["click-1", "click-1"]
     const segments = expandSession(session)
@@ -116,7 +116,7 @@ describe("clock", () => {
   it("splits one beat into five quintuplet clicks", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
-    session.time.increaseEvery = "time"
+    session.time.increaseEvery = "bars"
     session.subdivision = "quintuplet"
     session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
     const segments = expandSession(session)

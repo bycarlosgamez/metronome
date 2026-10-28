@@ -48,7 +48,7 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
   return {
     seconds: Math.max(1, integer(base.seconds)),
     targetBpm: clampBpm(base.targetBpm ?? 120),
-    increaseEvery: base.increaseEvery === "bars" || base.increaseEvery === "time" ? base.increaseEvery : "off",
+    increaseEvery: base.increaseEvery === "bars" ? "bars" : base.increaseEvery === ("time" as string) ? "bars" : "off",
     everySec: Math.max(1, integer(base.everySec)),
     everyBars: Math.max(1, integer(base.everyBars)),
   }
@@ -69,10 +69,7 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
     const bpm = Math.min(targetBpm, startBpm + increase * index)
     steps.push({ atSec: at, bpm })
     if (bpm >= targetBpm) break
-    const window =
-      pattern.increaseEvery === "bars"
-        ? pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
-        : pattern.everySec
+    const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
     if (!(window > 0)) break
     at += window
     index += 1
@@ -85,10 +82,7 @@ export function timeDurationSec(session: Session): number {
   if (pattern.increaseEvery === "off") return Number.POSITIVE_INFINITY
   const steps = timeSteps(session)
   const lastStep = steps[steps.length - 1]
-  const window =
-    pattern.increaseEvery === "bars"
-      ? pattern.everyBars * beatsInMeter(session.meter) * 60 / lastStep.bpm
-      : pattern.everySec
+  const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / lastStep.bpm
   return Math.max(1, Math.round(lastStep.atSec + window))
 }
 

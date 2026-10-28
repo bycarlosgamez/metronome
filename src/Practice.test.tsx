@@ -126,7 +126,7 @@ describe("Practice", () => {
     const props = makeProps({
       bpm: 80,
       bpmIncrease: 10,
-      time: { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 },
+      time: { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 },
     })
     render(<Practice {...props} />)
     expect(screen.getByTestId("bpm-target")).toHaveTextContent("100")
