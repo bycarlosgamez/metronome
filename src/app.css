@@ -476,7 +476,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .bpm-sheet-cols {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
 }
 .bpm-sheet-card {
@@ -484,8 +484,14 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.bpm-sheet-target-card { flex: 1; min-width: 0; }
+.bpm-sheet-target-card {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
 .bpm-input-row {
   display: flex;
   align-items: center;
