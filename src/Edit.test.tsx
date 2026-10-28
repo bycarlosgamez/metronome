@@ -242,26 +242,29 @@ describe("Edit", () => {
     expect(opened.type).toBe("time")
     expect(opened.time).toEqual(freshTime())
     expect(opened.simple.practices).toBe(4)
-    opened.time = { ...opened.time, increaseEvery: "time" }
     rerender(<Edit session={opened} onChange={onChange} onDone={() => {}} />)
-
+    expect(screen.queryByRole("textbox", { name: "Duration" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Total /)).not.toBeInTheDocument()
+    const increase = screen.getByRole("group", { name: "Increase every" })
+    expect(within(increase).getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true")
+    await user.click(within(increase).getByRole("button", { name: "Time", exact: true }))
+    const timed = onChange.mock.calls.at(-1)?.[0]
+    expect(timed.time.increaseEvery).toBe("time")
+    expect(timed.time.seconds).toBe(120)
+    rerender(<Edit session={timed} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("textbox", { name: "Duration" })).toHaveValue("2:00")
     expect(screen.getByText("Total 2:03")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Add cycle" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Repeat the round" })).not.toBeInTheDocument()
-    const increase = screen.getByRole("group", { name: "Increase every" })
-    expect(within(increase).getByRole("button", { name: "Time" })).toHaveAttribute("aria-pressed", "true")
-    expect(within(increase).queryByRole("button", { name: "Interval" })).not.toBeInTheDocument()
     expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
 
-    await user.click(within(increase).getByRole("button", { name: "Bars" }))
+    await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Bars" }))
     const bars = onChange.mock.calls.at(-1)?.[0]
     expect(bars.time.increaseEvery).toBe("bars")
     expect(bars.time.everySec).toBe(30)
     rerender(<Edit session={bars} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("4")
 
-    await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Time" }))
+    await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Time", exact: true }))
     const backToTime = onChange.mock.calls.at(-1)?.[0]
     expect(backToTime.time.everySec).toBe(30)
     rerender(<Edit session={backToTime} onChange={onChange} onDone={() => {}} />)
@@ -318,6 +321,10 @@ describe("Edit", () => {
     session.type = "time"
     const onChange = vi.fn()
     const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    const increase = screen.getByRole("group", { name: "Increase every" })
+    await user.click(within(increase).getByRole("button", { name: "Time", exact: true }))
+    const timed = onChange.mock.calls.at(-1)?.[0]
+    rerender(<Edit session={timed} onChange={onChange} onDone={() => {}} />)
     const every = screen.getByRole("textbox", { name: "Every" })
     await user.clear(every)
     await user.type(every, "0:45")

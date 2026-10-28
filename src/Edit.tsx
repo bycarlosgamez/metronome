@@ -384,7 +384,14 @@ export function Edit(props: {
             <>
               <button
                 type="button"
-                aria-pressed={session.time.increaseEvery !== "bars"}
+                aria-pressed={session.time.increaseEvery === "off"}
+                onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "off" } })}
+              >
+                Off
+              </button>
+              <button
+                type="button"
+                aria-pressed={session.time.increaseEvery === "time"}
                 onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "time" } })}
               >
                 Time
@@ -420,7 +427,7 @@ export function Edit(props: {
             </>
           )}
         </div>
-        {session.type === "time" && (
+        {session.type === "time" && session.time.increaseEvery !== "off" && (
           <DraftField
             label="Every"
             value={session.time.increaseEvery === "bars" ? String(session.time.everyBars) : formatDuration(session.time.everySec)}
@@ -440,12 +447,16 @@ export function Edit(props: {
         </section>
       ) : session.type === "time" ? (
         <section className="editor-builder">
-          <DraftField
-            label="Duration"
-            value={formatDuration(session.time.seconds)}
-            onCommit={(text) => commit({ ...session, time: { ...session.time, seconds: parseDuration(text) } })}
-          />
-          <p className="total">Total {formatClock(totalSec)}</p>
+          {session.time.increaseEvery !== "off" && (
+            <>
+              <DraftField
+                label="Duration"
+                value={formatDuration(session.time.seconds)}
+                onCommit={(text) => commit({ ...session, time: { ...session.time, seconds: parseDuration(text) } })}
+              />
+              <p className="total">Total {formatClock(totalSec)}</p>
+            </>
+          )}
         </section>
       ) : (
         <section className="editor-builder">
