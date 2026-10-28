@@ -118,3 +118,36 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   background-size: 12px 12px;
 }
 .stage .slot-row { justify-content: center; }
+.stage-picks { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.stage-pick-row { display: flex; justify-content: center; gap: 12px; }
+.stage-pick-row > button {
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  color: inherit;
+  font: inherit;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.stage-panel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 12px;
+  padding: 8px;
+}
+.stage-panel button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+}
+.stage select:focus, .stage-pick-row > button:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }

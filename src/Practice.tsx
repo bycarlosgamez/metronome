@@ -3,7 +3,7 @@ import { bpmAt, stepIndexAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, sessionTitle } from "./session"
-import { Signature } from "./Signature"
+import { StagePicks } from "./StagePicks"
 import { type Session } from "./types"
 
 type DraftTarget = {
@@ -194,6 +194,7 @@ export function Practice(props: {
         />
         {segment.kind !== "rest" && (
           <>
+            <StagePicks session={props.session} onChange={(next) => props.onChange(clampSession(next))} />
             <p className="stage-meta">
               <input
                 aria-label="BPM"
@@ -226,10 +227,6 @@ export function Practice(props: {
                 )
               })}
             </div>
-            <Signature
-              session={props.session}
-              onChange={(next) => props.onChange(clampSession(next))}
-            />
           </>
         )}
         {segment.kind === "rest" && nextPlay && (

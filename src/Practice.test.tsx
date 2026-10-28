@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { snapshotAt } from "./clock"
@@ -66,6 +66,8 @@ describe("Practice", () => {
     expect(document.querySelector(".stage")).toHaveClass("color-yellow")
     expect(screen.getByTestId("next-up")).toHaveTextContent("Next · Practice at 80")
     expect(screen.queryByTestId("beat-1")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Time signature" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 
   it("labels the transport Pause when sound is unavailable", () => {
@@ -96,7 +98,7 @@ describe("Practice", () => {
     const segments = expandSession(session)
     const onChange = vi.fn()
     const user = userEvent.setup()
-    render(
+    const { rerender } = render(
       <Practice
         session={session}
         segments={segments}
@@ -128,12 +130,32 @@ describe("Practice", () => {
       bpm: 100,
     }))
 
-    expect(screen.queryByRole("combobox", { name: "Meter" })).not.toBeInTheDocument()
-    const signature = screen.getByRole("group", { name: "Time signature" })
-    await user.selectOptions(within(signature).getByRole("combobox", { name: "Beats" }), "3")
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ meter: "3/4" }))
-    expect(screen.getByRole("combobox", { name: "Subdivision" })).toBeInTheDocument()
-    expect(screen.getByRole("combobox", { name: "Beat click" })).toBeInTheDocument()
+    expect(screen.queryByRole("combobox", { name: "Beat click" })).not.toBeInTheDocument()
+    expect(screen.queryByText("Time signature")).not.toBeInTheDocument()
+    expect(screen.queryByText("Subdivision")).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Time signature" }))
+    await user.selectOptions(screen.getByRole("combobox", { name: "Beats" }), "7")
+    await user.selectOptions(screen.getByRole("combobox", { name: "Note" }), "8")
+    const signed = onChange.mock.calls.at(-1)?.[0]
+    expect(signed.meter).toBe("7/8")
+    rerender(
+      <Practice
+        session={signed}
+        segments={expandSession(signed)}
+        snapshot={snapshotAt(expandSession(signed), 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Time signature" })).toHaveTextContent("7/8")
+    expect(screen.getByRole("combobox", { name: "Beats" })).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("combobox", { name: "Beats" })).not.toBeInTheDocument()
   })
 
   it("moves the stage when a minicard is clicked", async () => {
@@ -646,12 +668,12 @@ describe("Practice", () => {
     expect(screen.getAllByTestId(/beat-/)).toHaveLength(16)
   })
 
-  it("shows sixteenth syllables on the stage and leaves a beat unlabeled", () => {
+  it("does not show slot clicks on the practice stage", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.subdivision = "sixteenth"
     session.slots = ["click-1", "click-1", "click-1", "click-1"]
     const segments = expandSession(session)
-    const view = render(
+    render(
       <Practice
         session={session}
         segments={segments}
@@ -665,21 +687,18 @@ describe("Practice", () => {
         onSeek={() => {}}
       />,
     )
-    expect(screen.getByText("e")).toBeVisible()
-    expect(screen.getByText("&")).toBeVisible()
-    expect(screen.getByText("a")).toBeVisible()
-    expect(screen.getByRole("combobox", { name: "e click" })).toHaveAccessibleName("e click")
-    expect(screen.getByRole("combobox", { name: "& click" })).toHaveAccessibleName("& click")
-    expect(screen.getByRole("combobox", { name: "a click" })).toHaveAccessibleName("a click")
+    expect(screen.queryByRole("combobox", { name: "e click" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Subdivision" })).toBeInTheDocument()
+  })
 
-    session.subdivision = "quarter"
-    session.slots = ["click-1"]
-    const beatSegments = expandSession(session)
-    view.rerender(
+  it("orders the clock, the two buttons, BPM, the dots, and Play", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    const segments = expandSession(session)
+    render(
       <Practice
         session={session}
-        segments={beatSegments}
-        snapshot={snapshotAt(beatSegments, 0)}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
         status="stopped"
         onToggle={() => {}}
         onJump={() => {}}
@@ -689,7 +708,64 @@ describe("Practice", () => {
         onSeek={() => {}}
       />,
     )
-    expect(screen.getByRole("combobox", { name: "Beat click" })).toHaveAccessibleName("Beat click")
-    expect(document.querySelector(".slot-row [aria-hidden='true']")).toBeNull()
+    const stage = document.querySelector(".stage")!
+    expect(screen.getByRole("button", { name: "Time signature" })).toHaveTextContent("4/4")
+    const nodes = [
+      screen.getByTestId("stage-time"),
+      screen.getByRole("button", { name: "Time signature" }),
+      screen.getByRole("button", { name: "Subdivision" }),
+      screen.getByRole("textbox", { name: "BPM" }),
+      screen.getByTestId("beat-1"),
+      screen.getByRole("button", { name: "Play" }),
+    ]
+    nodes.forEach((node) => expect(stage.contains(node)).toBe(true))
+    for (let index = 1; index < nodes.length; index += 1) {
+      expect(nodes[index - 1].compareDocumentPosition(nodes[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
+  })
+
+  it("chooses a quintuplet from the subdivision panel", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const session = createDefaultSession(() => "cycle-1")
+    session.click = "click-2"
+    const segments = expandSession(session)
+    const { rerender } = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const button = screen.getByRole("button", { name: "Subdivision" })
+    expect(button).not.toHaveTextContent("5")
+    await user.click(button)
+    await user.click(screen.getByRole("button", { name: "Quintuplet" }))
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.subdivision).toBe("quintuplet")
+    expect(next.slots).toEqual(["click-2", "click-2", "click-2", "click-2", "click-2"])
+    rerender(
+      <Practice
+        session={next}
+        segments={expandSession(next)}
+        snapshot={snapshotAt(expandSession(next), 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Subdivision" })).toHaveTextContent("5")
+    expect(screen.queryByRole("button", { name: "Quintuplet" })).not.toBeInTheDocument()
   })
 })
