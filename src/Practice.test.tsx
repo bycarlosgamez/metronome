@@ -900,7 +900,15 @@ describe("Practice", () => {
     const end = screen.getByRole("textbox", { name: "End" })
     await user.clear(end)
     await user.type(end, "3:00")
-    await user.click(screen.getByRole("button", { name: "Play" }))
+    const blur = HTMLElement.prototype.blur
+    HTMLElement.prototype.blur = function () {}
+    try {
+      screen.getByRole("button", { name: "Play" }).dispatchEvent(
+        new Event("pointerdown", { bubbles: true }),
+      )
+    } finally {
+      HTMLElement.prototype.blur = blur
+    }
     expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(180)
   })
 

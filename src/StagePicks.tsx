@@ -93,7 +93,10 @@ export function StagePicks(props: { session: Session; onChange(session: Session)
     function onPointer(event: PointerEvent) {
       if (rootRef.current?.contains(event.target as Node)) return
       const active = document.activeElement
-      if (active instanceof HTMLElement && rootRef.current?.contains(active)) active.blur()
+      if (active instanceof HTMLElement && rootRef.current?.contains(active)) {
+        // Chrome does not emit blur when blur() runs during pointerdown.
+        active.dispatchEvent(new FocusEvent("focusout", { bubbles: true }))
+      }
       setOpen(null)
     }
     function onKey(event: KeyboardEvent) {
