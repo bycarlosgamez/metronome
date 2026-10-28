@@ -165,4 +165,21 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border: 0;
   color: inherit;
 }
+.stage-panel label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75rem;
+}
+.stage-panel input {
+  width: 5ch;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  color: inherit;
+  text-align: center;
+  font: inherit;
+  padding: 2px 0;
+}
 .stage select:focus, .stage-pick-row > button:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }

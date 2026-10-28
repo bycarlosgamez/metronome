@@ -162,39 +162,48 @@ export function StagePicks(props: { session: Session; onChange(session: Session)
           ))}
           {increaseEvery !== "off" && (
             <>
-              <input
-                aria-label="Amount"
-                value={String(props.session.bpmIncrease)}
-                onChange={(event) => {
-                  props.onChange({
-                    ...props.session,
-                    bpmIncrease: Math.max(0, Math.round(Number(event.target.value))),
-                  })
-                }}
-              />
-              <input
-                aria-label="Every"
-                value={increaseEvery === "bars" ? String(props.session.time.everyBars) : formatDuration(props.session.time.everySec)}
-                onChange={(event) => {
-                  const value = event.target.value
-                  props.onChange({
-                    ...props.session,
-                    time: increaseEvery === "bars"
-                      ? { ...props.session.time, everyBars: Math.max(1, Math.round(Number(value))) }
-                      : { ...props.session.time, everySec: parseDuration(value) },
-                  })
-                }}
-              />
-              <input
-                aria-label="End"
-                value={formatDuration(props.session.time.seconds)}
-                onChange={(event) => {
-                  props.onChange({
-                    ...props.session,
-                    time: { ...props.session.time, seconds: parseDuration(event.target.value) },
-                  })
-                }}
-              />
+              <label>
+                Amount
+                <input
+                  aria-label="Amount"
+                  value={String(props.session.bpmIncrease)}
+                  onChange={(event) => {
+                    props.onChange({
+                      ...props.session,
+                      bpmIncrease: Math.max(0, Math.round(Number(event.target.value))),
+                    })
+                  }}
+                />
+              </label>
+              <label>
+                Every
+                <input
+                  aria-label="Every"
+                  value={increaseEvery === "bars" ? String(props.session.time.everyBars) : formatDuration(props.session.time.everySec)}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    props.onChange({
+                      ...props.session,
+                      time: increaseEvery === "bars"
+                        ? { ...props.session.time, everyBars: Math.max(1, Math.round(Number(value))) }
+                        : { ...props.session.time, everySec: parseDuration(value) },
+                    })
+                  }}
+                />
+              </label>
+              <label>
+                End
+                <input
+                  aria-label="End"
+                  value={formatDuration(props.session.time.seconds)}
+                  onChange={(event) => {
+                    props.onChange({
+                      ...props.session,
+                      time: { ...props.session.time, seconds: parseDuration(event.target.value) },
+                    })
+                  }}
+                />
+              </label>
             </>
           )}
         </div>
