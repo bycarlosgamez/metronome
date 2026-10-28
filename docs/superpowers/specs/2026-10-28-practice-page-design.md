@@ -103,13 +103,16 @@ Subdivision symbols:
 
 ## Subdivision Sheet
 
-Bottom sheet with six options in a pill/chip row:
+Bottom sheet with six options in a grid. Each option shows the existing `NoteIcon` SVG above a text label. Selected option gets the purple highlight.
 
 ```
-Quarter ♩  |  Eighth ♪  |  Triplet  |  Sixteenth  |  Quintuplet  |  Sextuplet
+[♩ svg]   [♪ svg]   [♪3 svg]   [♪♪ svg]   [♪5 svg]   [♪6 svg]
+Quarter   Eighth    Triplet    16th       Quintuplet  Sextuplet
 ```
 
-Selected option gets the purple highlight (existing `.sel` style). Text labels for all, with Unicode note characters appended to Quarter and Eighth only.
+The `NoteIcon` component is unchanged — reused directly in the sheet.
+
+The subdivision button on the main screen also uses `NoteIcon` at a smaller size to show the current selection.
 
 ---
 
@@ -143,7 +146,7 @@ No forward/backward buttons.
 
 ## NoteIcon Component
 
-`NoteIcon.tsx` keeps its existing SVG approach but is no longer used in the subdivision sheet. It may still appear in other contexts (e.g. the edit page). The subdivision button and sheet use plain text/Unicode instead.
+`NoteIcon.tsx` is unchanged. It is used in both the subdivision sheet (28px) and the subdivision button on the main screen (20px). No modifications needed.
 
 ---
 
