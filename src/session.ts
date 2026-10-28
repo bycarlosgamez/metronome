@@ -1,4 +1,4 @@
-import { CLICKS, COLORS, METERS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -117,6 +117,8 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     bpmIncrease: 0,
     every: 1,
     click: "click-1",
+    subdivision: "quarter",
+    slots: ["click-1"],
     type: "simple",
     simple: freshSimple(),
     complex: freshComplex(),
@@ -128,6 +130,32 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
 export function ladderBpm(bpm: number, increase: number, every: number, index: number): number {
   const step = Math.max(1, integer(every))
   return Math.min(300, clampBpm(bpm) + Math.max(0, integer(increase)) * Math.floor(index / step))
+}
+
+export const SUBDIVISION_SLOTS: Record<Subdivision, number> = {
+  quarter: 1,
+  eighth: 2,
+  triplet: 3,
+  sixteenth: 4,
+}
+
+export function clampMeter(meter: string | undefined): Meter {
+  const [beats, note] = (meter ?? "").split("/")
+  const top = Number(beats)
+  const bottom = Number(note)
+  if (!BEATS.includes(top as (typeof BEATS)[number])) return "4/4"
+  if (!NOTES.includes(bottom as (typeof NOTES)[number])) return "4/4"
+  return `${top}/${bottom}`
+}
+
+function clampSlot(value: unknown, fallback: ClickId): Slot {
+  if (value === "off") return "off"
+  return CLICKS.includes(value as ClickId) ? value as ClickId : fallback
+}
+
+export function clampSlots(subdivision: Subdivision, slots: unknown, click: ClickId): Slot[] {
+  const list = Array.isArray(slots) ? slots : []
+  return Array.from({ length: SUBDIVISION_SLOTS[subdivision] }, (_, index) => clampSlot(list[index], click))
 }
 
 export function beatsInMeter(meter: Meter): number {
@@ -175,14 +203,18 @@ function clampCycle(cycle: Cycle): Cycle {
 export function clampSession(session: Session): Session {
   const fallback = createDefaultSession()
   const cycles = (session.cycles?.length ? session.cycles : fallback.cycles).map(clampCycle)
+  const click = CLICKS.includes(session.click) ? session.click : "click-1"
+  const subdivision = SUBDIVISIONS.includes(session.subdivision) ? session.subdivision : "quarter"
   return {
     name: session.name ?? "",
     color: COLORS.includes(session.color) ? session.color : "red",
-    meter: METERS.includes(session.meter) ? session.meter : "4/4",
+    meter: clampMeter(session.meter),
     bpm: clampBpm(session.bpm),
     bpmIncrease: Math.max(0, integer(session.bpmIncrease)),
     every: Math.max(1, integer(session.every)),
-    click: CLICKS.includes(session.click) ? session.click : "click-1",
+    click,
+    subdivision,
+    slots: clampSlots(subdivision, session.slots, click),
     type: session.type === "complex" || session.type === "time" ? session.type : "simple",
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
@@ -251,14 +283,17 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
   })
   plays[plays.length - 1].restSec = 0
   const firstBpm = plays[0].bpm
+  const click = CLICKS.includes(legacy.click as ClickId) ? (legacy.click as ClickId) : "click-1"
   return clampSession({
     name: legacy.name ?? "",
     color: COLORS.includes(sets[0].color as SetColor) ? (sets[0].color as SetColor) : "red",
-    meter: METERS.includes(legacy.meter as Meter) ? (legacy.meter as Meter) : "4/4",
+    meter: clampMeter(legacy.meter),
     bpm: firstBpm,
     bpmIncrease: 0,
     every: 1,
-    click: CLICKS.includes(legacy.click as ClickId) ? (legacy.click as ClickId) : "click-1",
+    click,
+    subdivision: "quarter",
+    slots: [click],
     type: "complex",
     simple: freshSimple(),
     complex: freshComplex(),

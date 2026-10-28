@@ -1,5 +1,12 @@
-export const METERS = ["3/4", "4/4", "5/4", "6/8", "7/8"] as const
-export type Meter = (typeof METERS)[number]
+export type Meter = string
+
+export const BEATS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] as const
+export const NOTES = [1, 2, 4, 8] as const
+
+export const SUBDIVISIONS = ["quarter", "eighth", "triplet", "sixteenth"] as const
+export type Subdivision = (typeof SUBDIVISIONS)[number]
+
+export type Slot = ClickId | "off"
 
 export const COLORS = ["red", "orange", "yellow", "green", "blue", "pink"] as const
 export type SetColor = (typeof COLORS)[number]
@@ -54,6 +61,8 @@ export type Session = {
   bpmIncrease: number
   every: number
   click: ClickId
+  subdivision: Subdivision
+  slots: Slot[]
   type: "simple" | "complex" | "time"
   simple: SimplePattern
   complex: ComplexPattern

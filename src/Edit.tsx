@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { expandSession } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, cycleGroupFromSimple, cyclesFromSimple, freshComplex, freshSimple, freshTime, sessionTitle } from "./session"
-import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type Length, type Meter, type Session } from "./types"
+import { Signature } from "./Signature"
+import { CLICKS, COLORS, type ClickId, type Cycle, type Length, type Session } from "./types"
 
 function lengthText(length: Length): string {
   return length.unit === "time" ? formatDuration(length.seconds) : String(length.bars)
@@ -372,26 +373,15 @@ export function Edit(props: {
             </div>
           </div>
           <div className="type-switch" role="group" aria-label="Type">
+            <button type="button" aria-pressed={session.type === "time"} onClick={() => choose("time")}>Time</button>
             <button type="button" aria-pressed={session.type === "simple"} onClick={() => choose("simple")}>Simple</button>
             <button type="button" aria-pressed={session.type === "complex"} onClick={() => choose("complex")}>Complex</button>
-            <button type="button" aria-pressed={session.type === "time"} onClick={() => choose("time")}>Time</button>
           </div>
         </section>
         <section className="editor-card">
           <p className="card-title">Tempo</p>
           <DraftField label="BPM" value={String(session.bpm)} onCommit={(text) => commit({ ...session, bpm: Number(text) })} />
-          <label>
-            Meter
-            <select
-              aria-label="Meter"
-              value={session.meter}
-              onChange={(event) => commit({ ...session, meter: event.target.value as Meter })}
-            >
-              {METERS.map((meter) => (
-                <option key={meter} value={meter}>{meter}</option>
-              ))}
-            </select>
-          </label>
+          <Signature session={session} onChange={commit} />
           <label>
             Click
             <select

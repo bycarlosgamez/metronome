@@ -24,6 +24,8 @@ describe("session", () => {
       bpmIncrease: 0,
       every: 1,
       click: "click-1",
+      subdivision: "quarter",
+      slots: ["click-1"],
       type: "simple",
       simple: freshSimple(),
       complex: freshComplex(),
@@ -233,5 +235,32 @@ describe("session", () => {
     expect(migrated?.meter).toBe("4/4")
     expect(migrated?.color).toBe("blue")
     expect(migrated?.click).toBe("click-2")
+  })
+
+  it("keeps a known time signature and rejects an unknown bottom number", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.meter = "5/4"
+    expect(clampSession(session).meter).toBe("5/4")
+    session.meter = "16/8"
+    expect(clampSession(session).meter).toBe("16/8")
+    session.meter = "7/16"
+    expect(clampSession(session).meter).toBe("4/4")
+    session.meter = "0/4"
+    expect(clampSession(session).meter).toBe("4/4")
+    delete (session as { subdivision?: unknown }).subdivision
+    delete (session as { slots?: unknown }).slots
+    session.click = "click-2"
+    const loaded = clampSession(session)
+    expect(loaded.subdivision).toBe("quarter")
+    expect(loaded.slots).toEqual(["click-2"])
+    session.subdivision = "nope" as "quarter"
+    session.slots = ["click-3", "off", "click-4", "click-1"]
+    const unknown = clampSession(session)
+    expect(unknown.subdivision).toBe("quarter")
+    expect(unknown.slots).toEqual(["click-3"])
+    session.subdivision = "eighth"
+    session.click = "click-2"
+    session.slots = ["click-3"]
+    expect(clampSession(session).slots).toEqual(["click-3", "click-2"])
   })
 })

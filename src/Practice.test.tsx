@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { snapshotAt } from "./clock"
@@ -126,7 +126,9 @@ describe("Practice", () => {
       bpm: 100,
     }))
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Meter" }), "3/4")
+    expect(screen.queryByRole("combobox", { name: "Meter" })).not.toBeInTheDocument()
+    const signature = screen.getByRole("group", { name: "Time signature" })
+    await user.selectOptions(within(signature).getByRole("combobox", { name: "Beats" }), "3")
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ meter: "3/4" }))
   })
 

@@ -3,7 +3,8 @@ import { bpmAt, stepIndexAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, sessionTitle } from "./session"
-import { METERS, type Meter, type Session } from "./types"
+import { Signature } from "./Signature"
+import { type Session } from "./types"
 
 type DraftTarget = {
   segmentIndex: number
@@ -225,21 +226,10 @@ export function Practice(props: {
                 )
               })}
             </div>
-            <select
-              className="stage-meter"
-              aria-label="Meter"
-              value={props.session.meter}
-              onChange={(event) => {
-                const meter = event.target.value as Meter
-                props.onChange(clampSession({ ...props.session, meter }))
-              }}
-            >
-              {METERS.map((meter) => (
-                <option key={meter} value={meter}>
-                  {meter}
-                </option>
-              ))}
-            </select>
+            <Signature
+              session={props.session}
+              onChange={(next) => props.onChange(clampSession(next))}
+            />
           </>
         )}
         {segment.kind === "rest" && nextPlay && (
