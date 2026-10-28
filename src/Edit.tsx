@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { expandSession } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
-import { clampSession, cycleGroupFromSimple, cyclesFromSimple, freshComplex, freshSimple, sessionTitle } from "./session"
+import { clampSession, cycleGroupFromSimple, cyclesFromSimple, freshComplex, freshSimple, freshTime, sessionTitle } from "./session"
 import { CLICKS, COLORS, METERS, type ClickId, type Cycle, type Length, type Meter, type Session } from "./types"
 
 function lengthText(length: Length): string {
@@ -191,52 +191,56 @@ function CycleList(props: { session: Session; commit(session: Session): void }) 
     <>
       {session.cycles.map((cycle, index) => (
         <div className="cycle-row" key={cycle.id}>
-          <span className="cycle-index">{index + 1}</span>
-          <div>
-            <LengthField
-              label="Practice"
-              length={cycle.length}
-              onText={(text) => replace(index, { ...cycle, length: lengthFromText(cycle.length.unit, text) })}
-              onUnit={(length) => replace(index, { ...cycle, length })}
-            />
-            {cycle.bpm !== undefined && (
-              <DraftField
-                label={`Cycle ${index + 1} BPM`}
-                value={String(cycle.bpm)}
-                type="number"
-                onCommit={(text) => replace(index, { ...cycle, bpm: Number(text) })}
-              />
-            )}
-          </div>
-          <DraftField
-            label="Rest"
-            value={formatDuration(cycle.restSec)}
-            onCommit={(text) => replace(index, { ...cycle, restSec: parseDuration(text) })}
-          />
-          <div className="cycle-actions">
-            {cycle.bpm !== undefined && (
-              <button type="button" onClick={() => replace(index, withoutBpm(cycle))}>
-                Use session tempo
+          <div className="cycle-head">
+            <span className="cycle-index">{index + 1}</span>
+            <div className="cycle-actions">
+              <button type="button" aria-label={`Move cycle ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10 L8 6 L12 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </button>
-            )}
-            <button type="button" aria-label={`Move cycle ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
-              Up
-            </button>
-            <button type="button" aria-label={`Move cycle ${index + 1} down`} disabled={index === session.cycles.length - 1} onClick={() => move(index, 1)}>
-              Down
-            </button>
-            <button
-              type="button"
-              aria-label={`Remove cycle ${index + 1}`}
-              disabled={session.cycles.length === 1}
-              onClick={() => {
-                if (session.cycles.length === 1) return
-                commit({ ...session, cycles: session.cycles.filter((_, i) => i !== index) })
-              }}
-            >
-              Remove
-            </button>
+              <button type="button" aria-label={`Move cycle ${index + 1} down`} disabled={index === session.cycles.length - 1} onClick={() => move(index, 1)}>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6 L8 10 L12 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              <button
+                type="button"
+                aria-label={`Remove cycle ${index + 1}`}
+                disabled={session.cycles.length === 1}
+                onClick={() => {
+                  if (session.cycles.length === 1) return
+                  commit({ ...session, cycles: session.cycles.filter((_, i) => i !== index) })
+                }}
+              >
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5 L11.5 11.5 M11.5 4.5 L4.5 11.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              </button>
+            </div>
           </div>
+          <div className="cycle-fields">
+            <div>
+              <LengthField
+                label="Practice"
+                length={cycle.length}
+                onText={(text) => replace(index, { ...cycle, length: lengthFromText(cycle.length.unit, text) })}
+                onUnit={(length) => replace(index, { ...cycle, length })}
+              />
+              {cycle.bpm !== undefined && (
+                <DraftField
+                  label={`Cycle ${index + 1} BPM`}
+                  value={String(cycle.bpm)}
+                  type="number"
+                  onCommit={(text) => replace(index, { ...cycle, bpm: Number(text) })}
+                />
+              )}
+            </div>
+            <DraftField
+              label="Rest"
+              value={formatDuration(cycle.restSec)}
+              onCommit={(text) => replace(index, { ...cycle, restSec: parseDuration(text) })}
+            />
+          </div>
+          {cycle.bpm !== undefined && (
+            <button type="button" onClick={() => replace(index, withoutBpm(cycle))}>
+              Use session tempo
+            </button>
+          )}
         </div>
       ))}
       <button type="button" className="add-cycle" onClick={add}>Add cycle</button>
@@ -249,8 +253,10 @@ export function Edit(props: {
   onChange(session: Session): void
   onDone(): void
 }) {
-  const openedAsComplex = useRef(props.session.type === "complex")
+  const openedAs = useRef(props.session.type)
   const installedFreshSimple = useRef(false)
+  const installedFreshTime = useRef(false)
+  const installedFreshComplex = useRef(false)
   const [session, setSession] = useState(props.session)
 
   useEffect(() => {
@@ -265,45 +271,70 @@ export function Edit(props: {
 
   function done() {
     if (session.type === "complex") {
-      commit({ ...session, simple: freshSimple() })
+      commit({ ...session, simple: freshSimple(), time: freshTime() })
+    } else if (session.type === "time") {
+      commit({
+        ...session,
+        simple: freshSimple(),
+        complex: freshComplex(),
+        cycles: [{ id: crypto.randomUUID(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
+      })
     } else {
       commit({
         ...session,
         cycles: cyclesFromSimple(session, () => crypto.randomUUID()),
         complex: freshComplex(),
+        time: freshTime(),
       })
     }
     props.onDone()
   }
 
-  function choose(type: "simple" | "complex") {
+  function choose(type: "simple" | "complex" | "time") {
     if (type === session.type) return
-    if (openedAsComplex.current) {
-      if (type === "simple") {
-        const simple = installedFreshSimple.current ? session.simple : freshSimple()
-        installedFreshSimple.current = true
-        commit({ ...session, type: "simple", simple })
+    const opened = openedAs.current
+    if (type === "time") {
+      const time = opened === "time" || installedFreshTime.current ? session.time : freshTime()
+      if (opened !== "time") installedFreshTime.current = true
+      commit({ ...session, type: "time", time })
+      return
+    }
+    if (type === "complex") {
+      if (opened === "simple") {
+        const pattern = session.simple
+        commit({
+          ...session,
+          type: "complex",
+          cycles: cycleGroupFromSimple(session, () => crypto.randomUUID()),
+          complex: {
+            increaseEvery: pattern.increaseEvery,
+            repeatRound: pattern.repeatRound,
+            rounds: pattern.rounds,
+            restBetweenSec: pattern.restBetweenSec,
+          },
+        })
+        return
+      }
+      if (opened === "time" && !installedFreshComplex.current) {
+        installedFreshComplex.current = true
+        commit({
+          ...session,
+          type: "complex",
+          complex: freshComplex(),
+          cycles: [{ id: crypto.randomUUID(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
+        })
         return
       }
       commit({ ...session, type: "complex" })
       return
     }
-    if (type === "complex") {
-      const pattern = session.simple
-      commit({
-        ...session,
-        type: "complex",
-        cycles: cycleGroupFromSimple(session, () => crypto.randomUUID()),
-        complex: {
-          increaseEvery: pattern.increaseEvery,
-          repeatRound: pattern.repeatRound,
-          rounds: pattern.rounds,
-          restBetweenSec: pattern.restBetweenSec,
-        },
-      })
+    if (opened === "simple") {
+      commit({ ...session, type: "simple" })
       return
     }
-    commit({ ...session, type: "simple" })
+    const simple = installedFreshSimple.current ? session.simple : freshSimple()
+    installedFreshSimple.current = true
+    commit({ ...session, type: "simple", simple })
   }
 
   const totalSec = expandSession(session).reduce((sum, segment) => sum + segment.durationSec, 0)
@@ -343,6 +374,7 @@ export function Edit(props: {
           <div className="type-switch" role="group" aria-label="Type">
             <button type="button" aria-pressed={session.type === "simple"} onClick={() => choose("simple")}>Simple</button>
             <button type="button" aria-pressed={session.type === "complex"} onClick={() => choose("complex")}>Complex</button>
+            <button type="button" aria-pressed={session.type === "time"} onClick={() => choose("time")}>Time</button>
           </div>
         </section>
         <section className="editor-card">
@@ -377,29 +409,71 @@ export function Edit(props: {
       <section className="editor-card increase-card">
         <DraftField label="BPM increase" value={String(session.bpmIncrease)} onCommit={(text) => commit({ ...session, bpmIncrease: Number(text) })} />
         <div className="type-switch" role="group" aria-label="Increase every">
-          <button
-            type="button"
-            aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) !== "round"}
-            onClick={() => commit(session.type === "complex"
-              ? { ...session, complex: { ...session.complex, increaseEvery: "interval" } }
-              : { ...session, simple: { ...session.simple, increaseEvery: "interval" } })}
-          >
-            Interval
-          </button>
-          <button
-            type="button"
-            aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) === "round"}
-            onClick={() => commit(session.type === "complex"
-              ? { ...session, complex: { ...session.complex, increaseEvery: "round" } }
-              : { ...session, simple: { ...session.simple, increaseEvery: "round" } })}
-          >
-            Round
-          </button>
+          {session.type === "time" ? (
+            <>
+              <button
+                type="button"
+                aria-pressed={session.time.increaseEvery !== "bars"}
+                onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "time" } })}
+              >
+                Time
+              </button>
+              <button
+                type="button"
+                aria-pressed={session.time.increaseEvery === "bars"}
+                onClick={() => commit({ ...session, time: { ...session.time, increaseEvery: "bars" } })}
+              >
+                Bars
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) !== "round"}
+                onClick={() => commit(session.type === "complex"
+                  ? { ...session, complex: { ...session.complex, increaseEvery: "interval" } }
+                  : { ...session, simple: { ...session.simple, increaseEvery: "interval" } })}
+              >
+                Interval
+              </button>
+              <button
+                type="button"
+                aria-pressed={(session.type === "complex" ? session.complex.increaseEvery : session.simple.increaseEvery) === "round"}
+                onClick={() => commit(session.type === "complex"
+                  ? { ...session, complex: { ...session.complex, increaseEvery: "round" } }
+                  : { ...session, simple: { ...session.simple, increaseEvery: "round" } })}
+              >
+                Round
+              </button>
+            </>
+          )}
         </div>
+        {session.type === "time" && (
+          <DraftField
+            label="Every"
+            value={session.time.increaseEvery === "bars" ? String(session.time.everyBars) : formatDuration(session.time.everySec)}
+            onCommit={(text) => commit({
+              ...session,
+              time: session.time.increaseEvery === "bars"
+                ? { ...session.time, everyBars: Number(text) }
+                : { ...session.time, everySec: parseDuration(text) },
+            })}
+          />
+        )}
       </section>
       {session.type === "simple" ? (
         <section className="editor-builder">
           <SimpleFields session={session} commit={commit} />
+          <p className="total">Total {formatClock(totalSec)}</p>
+        </section>
+      ) : session.type === "time" ? (
+        <section className="editor-builder">
+          <DraftField
+            label="Duration"
+            value={formatDuration(session.time.seconds)}
+            onCommit={(text) => commit({ ...session, time: { ...session.time, seconds: parseDuration(text) } })}
+          />
           <p className="total">Total {formatClock(totalSec)}</p>
         </section>
       ) : (

@@ -1,10 +1,10 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { Edit } from "./Edit"
 import { expandSession } from "./expandSession"
 import { formatClock } from "./format"
-import { createDefaultSession, freshComplex } from "./session"
+import { createDefaultSession, freshComplex, freshSimple, freshTime } from "./session"
 
 describe("Edit", () => {
   it("edits the session card and the tempo card", async () => {
@@ -153,6 +153,104 @@ describe("Edit", () => {
     const saved = onChange.mock.calls.at(-1)?.[0]
     expect(saved.type).toBe("simple")
     expect(saved.complex).toEqual(freshComplex())
+    expect(saved.time).toEqual(freshTime())
     expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it("edits a time session by clock time or by bars", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.simple.practices = 4
+    const onChange = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    const types = screen.getByRole("group", { name: "Type" })
+    await user.click(within(types).getByRole("button", { name: "Time" }))
+    const opened = onChange.mock.calls.at(-1)?.[0]
+    expect(opened.type).toBe("time")
+    expect(opened.time).toEqual(freshTime())
+    expect(opened.simple.practices).toBe(4)
+    rerender(<Edit session={opened} onChange={onChange} onDone={() => {}} />)
+
+    expect(screen.getByRole("textbox", { name: "Duration" })).toHaveValue("2:00")
+    expect(screen.getByText("Total 2:03")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Add cycle" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Repeat the round" })).not.toBeInTheDocument()
+    const increase = screen.getByRole("group", { name: "Increase every" })
+    expect(within(increase).getByRole("button", { name: "Time" })).toHaveAttribute("aria-pressed", "true")
+    expect(within(increase).queryByRole("button", { name: "Interval" })).not.toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
+
+    await user.click(within(increase).getByRole("button", { name: "Bars" }))
+    const bars = onChange.mock.calls.at(-1)?.[0]
+    expect(bars.time.increaseEvery).toBe("bars")
+    expect(bars.time.everySec).toBe(30)
+    rerender(<Edit session={bars} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("4")
+
+    await user.click(within(screen.getByRole("group", { name: "Increase every" })).getByRole("button", { name: "Time" }))
+    const backToTime = onChange.mock.calls.at(-1)?.[0]
+    expect(backToTime.time.everySec).toBe(30)
+    rerender(<Edit session={backToTime} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("0:30")
+
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Simple" }))
+    const restored = onChange.mock.calls.at(-1)?.[0]
+    expect(restored.type).toBe("simple")
+    expect(restored.simple.practices).toBe(4)
+  })
+
+  it("keeps a time pattern when the visit opened on time", async () => {
+    const user = userEvent.setup()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.time.seconds = 90
+    session.cycles = [
+      { id: "a", length: { unit: "time", seconds: 30 }, restSec: 5 },
+      { id: "b", length: { unit: "time", seconds: 45 }, restSec: 5 },
+    ]
+    const onChange = vi.fn()
+    const onDone = vi.fn()
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={onDone} />)
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Complex" }))
+    const preview = onChange.mock.calls.at(-1)?.[0]
+    expect(preview.type).toBe("complex")
+    expect(preview.complex).toEqual(freshComplex())
+    expect(preview.cycles).toEqual([
+      { id: expect.any(String), length: { unit: "time", seconds: 120 }, restSec: 30 },
+    ])
+    expect(preview.time.seconds).toBe(90)
+    rerender(<Edit session={preview} onChange={onChange} onDone={onDone} />)
+    await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Time" }))
+    const returned = onChange.mock.calls.at(-1)?.[0]
+    expect(returned.type).toBe("time")
+    expect(returned.time.seconds).toBe(90)
+
+    rerender(<Edit session={returned} onChange={onChange} onDone={onDone} />)
+    await user.click(screen.getByRole("button", { name: "Done" }))
+    const saved = onChange.mock.calls.at(-1)?.[0]
+    expect(saved.type).toBe("time")
+    expect(saved.time.seconds).toBe(90)
+    expect(saved.simple).toEqual(freshSimple())
+    expect(saved.complex).toEqual(freshComplex())
+    expect(saved.cycles).toEqual([
+      { id: expect.any(String), length: { unit: "time", seconds: 120 }, restSec: 30 },
+    ])
+    expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it("freshens time when complex is saved", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "complex"
+    session.time.seconds = 45
+    session.cycles = [{ id: "a", length: { unit: "time", seconds: 30 }, restSec: 5 }]
+    render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Done" }))
+    const saved = onChange.mock.calls.at(-1)?.[0]
+    expect(saved.type).toBe("complex")
+    expect(saved.time).toEqual(freshTime())
+    expect(saved.cycles).toEqual([{ id: "a", length: { unit: "time", seconds: 30 }, restSec: 5 }])
+    expect(saved.simple).toEqual(freshSimple())
   })
 })
