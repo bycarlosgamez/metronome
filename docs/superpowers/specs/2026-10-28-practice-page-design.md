@@ -101,18 +101,28 @@ Subdivision symbols:
 
 ---
 
+## Subdivision Icons
+
+Unicode music characters as the base icon, with a small number badge for subdivisions that don't have a Unicode equivalent:
+
+| Subdivision | Icon | Badge |
+|---|---|---|
+| Quarter | ♩ | — |
+| Eighth | ♪ | — |
+| Triplet | ♪ | 3 |
+| 16th | ♪ | 16 |
+| Quintuplet | ♪ | 5 |
+| Sextuplet | ♪ | 6 |
+
+The badge sits top-right on the icon — same approach used by Pro Metronome and Soundbrenner. It communicates both note type (eighth) and grouping (3), which plain text alone does not. `NoteIcon.tsx` is not used for this — replaced by a simple CSS+Unicode implementation.
+
+---
+
 ## Subdivision Sheet
 
-Bottom sheet with six options in a grid. Each option shows the existing `NoteIcon` SVG above a text label. Selected option gets the purple highlight.
+Bottom sheet with six options. Each shows the icon (with badge if applicable) above a text label. Selected option gets the purple highlight.
 
-```
-[♩ svg]   [♪ svg]   [♪3 svg]   [♪♪ svg]   [♪5 svg]   [♪6 svg]
-Quarter   Eighth    Triplet    16th       Quintuplet  Sextuplet
-```
-
-The `NoteIcon` component is unchanged — reused directly in the sheet.
-
-The subdivision button on the main screen also uses `NoteIcon` at a smaller size to show the current selection.
+The subdivision button on the main screen shows the same icon at a smaller size.
 
 ---
 
@@ -146,7 +156,7 @@ No forward/backward buttons.
 
 ## NoteIcon Component
 
-`NoteIcon.tsx` is unchanged. It is used in both the subdivision sheet (28px) and the subdivision button on the main screen (20px). No modifications needed.
+`NoteIcon.tsx` is unchanged and continues to be used wherever it already appears (edit page, etc.). The subdivision sheet and button use the new Unicode+badge approach instead.
 
 ---
 
