@@ -4,6 +4,7 @@ import { createDefaultSession } from "./session"
 
 function example() {
   const session = createDefaultSession(() => "cycle-1")
+  session.type = "simple"
   session.bpm = 80
   session.bpmIncrease = 5
   session.simple = {
@@ -79,6 +80,7 @@ describe("expandSession", () => {
 
   it("shares one bpm across the practices in an interval", () => {
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.bpmIncrease = 5
     session.simple.practices = 3
     session.simple.stepTempo = true
@@ -90,6 +92,7 @@ describe("expandSession", () => {
 
   it("caps a stepped simple bpm at 300", () => {
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.bpm = 290
     session.bpmIncrease = 20
     session.simple.stepTempo = true

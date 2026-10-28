@@ -31,16 +31,24 @@ describe("store", () => {
     storage.setItem(SESSION_KEY, "{")
     const loaded = loadSession(storage)
     expect(loaded.name).toBe("Practice")
-    expect(loaded.type).toBe("simple")
+    expect(loaded.type).toBe("time")
     expect(loaded.bpm).toBe(80)
     expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
   })
 
   it("loads the first-visit session when nothing is saved", () => {
     const loaded = loadSession(memory())
-    expect(loaded.type).toBe("simple")
+    expect(loaded.type).toBe("time")
     expect(loaded.bpm).toBe(80)
     expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
+  })
+
+  it("keeps a saved simple session", () => {
+    const storage = memory()
+    const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
+    saveSession(session, storage)
+    expect(loadSession(storage).type).toBe("simple")
   })
 
   it("migrates an old set list", () => {
@@ -72,7 +80,7 @@ describe("store", () => {
     const { time: _time, ...withoutTime } = createDefaultSession(() => "cycle-1")
     storage.setItem(SESSION_KEY, JSON.stringify(withoutTime))
     const loaded = loadSession(storage)
-    expect(loaded.type).toBe("simple")
+    expect(loaded.type).toBe("time")
     expect(loaded.time).toEqual(freshTime())
   })
 })

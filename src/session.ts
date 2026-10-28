@@ -119,7 +119,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     click: "click-1",
     subdivision: "quarter",
     slots: ["click-1"],
-    type: "simple",
+    type: "time",
     simple: freshSimple(),
     complex: freshComplex(),
     time: freshTime(),

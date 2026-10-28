@@ -26,7 +26,7 @@ describe("session", () => {
       click: "click-1",
       subdivision: "quarter",
       slots: ["click-1"],
-      type: "simple",
+      type: "time",
       simple: freshSimple(),
       complex: freshComplex(),
       time: freshTime(),
@@ -54,7 +54,7 @@ describe("session", () => {
   it("loads a missing time pattern as fresh and keeps the saved type", () => {
     const session = createDefaultSession(() => "cycle-1")
     delete (session as { time?: unknown }).time
-    expect(clampSession(session).type).toBe("simple")
+    expect(clampSession(session).type).toBe("time")
     expect(clampSession(session).time).toEqual(freshTime())
 
     session.time = freshTime()

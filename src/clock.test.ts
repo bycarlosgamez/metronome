@@ -21,6 +21,7 @@ describe("clock", () => {
 
   it("reports no beat during a rest", () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     const segments = expandSession(session)
@@ -31,6 +32,7 @@ describe("clock", () => {
 
   it("places four accented-on-one count-in clicks and no rest clicks", () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     const segments = expandSession(session)

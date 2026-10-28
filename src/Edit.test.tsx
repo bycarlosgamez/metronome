@@ -10,7 +10,9 @@ describe("Edit", () => {
   it("edits the session card and the tempo card", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
     await user.click(screen.getByRole("radio", { name: "blue" }))
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ color: "blue" }))
@@ -79,7 +81,9 @@ describe("Edit", () => {
 
   it("hides the repeat fields until the switches are on", async () => {
     const user = userEvent.setup()
-    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    render(<Edit session={session} onChange={() => {}} onDone={() => {}} />)
     expect(screen.queryByRole("textbox", { name: "Times" })).not.toBeInTheDocument()
     expect(screen.queryByRole("textbox", { name: "Rounds" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Repeat interval" }))
@@ -92,6 +96,7 @@ describe("Edit", () => {
   it("builds complex cycles from the simple pattern", async () => {
     const user = userEvent.setup()
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.simple.practices = 3
     session.simple.stepTempo = true
     session.simple.times = 2
@@ -152,7 +157,9 @@ describe("Edit", () => {
 
   it("shows the stored value when a commit clamps back to it", async () => {
     const user = userEvent.setup()
-    render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={() => {}} onDone={() => {}} />)
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    render(<Edit session={session} onChange={() => {}} onDone={() => {}} />)
     const practices = screen.getByRole("textbox", { name: "Practices" })
     await user.clear(practices)
     await user.type(practices, "0")
@@ -162,6 +169,7 @@ describe("Edit", () => {
 
   it("shows the total of every segment, including rests", () => {
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 5
     const totalSec = expandSession(session).reduce((sum, segment) => sum + segment.durationSec, 0)
@@ -172,7 +180,9 @@ describe("Edit", () => {
   it("chooses a round increase for simple and for complex", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    const { rerender } = render(<Edit session={createDefaultSession(() => "cycle-1")} onChange={onChange} onDone={() => {}} />)
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
     expect(screen.getByRole("group", { name: "Increase every" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Interval" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
@@ -202,6 +212,7 @@ describe("Edit", () => {
     const onChange = vi.fn()
     const onDone = vi.fn()
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.complex.repeatRound = true
     render(<Edit session={session} onChange={onChange} onDone={onDone} />)
     await user.click(screen.getByRole("button", { name: "Done" }))
@@ -215,6 +226,7 @@ describe("Edit", () => {
   it("edits a time session by clock time or by bars", async () => {
     const user = userEvent.setup()
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
     session.simple.practices = 4
     const onChange = vi.fn()
     const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)

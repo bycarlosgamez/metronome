@@ -41,6 +41,7 @@ describe("Practice", () => {
 
   it("shows the following stretch during a rest", () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     session.bpmIncrease = 5
@@ -91,6 +92,7 @@ describe("Practice", () => {
 
   it("edits duration, tempo, and meter on the stage", async () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     const segments = expandSession(session)
     const onChange = vi.fn()
     const user = userEvent.setup()
@@ -159,6 +161,7 @@ describe("Practice", () => {
 
   it("commits a duration draft to the practice that was focused", async () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     const segments = expandSession(session)
@@ -197,6 +200,7 @@ describe("Practice", () => {
 
   it("drops an unedited duration draft when playback moves to another segment", async () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     const segments = expandSession(session)
@@ -260,6 +264,7 @@ describe("Practice", () => {
 
   it("commits a between rest without changing the rest after a practice", async () => {
     const session = createDefaultSession(() => "set-1")
+    session.type = "simple"
     session.simple.practices = 2
     session.simple.repeatRound = true
     session.simple.rounds = 2

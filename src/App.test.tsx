@@ -55,6 +55,9 @@ describe("App", () => {
 
   it("stops playback when Edit opens", async () => {
     vi.stubGlobal("AudioContext", FakeAudioContext)
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole("button", { name: "Play" }))
@@ -73,6 +76,9 @@ describe("App", () => {
       return 1
     })
     vi.stubGlobal("cancelAnimationFrame", () => {})
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "simple"
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole("button", { name: "Play" }))
