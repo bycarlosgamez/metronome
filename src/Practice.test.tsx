@@ -477,4 +477,85 @@ describe("Practice", () => {
     expect(next.bpm).toBe(80)
     expect(next.cycles[0].bpm).toBe(100)
   })
+
+  it("shows one time play and keeps a later typed BPM on screen", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    const segments = expandSession(session)
+    expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 0)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByTestId("footer-set")).toHaveTextContent("1 / 2")
+    expect(screen.getByRole("textbox", { name: "BPM" })).toHaveValue("80")
+    rerender(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, 63)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    expect(screen.getByTestId("footer-set")).toHaveTextContent("2 / 2")
+    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    expect(bpm).toHaveValue("90")
+    await user.click(bpm)
+    await user.clear(bpm)
+    await user.type(bpm, "100")
+    await user.tab()
+    expect(onChange.mock.calls.at(-1)?.[0].bpm).toBe(90)
+  })
+
+  it("writes a time duration from the practice page", async () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.time.seconds = 120
+    const segments = expandSession(session)
+    const playIndex = segments.findIndex((segment) => segment.kind === "play")
+    const elapsed = segments.slice(0, playIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Practice
+        session={session}
+        segments={segments}
+        snapshot={snapshotAt(segments, elapsed)}
+        status="stopped"
+        onToggle={() => {}}
+        onJump={() => {}}
+        onReset={() => {}}
+        onEdit={() => {}}
+        onChange={onChange}
+        onSeek={() => {}}
+      />,
+    )
+    const duration = screen.getByRole("textbox", { name: "Duration" })
+    await user.click(duration)
+    await user.clear(duration)
+    await user.type(duration, "1:00")
+    await user.tab()
+    expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(60)
+  })
 })

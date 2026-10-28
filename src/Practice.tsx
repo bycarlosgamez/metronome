@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import type { ClockSnapshot } from "./clock"
+import { bpmAt, stepIndexAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, sessionTitle } from "./session"
@@ -11,15 +11,17 @@ type DraftTarget = {
   restRole?: Segment["restRole"]
   cycleIndex: number
   baseline: string
+  step: number
 }
 
-function draftTarget(segment: Segment, segmentIndex: number, baseline: string): DraftTarget {
+function draftTarget(segment: Segment, segmentIndex: number, baseline: string, step: number): DraftTarget {
   return {
     segmentIndex,
     kind: segment.kind,
     restRole: segment.restRole,
     cycleIndex: segment.cycleIndex,
     baseline,
+    step,
   }
 }
 
@@ -52,7 +54,8 @@ export function Practice(props: {
   timeTextRef.current = timeText
   bpmTextRef.current = bpmText
   const shownTime = timeText ?? clock
-  const shownBpm = bpmText ?? String(segment.bpm)
+  const intoSec = Math.max(0, segment.durationSec - props.snapshot.segmentRemainingSec)
+  const shownBpm = bpmText ?? String(bpmAt(segment, intoSec))
   const stageColor = segment.kind === "rest" ? "yellow" : props.status === "playing" || props.status === "no-audio" ? "green" : "red"
 
   useEffect(() => {
@@ -68,13 +71,15 @@ export function Practice(props: {
 
   function rememberTime() {
     const baseline = formatDuration(storedSeconds)
-    timeTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline)
+    timeTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline, 0)
     setTimeText(baseline)
   }
 
   function rememberBpm() {
-    const baseline = String(segment.bpm)
-    bpmTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline)
+    const into = Math.max(0, segment.durationSec - props.snapshot.segmentRemainingSec)
+    const step = stepIndexAt(segment, into)
+    const baseline = String(bpmAt(segment, into))
+    bpmTarget.current = draftTarget(segment, props.snapshot.segmentIndex, baseline, step)
     setBpmText(baseline)
   }
 
@@ -86,6 +91,13 @@ export function Practice(props: {
     if (typed === null || target === null || typed === target.baseline) return
     const seconds = Math.max(1, parseDuration(typed))
     const session = props.session
+    if (session.type === "time") {
+      props.onChange(clampSession({
+        ...session,
+        time: { ...session.time, seconds },
+      }))
+      return
+    }
     if (session.type === "complex") {
       if (target.kind === "rest" && target.restRole === "between") {
         props.onChange(clampSession({
@@ -125,6 +137,11 @@ export function Practice(props: {
     bpmTarget.current = null
     if (typed === null || target === null || Number(typed) === Number(target.baseline)) return
     const session = props.session
+    if (session.type === "time") {
+      const bpm = Number(typed) - session.bpmIncrease * target.step
+      props.onChange(clampSession({ ...session, bpm }))
+      return
+    }
     const cycleIndex = target.cycleIndex % Math.max(1, session.cycles.length)
     const cycle = session.cycles[cycleIndex]
     if (session.type === "complex" && cycle?.bpm !== undefined) {
