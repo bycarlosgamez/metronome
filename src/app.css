@@ -17,7 +17,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .stage-meta input, .stage-meter { background: transparent; border: 0; color: inherit; font: inherit; text-align: center; padding: 0; }
 .stage-meta input { width: 3.5ch; }
 .stage-meter { appearance: none; margin-top: -8px; }
-.stage-time:focus, .stage-meta input:focus, .stage-meter:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }
+.stage-time:focus, .stage-meta input:focus, .stage-meter:focus, .stage label > select:focus { outline: 2px solid currentColor; outline-offset: 6px; border-radius: 8px; }
 .beats { display: flex; gap: 8px; }
 .beats span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, 0.22); }
 .beats span[data-current="true"] { background: var(--ink); color: var(--play-ink); }
@@ -106,6 +106,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .stage .signature { justify-content: center; }
 .stage .signature select { background: transparent; color: inherit; border: 0; text-align: center; }
+.stage label { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.stage label > select { background: transparent; color: inherit; border: 0; width: auto; appearance: none; text-align: center; }
 .slot-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .editor-screen .slot-row select {
   width: auto;
