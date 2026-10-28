@@ -284,7 +284,7 @@ describe("App", () => {
     session.meter = "4/4"
     session.bpm = 80
     session.bpmIncrease = 5
-    session.time = { seconds: 180, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 180, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
     vi.spyOn(performance, "now").mockReturnValue(0)

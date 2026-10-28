@@ -36,6 +36,7 @@ export function freshComplex(): ComplexPattern {
 export function freshTime(): TimePattern {
   return {
     seconds: 120,
+    targetBpm: 120,
     increaseEvery: "off",
     everySec: 30,
     everyBars: 4,
@@ -46,6 +47,7 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
   const base = pattern ?? freshTime()
   return {
     seconds: Math.max(1, integer(base.seconds)),
+    targetBpm: clampBpm(base.targetBpm ?? 120),
     increaseEvery: base.increaseEvery === "bars" || base.increaseEvery === "time" ? base.increaseEvery : "off",
     everySec: Math.max(1, integer(base.everySec)),
     everyBars: Math.max(1, integer(base.everyBars)),
@@ -54,21 +56,40 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
 
 export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
   const pattern = clampTime(session.time)
-  const duration = pattern.seconds
+  const startBpm = clampBpm(session.bpm)
+  const targetBpm = pattern.targetBpm
+  const increase = Math.max(0, integer(session.bpmIncrease))
+  if (increase === 0 || startBpm >= targetBpm) {
+    return [{ atSec: 0, bpm: startBpm }]
+  }
   const steps: { atSec: number; bpm: number }[] = []
   let at = 0
   let index = 0
-  while (at < duration - 1e-9) {
-    const bpm = Math.min(300, clampBpm(session.bpm) + Math.max(0, integer(session.bpmIncrease)) * index)
+  while (true) {
+    const bpm = Math.min(targetBpm, startBpm + increase * index)
     steps.push({ atSec: at, bpm })
-    const window = pattern.increaseEvery === "bars"
-      ? pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
-      : pattern.everySec
+    if (bpm >= targetBpm) break
+    const window =
+      pattern.increaseEvery === "bars"
+        ? pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
+        : pattern.everySec
     if (!(window > 0)) break
     at += window
     index += 1
   }
   return steps
+}
+
+export function timeDurationSec(session: Session): number {
+  if (session.time.increaseEvery === "off") return Number.POSITIVE_INFINITY
+  const steps = timeSteps(session)
+  const pattern = clampTime(session.time)
+  const lastStep = steps[steps.length - 1]
+  const window =
+    pattern.increaseEvery === "bars"
+      ? pattern.everyBars * beatsInMeter(session.meter) * 60 / lastStep.bpm
+      : pattern.everySec
+  return Math.max(1, Math.round(lastStep.atSec + window))
 }
 
 function clampComplex(pattern: ComplexPattern | undefined): ComplexPattern {

@@ -12,6 +12,8 @@ import {
   migrateLegacy,
   sessionTitle,
   simplePlayedBpm,
+  timeDurationSec,
+  timeSteps,
 } from "./session"
 
 describe("session", () => {
@@ -45,6 +47,7 @@ describe("session", () => {
     })
     expect(freshTime()).toEqual({
       seconds: 120,
+      targetBpm: 120,
       increaseEvery: "off",
       everySec: 30,
       everyBars: 4,
@@ -65,6 +68,7 @@ describe("session", () => {
     session.time.everyBars = 0
     expect(clampSession(session).time).toEqual({
       seconds: 1,
+      targetBpm: 120,
       increaseEvery: "off",
       everySec: 1,
       everyBars: 1,
@@ -239,6 +243,75 @@ describe("session", () => {
     expect(migrated?.meter).toBe("4/4")
     expect(migrated?.color).toBe("blue")
     expect(migrated?.click).toBe("click-2")
+  })
+
+  describe("timeSteps", () => {
+    it("returns single step when increase is off", () => {
+      const session = createDefaultSession()
+      session.bpm = 80
+      session.bpmIncrease = 0
+      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "off", everySec: 30, everyBars: 4 }
+      const steps = timeSteps(session)
+      expect(steps).toEqual([{ atSec: 0, bpm: 80 }])
+    })
+
+    it("returns single step when bpmIncrease is 0", () => {
+      const session = createDefaultSession()
+      session.bpm = 80
+      session.bpmIncrease = 0
+      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      const steps = timeSteps(session)
+      expect(steps).toEqual([{ atSec: 0, bpm: 80 }])
+    })
+
+    it("returns single step when startBpm already meets targetBpm", () => {
+      const session = createDefaultSession()
+      session.bpm = 120
+      session.bpmIncrease = 5
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      const steps = timeSteps(session)
+      expect(steps).toEqual([{ atSec: 0, bpm: 120 }])
+    })
+
+    it("ramps up to targetBpm every N seconds", () => {
+      const session = createDefaultSession()
+      session.bpm = 80
+      session.bpmIncrease = 10
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      const steps = timeSteps(session)
+      expect(steps).toEqual([
+        { atSec: 0, bpm: 80 },
+        { atSec: 30, bpm: 90 },
+        { atSec: 60, bpm: 100 },
+      ])
+    })
+
+    it("caps final bpm at targetBpm not above", () => {
+      const session = createDefaultSession()
+      session.bpm = 80
+      session.bpmIncrease = 15
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      const steps = timeSteps(session)
+      expect(steps[steps.length - 1].bpm).toBe(100)
+    })
+  })
+
+  describe("timeDurationSec", () => {
+    it("returns POSITIVE_INFINITY when increaseEvery is off", () => {
+      const session = createDefaultSession()
+      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "off", everySec: 30, everyBars: 4 }
+      expect(timeDurationSec(session)).toBe(Number.POSITIVE_INFINITY)
+    })
+
+    it("returns last step atSec plus one window", () => {
+      const session = createDefaultSession()
+      session.bpm = 80
+      session.bpmIncrease = 10
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      // steps: [{atSec:0,bpm:80},{atSec:30,bpm:90},{atSec:60,bpm:100}]
+      // duration = 60 + 30 = 90
+      expect(timeDurationSec(session)).toBe(90)
+    })
   })
 
   it("keeps a known time signature and rejects an unknown bottom number", () => {

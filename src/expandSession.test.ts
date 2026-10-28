@@ -179,7 +179,7 @@ describe("expandSession", () => {
     session.type = "time"
     session.bpm = 80
     session.bpmIncrease = 5
-    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 120, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const segments = expandSession(session)
     expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
     expect(segments[0]).toMatchObject({ bpm: 80, meter: "4/4", durationSec: 3 })
@@ -197,7 +197,7 @@ describe("expandSession", () => {
     session.type = "time"
     session.bpm = 80
     session.bpmIncrease = 5
-    session.time = { seconds: 130, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 130, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const play = expandSession(session).find((segment) => segment.kind === "play")
     expect(play?.durationSec).toBe(130)
     expect(play?.steps?.at(-1)).toEqual({ atSec: 120, bpm: 100 })
@@ -209,7 +209,7 @@ describe("expandSession", () => {
     session.bpm = 80
     session.bpmIncrease = 5
     session.meter = "4/4"
-    session.time = { seconds: 18, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 18, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
     const play = expandSession(session).find((segment) => segment.kind === "play")
     expect(play?.durationSec).toBe(18)
     expect(play?.steps).toEqual([
@@ -223,7 +223,7 @@ describe("expandSession", () => {
     session.type = "time"
     session.bpm = 80
     session.bpmIncrease = 0
-    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 120, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const flat = expandSession(session).find((segment) => segment.kind === "play")
     expect(flat?.steps).toEqual([
       { atSec: 0, bpm: 80 },
@@ -243,7 +243,7 @@ describe("expandSession", () => {
     session.type = "time"
     session.bpm = 290
     session.bpmIncrease = 20
-    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 120, targetBpm: 300, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const play = expandSession(session).find((segment) => segment.kind === "play")
     expect(play?.steps?.map((step) => step.bpm)).toEqual([290, 300, 300, 300])
   })

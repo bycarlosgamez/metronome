@@ -48,6 +48,7 @@ export type ComplexPattern = {
 
 export type TimePattern = {
   seconds: number
+  targetBpm: number
   increaseEvery: "off" | "time" | "bars"
   everySec: number
   everyBars: number
