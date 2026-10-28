@@ -130,6 +130,8 @@ describe("Practice", () => {
     const signature = screen.getByRole("group", { name: "Time signature" })
     await user.selectOptions(within(signature).getByRole("combobox", { name: "Beats" }), "3")
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ meter: "3/4" }))
+    expect(screen.getByRole("combobox", { name: "Subdivision" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Beat click" })).toBeInTheDocument()
   })
 
   it("moves the stage when a minicard is clicked", async () => {

@@ -19,7 +19,36 @@ describe("Edit", () => {
     await user.tab()
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ bpm: 40 }))
     expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
-    expect(screen.getByRole("combobox", { name: "Click" })).toBeInTheDocument()
+    expect(screen.queryByRole("combobox", { name: "Click" })).not.toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Beat click" })).toBeInTheDocument()
+  })
+
+  it("fills a subdivision with the current click and keeps that click when the first slot changes", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const session = createDefaultSession(() => "cycle-1")
+    session.click = "click-2"
+    session.slots = ["click-2"]
+    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    expect(screen.queryByRole("combobox", { name: "Click" })).not.toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Beat click" })).toHaveValue("click-2")
+    await user.selectOptions(screen.getByRole("combobox", { name: "Subdivision" }), "triplet")
+    const triplet = onChange.mock.calls.at(-1)?.[0]
+    expect(triplet.subdivision).toBe("triplet")
+    expect(triplet.slots).toEqual(["click-2", "click-2", "click-2"])
+    rerender(<Edit session={triplet} onChange={onChange} onDone={() => {}} />)
+    expect(screen.getByRole("combobox", { name: "1 click" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "trip click" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "let click" })).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole("combobox", { name: "trip click" }), "off")
+    const muted = onChange.mock.calls.at(-1)?.[0]
+    expect(muted.slots).toEqual(["click-2", "off", "click-2"])
+    expect(muted.click).toBe("click-2")
+    rerender(<Edit session={muted} onChange={onChange} onDone={() => {}} />)
+    await user.selectOptions(screen.getByRole("combobox", { name: "1 click" }), "click-4")
+    const next = onChange.mock.calls.at(-1)?.[0]
+    expect(next.click).toBe("click-4")
+    expect(next.slots[0]).toBe("click-4")
   })
 
   it("hides the repeat fields until the switches are on", async () => {

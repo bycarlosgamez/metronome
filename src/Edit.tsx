@@ -3,7 +3,7 @@ import { expandSession } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, cycleGroupFromSimple, cyclesFromSimple, freshComplex, freshSimple, freshTime, sessionTitle } from "./session"
 import { Signature } from "./Signature"
-import { CLICKS, COLORS, type ClickId, type Cycle, type Length, type Session } from "./types"
+import { COLORS, type Cycle, type Length, type Session } from "./types"
 
 function lengthText(length: Length): string {
   return length.unit === "time" ? formatDuration(length.seconds) : String(length.bars)
@@ -18,13 +18,6 @@ function lengthWithUnit(length: Length, unit: "time" | "bars"): Length {
   if (length.unit === unit) return length
   if (unit === "bars") return { unit: "bars", bars: 1 }
   return { unit: "time", seconds: 1 }
-}
-
-const CLICK_LABELS: Record<ClickId, string> = {
-  "click-1": "Click 1",
-  "click-2": "Click 2",
-  "click-3": "Click 3",
-  "click-4": "Click 4",
 }
 
 function DraftField(props: {
@@ -382,18 +375,6 @@ export function Edit(props: {
           <p className="card-title">Tempo</p>
           <DraftField label="BPM" value={String(session.bpm)} onCommit={(text) => commit({ ...session, bpm: Number(text) })} />
           <Signature session={session} onChange={commit} />
-          <label>
-            Click
-            <select
-              aria-label="Click"
-              value={session.click}
-              onChange={(event) => commit({ ...session, click: event.target.value as ClickId })}
-            >
-              {CLICKS.map((click) => (
-                <option key={click} value={click}>{CLICK_LABELS[click]}</option>
-              ))}
-            </select>
-          </label>
         </section>
       </div>
       <section className="editor-card increase-card">
