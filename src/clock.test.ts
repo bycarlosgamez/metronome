@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { clicksInSegment, snapshotAt } from "./clock"
+import { clickWindow, clicksInSegment, snapshotAt } from "./clock"
 import { expandSession, type Segment } from "./expandSession"
 import { createDefaultSession } from "./session"
 
@@ -82,6 +82,7 @@ describe("clock", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 80
     session.meter = "4/4"
+    session.time.increaseEvery = "time"
     session.subdivision = "eighth"
     session.slots = ["click-1", "click-1"]
     const segments = expandSession(session)
@@ -117,6 +118,7 @@ describe("clock", () => {
   it("splits one beat into five quintuplet clicks and leaves the count-in plain", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
+    session.time.increaseEvery = "time"
     session.subdivision = "quintuplet"
     session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
     const segments = expandSession(session)
@@ -125,5 +127,17 @@ describe("clock", () => {
     expect(clicksInSegment(play).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
     expect(clicksInSegment(play)[0].accent).toBe(true)
     expect(clicksInSegment(play)[1].accent).toBe(false)
+  })
+
+  it("places the next two seconds of an endless play and then the following stretch", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 60
+    const play = expandSession(session).find((segment) => segment.kind === "play")!
+    const first = clickWindow(play, 0)
+    expect(first.untilSec).toBe(2)
+    expect(first.marks.map((mark) => mark.offsetSec)).toEqual([0, 1])
+    const second = clickWindow(play, first.untilSec)
+    expect(second.marks.map((mark) => mark.offsetSec)).toEqual([2, 3])
+    expect(clicksInSegment(play)).toEqual([])
   })
 })

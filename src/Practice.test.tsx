@@ -160,6 +160,7 @@ describe("Practice", () => {
 
   it("moves the stage when a minicard is clicked", async () => {
     const session = createDefaultSession(() => "set-1")
+    session.time.increaseEvery = "time"
     const segments = expandSession(session)
     const onSeek = vi.fn()
     const user = userEvent.setup()

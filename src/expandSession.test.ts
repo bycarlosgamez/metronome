@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { clicksInSegment } from "./clock"
 import { expandSession } from "./expandSession"
 import { createDefaultSession } from "./session"
 
@@ -245,5 +246,27 @@ describe("expandSession", () => {
     session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
     const play = expandSession(session).find((segment) => segment.kind === "play")
     expect(play?.steps?.map((step) => step.bpm)).toEqual([290, 300, 300, 300])
+  })
+
+  it("plays an Off session as a count-in plus one endless play", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 60
+    const segments = expandSession(session)
+    expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
+    expect(clicksInSegment(segments[0])).toHaveLength(4)
+    expect(segments[1].durationSec).toBe(Number.POSITIVE_INFINITY)
+    expect(segments[1].steps).toEqual([{ atSec: 0, bpm: 60 }])
+  })
+
+  it("holds the tempo and stops at the end when the amount is 0", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.time.increaseEvery = "time"
+    session.time.seconds = 10
+    session.time.everySec = 5
+    session.bpmIncrease = 0
+    const play = expandSession(session).find((segment) => segment.kind === "play")!
+    expect(play.durationSec).toBe(10)
+    expect(play.steps?.every((step) => step.bpm === 80)).toBe(true)
+    expect(play.steps?.length).toBeGreaterThan(1)
   })
 })

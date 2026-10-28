@@ -242,6 +242,7 @@ describe("Edit", () => {
     expect(opened.type).toBe("time")
     expect(opened.time).toEqual(freshTime())
     expect(opened.simple.practices).toBe(4)
+    opened.time = { ...opened.time, increaseEvery: "time" }
     rerender(<Edit session={opened} onChange={onChange} onDone={() => {}} />)
 
     expect(screen.getByRole("textbox", { name: "Duration" })).toHaveValue("2:00")

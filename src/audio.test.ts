@@ -70,6 +70,7 @@ describe("scheduleSegment", () => {
   it("plays an eighth slot from that slot's normal buffer", () => {
     const session = createDefaultSession(() => "set-1")
     session.bpm = 80
+    session.time.increaseEvery = "time"
     session.subdivision = "eighth"
     session.slots = ["click-1", "click-2"]
     const play = expandSession(session).find((segment) => segment.kind === "play")!

@@ -49,27 +49,45 @@ export function bpmAt(segment: Segment, offsetSec: number): number {
   return segment.steps?.[stepIndexAt(segment, offsetSec)]?.bpm ?? segment.bpm
 }
 
-export function clicksInSegment(segment: Segment): ClickMark[] {
-  if (segment.kind === "rest") return []
+export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segment.durationSec): ClickMark[] {
+  const end = Math.min(
+    Number.isFinite(segment.durationSec) ? segment.durationSec : Number.POSITIVE_INFINITY,
+    Number.isFinite(untilSec) ? untilSec : 0,
+  )
+  const start = Math.max(0, fromSec)
+  if (segment.kind === "rest" || !(end > start)) return []
   const slots = segment.kind === "count-in" || !segment.slots?.length ? [segment.click] : segment.slots
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
   const marks: ClickMark[] = []
   let offsetSec = 0
   let beatIndex = 0
-  while (offsetSec < segment.durationSec - 1e-9) {
+  while (offsetSec < end - 1e-9) {
     const beatDur = 60 / bpmAt(segment, offsetSec)
     if (!(beatDur > 0)) break
     const beat = (beatIndex % beats) + 1
     const slotDur = beatDur / slots.length
     slots.forEach((slot, index) => {
       const at = offsetSec + index * slotDur
-      if (at >= segment.durationSec - 1e-9 || slot === "off") return
+      if (at < start - 1e-9 || at >= end - 1e-9 || slot === "off") return
       marks.push({ offsetSec: at, beat, accent: beat === 1 && index === 0, click: slot })
     })
     offsetSec += beatDur
     beatIndex += 1
   }
   return marks
+}
+
+export function clickWindow(segment: Segment, fromSec: number): { untilSec: number; marks: ClickMark[] } {
+  let untilSec = Math.max(0, fromSec)
+  let guard = 0
+  while (untilSec < fromSec + 2 - 1e-9 && guard < 64) {
+    const beat = 60 / bpmAt(segment, untilSec)
+    if (!(beat > 0)) break
+    untilSec += beat
+    guard += 1
+  }
+  if (Number.isFinite(segment.durationSec)) untilSec = Math.min(untilSec, segment.durationSec)
+  return { untilSec, marks: clicksInSegment(segment, fromSec, untilSec) }
 }
 
 function beatAt(segment: Segment, intoSec: number): number {

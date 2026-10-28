@@ -30,6 +30,15 @@ type Resolved = {
 }
 
 function resolved(session: Session): Resolved[] {
+  if (session.type === "time" && session.time.increaseEvery === "off") {
+    return [{
+      id: "time",
+      bpm: session.bpm,
+      durationSec: Number.POSITIVE_INFINITY,
+      restSec: 0,
+      steps: [{ atSec: 0, bpm: session.bpm }],
+    }]
+  }
   if (session.type === "time") {
     const steps = timeSteps(session)
     return [{

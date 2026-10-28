@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { createClickSounds, scheduleSegment, type ClickSounds } from "./audio"
-import { clicksInSegment, snapshotAt, stepIndexAt } from "./clock"
+import { createClickSounds, scheduleClicks, scheduleSegment, type ClickSounds } from "./audio"
+import { clickWindow, clicksInSegment, snapshotAt, stepIndexAt } from "./clock"
 import { Edit } from "./Edit"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
@@ -51,26 +51,52 @@ export function App() {
     if (!audio) return
     if (!buffersRef.current) buffersRef.current = createClickSounds(audio)
     const segment = segmentsRef.current[snapshot.segmentIndex]
-    const into = segment.durationSec - remainingRef.current
+    const before = segmentsRef.current
+      .slice(0, snapshot.segmentIndex)
+      .reduce((sum, item) => sum + item.durationSec, 0)
+    const into = Number.isFinite(segment.durationSec)
+      ? Math.max(0, segment.durationSec - remainingRef.current)
+      : Math.max(0, elapsedRef.current - before)
     const idealWhen = audio.currentTime - into
     const boundarySlackSec = 0.05
-    const scheduled = scheduleSegment(audio, buffersRef.current, segment, idealWhen)
-    const marks = segment.kind === "rest" ? [{ offsetSec: 0 }] : clicksInSegment(segment)
-    const kept: AudioBufferSourceNode[] = []
-    scheduled.forEach((node, index) => {
-      const idealStart = idealWhen + marks[index].offsetSec
-      if (idealStart < audio.currentTime - boundarySlackSec) {
-        try {
-          node.stop()
-        } catch {
-          // click already in the past
+    const sounds = buffersRef.current
+    const keep = (nodes: AudioBufferSourceNode[], marks: { offsetSec: number }[]) => {
+      const kept: AudioBufferSourceNode[] = []
+      nodes.forEach((node, index) => {
+        const idealStart = idealWhen + marks[index].offsetSec
+        if (idealStart < audio.currentTime - boundarySlackSec) {
+          try {
+            node.stop()
+          } catch {
+            // click already in the past
+          }
+          return
         }
-        return
-      }
-      kept.push(node)
-    })
-    nodesRef.current = kept
+        kept.push(node)
+      })
+      return kept
+    }
+    if (Number.isFinite(segment.durationSec)) {
+      const scheduled = scheduleSegment(audio, sounds, segment, idealWhen)
+      const marks = segment.kind === "rest" ? [{ offsetSec: 0 }] : clicksInSegment(segment)
+      nodesRef.current = keep(scheduled, marks)
+      return () => stopNodes()
+    }
+    let until = into
+    const place = () => {
+      const from = until
+      const window = clickWindow(segment, from)
+      const scheduled = scheduleClicks(audio, sounds, window.marks, idealWhen)
+      nodesRef.current = nodesRef.current.concat(keep(scheduled, window.marks))
+      until = window.untilSec
+    }
+    place()
+    const timer = window.setInterval(() => {
+      const played = audio.currentTime - idealWhen
+      if (until - played < 1) place()
+    }, 250)
     return () => {
+      window.clearInterval(timer)
       stopNodes()
     }
   }, [snapshot.segmentIndex, status, segments, seekCount])
@@ -159,7 +185,11 @@ export function App() {
       const nextSegments = expandSession(next)
       const total = nextSegments.reduce((sum, segment) => sum + segment.durationSec, 0)
       let nextElapsed = elapsedRef.current
-      if (currentSegment.kind === "play") {
+      if (currentSegment.kind === "play" && !Number.isFinite(currentSegment.durationSec)) {
+        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
+        const played = Math.max(0, elapsedRef.current - segments.slice(0, current.segmentIndex).reduce((sum, segment) => sum + segment.durationSec, 0))
+        nextElapsed = (nextCountIn?.durationSec ?? 0) + played
+      } else if (currentSegment.kind === "play") {
         const step = stepIndexAt(currentSegment, into)
         const steps = currentSegment.steps ?? [{ atSec: 0, bpm: currentSegment.bpm }]
         const atSec = steps[step]?.atSec ?? 0

@@ -359,4 +359,34 @@ describe("App", () => {
     })))
     expect(saved.cycles.map((cycle: { id: string }) => cycle.id)).not.toEqual(["old-a", "old-b"])
   })
+
+  it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 80
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    const countInSec = (4 * 60) / 80
+    await act(async () => {
+      tick?.((countInSec + 10) * 1000)
+    })
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    await user.click(bpm)
+    await user.clear(bpm)
+    await user.type(bpm, "100")
+    await user.tab()
+    expect(screen.getByRole("textbox", { name: "BPM" })).toHaveValue("100")
+    expect(screen.getByText("Elapsed").nextElementSibling).toHaveTextContent("0:12")
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+  })
 })
