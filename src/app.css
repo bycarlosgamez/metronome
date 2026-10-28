@@ -227,17 +227,21 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .beat-sq.accent.lit { background: var(--ink); border-color: var(--ink); color: var(--play-ink); }
 .beat-subs {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 .beat-sub {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: var(--surface);
+  background: var(--surface-raised);
   border: 1.5px solid var(--line);
-  transition: background 0.08s, border-color 0.08s;
+  transition: background 0.06s, border-color 0.06s, transform 0.06s;
 }
-.beat-sub.lit { background: var(--blue); border-color: var(--blue); }
+.beat-sub.lit {
+  background: var(--blue);
+  border-color: var(--blue);
+  transform: scale(1.25);
+}
 
 /* BPM block */
 .bpm-block {
@@ -418,6 +422,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .meter-selects {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
 }
 .meter-select {

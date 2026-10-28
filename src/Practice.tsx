@@ -154,7 +154,7 @@ export function Practice(props: {
             onClick={() => setSheet("meter")}
           >
             <strong>{props.session.meter}</strong>
-            <span>Meter</span>
+            <span>Time Signature</span>
           </button>
           <button
             type="button"
