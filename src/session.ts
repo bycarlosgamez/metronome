@@ -36,7 +36,7 @@ export function freshComplex(): ComplexPattern {
 export function freshTime(): TimePattern {
   return {
     seconds: 120,
-    increaseEvery: "time",
+    increaseEvery: "off",
     everySec: 30,
     everyBars: 4,
   }
@@ -46,7 +46,7 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
   const base = pattern ?? freshTime()
   return {
     seconds: Math.max(1, integer(base.seconds)),
-    increaseEvery: base.increaseEvery === "bars" ? "bars" : "time",
+    increaseEvery: base.increaseEvery === "bars" || base.increaseEvery === "time" ? base.increaseEvery : "off",
     everySec: Math.max(1, integer(base.everySec)),
     everyBars: Math.max(1, integer(base.everyBars)),
   }

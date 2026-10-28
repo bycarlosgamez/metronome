@@ -45,7 +45,7 @@ describe("session", () => {
     })
     expect(freshTime()).toEqual({
       seconds: 120,
-      increaseEvery: "time",
+      increaseEvery: "off",
       everySec: 30,
       everyBars: 4,
     })
@@ -59,16 +59,20 @@ describe("session", () => {
 
     session.time = freshTime()
     session.type = "time"
-    session.time.increaseEvery = "nope" as "time"
+    session.time.increaseEvery = "nope" as "off"
     session.time.seconds = 0
     session.time.everySec = 0
     session.time.everyBars = 0
     expect(clampSession(session).time).toEqual({
       seconds: 1,
-      increaseEvery: "time",
+      increaseEvery: "off",
       everySec: 1,
       everyBars: 1,
     })
+    session.time.increaseEvery = "time"
+    expect(clampSession(session).time.increaseEvery).toBe("time")
+    session.time.increaseEvery = "bars"
+    expect(clampSession(session).time.increaseEvery).toBe("bars")
 
     session.type = "nope" as "simple"
     expect(clampSession(session).type).toBe("simple")
