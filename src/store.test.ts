@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createDefaultSession } from "./session"
+import { createDefaultSession, freshTime } from "./session"
 import { SESSION_KEY, loadSession, saveSession } from "./store"
 
 function memory(): Storage {
@@ -59,5 +59,20 @@ describe("store", () => {
     expect(loaded.bpm).toBe(100)
     expect(loaded.cycles[0]).toMatchObject({ length: { unit: "time", seconds: 90 }, restSec: 0 })
     expect(loaded.color).toBe("green")
+  })
+
+  it("loads a time session and fills a missing time pattern", () => {
+    const storage = memory()
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.time.seconds = 90
+    saveSession(session, storage)
+    expect(loadSession(storage)).toMatchObject({ type: "time", time: { seconds: 90 } })
+
+    const { time: _time, ...withoutTime } = createDefaultSession(() => "cycle-1")
+    storage.setItem(SESSION_KEY, JSON.stringify(withoutTime))
+    const loaded = loadSession(storage)
+    expect(loaded.type).toBe("simple")
+    expect(loaded.time).toEqual(freshTime())
   })
 })

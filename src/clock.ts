@@ -34,23 +34,49 @@ export function snapshotAt(segments: Segment[], elapsedSec: number): ClockSnapsh
   throw new Error("expandSession always returns at least one segment")
 }
 
+export function stepIndexAt(segment: Segment, offsetSec: number): number {
+  if (!segment.steps?.length) return 0
+  let index = 0
+  for (let i = 0; i < segment.steps.length; i += 1) {
+    if (segment.steps[i].atSec <= offsetSec + 1e-9) index = i
+    else break
+  }
+  return index
+}
+
+export function bpmAt(segment: Segment, offsetSec: number): number {
+  return segment.steps?.[stepIndexAt(segment, offsetSec)]?.bpm ?? segment.bpm
+}
+
 export function clicksInSegment(segment: Segment): ClickMark[] {
   if (segment.kind === "rest") return []
-  const secondsPerBeat = 60 / segment.bpm
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
   const marks: ClickMark[] = []
-  for (let index = 0; ; index++) {
-    const offsetSec = index * secondsPerBeat
-    if (offsetSec >= segment.durationSec - 1e-9) break
+  let offsetSec = 0
+  let index = 0
+  while (offsetSec < segment.durationSec - 1e-9) {
+    const bpm = bpmAt(segment, offsetSec)
     const beat = (index % beats) + 1
     marks.push({ offsetSec, beat, accent: beat === 1 })
+    const next = offsetSec + 60 / bpm
+    if (!(next > offsetSec)) break
+    offsetSec = next
+    index += 1
   }
   return marks
 }
 
 function beatAt(segment: Segment, intoSec: number): number {
-  const secondsPerBeat = 60 / segment.bpm
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
-  const index = Math.floor(intoSec / secondsPerBeat)
-  return (index % beats) + 1
+  let offsetSec = 0
+  let index = 0
+  let beat = 1
+  while (offsetSec < segment.durationSec - 1e-9) {
+    beat = (index % beats) + 1
+    const next = offsetSec + 60 / bpmAt(segment, offsetSec)
+    if (!(next > offsetSec) || next > intoSec + 1e-9) break
+    offsetSec = next
+    index += 1
+  }
+  return beat
 }

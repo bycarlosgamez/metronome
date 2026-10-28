@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { clicksInSegment, snapshotAt } from "./clock"
-import { expandSession } from "./expandSession"
+import { expandSession, type Segment } from "./expandSession"
 import { createDefaultSession } from "./session"
 
 describe("clock", () => {
@@ -44,5 +44,31 @@ describe("clock", () => {
 
     const rest = segments.find((segment) => segment.kind === "rest")!
     expect(clicksInSegment(rest)).toEqual([])
+  })
+
+  it("keeps the beat count when a later window uses a new BPM", () => {
+    const segment: Segment = {
+      kind: "play",
+      setId: "time",
+      label: "Practice",
+      repetition: 1,
+      bpm: 80,
+      meter: "4/4",
+      durationSec: 3,
+      color: "red",
+      setIndex: 0,
+      cycleIndex: 0,
+      steps: [
+        { atSec: 0, bpm: 80 },
+        { atSec: 1, bpm: 85 },
+      ],
+    }
+    const clicks = clicksInSegment(segment)
+    expect(clicks[0]).toMatchObject({ offsetSec: 0, beat: 1, accent: true })
+    expect(clicks[1]).toMatchObject({ offsetSec: 0.75, beat: 2, accent: false })
+    expect(clicks[2].offsetSec).toBeCloseTo(1.5)
+    expect(clicks[2].beat).toBe(3)
+    expect(clicks[3].offsetSec - clicks[2].offsetSec).toBeCloseTo(60 / 85)
+    expect(clicks.at(-1)!.offsetSec).toBeLessThan(3)
   })
 })

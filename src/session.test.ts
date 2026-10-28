@@ -6,6 +6,7 @@ import {
   cyclesFromSimple,
   freshComplex,
   freshSimple,
+  freshTime,
   ladderBpm,
   lengthSeconds,
   migrateLegacy,
@@ -26,6 +27,7 @@ describe("session", () => {
       type: "simple",
       simple: freshSimple(),
       complex: freshComplex(),
+      time: freshTime(),
       cycles: [{ id: "cycle-1", length: { unit: "time", seconds: 120 }, restSec: 30 }],
     })
     expect(freshSimple()).toEqual({
@@ -39,6 +41,35 @@ describe("session", () => {
       restBetweenSec: 30,
       increaseEvery: "interval",
     })
+    expect(freshTime()).toEqual({
+      seconds: 120,
+      increaseEvery: "time",
+      everySec: 30,
+      everyBars: 4,
+    })
+  })
+
+  it("loads a missing time pattern as fresh and keeps the saved type", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    delete (session as { time?: unknown }).time
+    expect(clampSession(session).type).toBe("simple")
+    expect(clampSession(session).time).toEqual(freshTime())
+
+    session.time = freshTime()
+    session.type = "time"
+    session.time.increaseEvery = "nope" as "time"
+    session.time.seconds = 0
+    session.time.everySec = 0
+    session.time.everyBars = 0
+    expect(clampSession(session).time).toEqual({
+      seconds: 1,
+      increaseEvery: "time",
+      everySec: 1,
+      everyBars: 1,
+    })
+
+    session.type = "nope" as "simple"
+    expect(clampSession(session).type).toBe("simple")
   })
 
   it("loads a missing complex choice as interval and builds one round of repeated intervals", () => {

@@ -1,4 +1,4 @@
-import { CLICKS, COLORS, METERS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern } from "./types"
+import { CLICKS, COLORS, METERS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -31,6 +31,44 @@ export function freshComplex(): ComplexPattern {
     rounds: 2,
     restBetweenSec: 30,
   }
+}
+
+export function freshTime(): TimePattern {
+  return {
+    seconds: 120,
+    increaseEvery: "time",
+    everySec: 30,
+    everyBars: 4,
+  }
+}
+
+function clampTime(pattern: TimePattern | undefined): TimePattern {
+  const base = pattern ?? freshTime()
+  return {
+    seconds: Math.max(1, integer(base.seconds)),
+    increaseEvery: base.increaseEvery === "bars" ? "bars" : "time",
+    everySec: Math.max(1, integer(base.everySec)),
+    everyBars: Math.max(1, integer(base.everyBars)),
+  }
+}
+
+export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
+  const pattern = clampTime(session.time)
+  const duration = pattern.seconds
+  const steps: { atSec: number; bpm: number }[] = []
+  let at = 0
+  let index = 0
+  while (at < duration - 1e-9) {
+    const bpm = Math.min(300, clampBpm(session.bpm) + Math.max(0, integer(session.bpmIncrease)) * index)
+    steps.push({ atSec: at, bpm })
+    const window = pattern.increaseEvery === "bars"
+      ? pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
+      : pattern.everySec
+    if (!(window > 0)) break
+    at += window
+    index += 1
+  }
+  return steps
 }
 
 function clampComplex(pattern: ComplexPattern | undefined): ComplexPattern {
@@ -82,6 +120,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     type: "simple",
     simple: freshSimple(),
     complex: freshComplex(),
+    time: freshTime(),
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
   }
 }
@@ -144,9 +183,10 @@ export function clampSession(session: Session): Session {
     bpmIncrease: Math.max(0, integer(session.bpmIncrease)),
     every: Math.max(1, integer(session.every)),
     click: CLICKS.includes(session.click) ? session.click : "click-1",
-    type: session.type === "complex" ? "complex" : "simple",
+    type: session.type === "complex" || session.type === "time" ? session.type : "simple",
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
+    time: clampTime(session.time),
     cycles,
   }
 }
@@ -222,6 +262,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     type: "complex",
     simple: freshSimple(),
     complex: freshComplex(),
+    time: freshTime(),
     cycles: plays.map((play) => ({
       id: nextId(),
       length: { unit: "time", seconds: play.seconds },

@@ -169,4 +169,73 @@ describe("expandSession", () => {
     const plays = expandSession(session).filter((segment) => segment.kind === "play")
     expect(plays.map((segment) => segment.bpm)).toEqual([290, 300, 300])
   })
+
+  it("plays a time session as one count-in and one climb by clock time", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    const segments = expandSession(session)
+    expect(segments.map((segment) => segment.kind)).toEqual(["count-in", "play"])
+    expect(segments[0]).toMatchObject({ bpm: 80, meter: "4/4", durationSec: 3 })
+    expect(segments[1]).toMatchObject({ bpm: 80, durationSec: 120, meter: "4/4" })
+    expect(segments[1].steps).toEqual([
+      { atSec: 0, bpm: 80 },
+      { atSec: 30, bpm: 85 },
+      { atSec: 60, bpm: 90 },
+      { atSec: 90, bpm: 95 },
+    ])
+  })
+
+  it("gives a short leftover its own later tempo", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.time = { seconds: 130, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    const play = expandSession(session).find((segment) => segment.kind === "play")
+    expect(play?.durationSec).toBe(130)
+    expect(play?.steps?.at(-1)).toEqual({ atSec: 120, bpm: 100 })
+  })
+
+  it("cuts a bar step off when the duration ends", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.meter = "4/4"
+    session.time = { seconds: 18, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    const play = expandSession(session).find((segment) => segment.kind === "play")
+    expect(play?.durationSec).toBe(18)
+    expect(play?.steps).toEqual([
+      { atSec: 0, bpm: 80 },
+      { atSec: 12, bpm: 85 },
+    ])
+  })
+
+  it("holds the session tempo when the increase is zero or the step is longer than the duration", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 80
+    session.bpmIncrease = 0
+    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    const flat = expandSession(session).find((segment) => segment.kind === "play")
+    expect(flat?.steps?.every((step) => step.bpm === 80)).toBe(true)
+
+    session.bpmIncrease = 5
+    session.time.everySec = 180
+    const one = expandSession(session).find((segment) => segment.kind === "play")
+    expect(one?.steps).toEqual([{ atSec: 0, bpm: 80 }])
+  })
+
+  it("plays a time step at 300 once the climb reaches the cap", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
+    session.bpm = 290
+    session.bpmIncrease = 20
+    session.time = { seconds: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+    const play = expandSession(session).find((segment) => segment.kind === "play")
+    expect(play?.steps?.map((step) => step.bpm)).toEqual([290, 300, 300, 300])
+  })
 })

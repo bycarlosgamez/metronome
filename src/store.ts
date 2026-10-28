@@ -9,7 +9,7 @@ export function loadSession(storage: Storage): Session {
   try {
     const parsed = JSON.parse(raw) as Session & { sets?: unknown }
     if (!parsed || typeof parsed !== "object") return createDefaultSession()
-    if (parsed.type === "simple" || parsed.type === "complex") return clampSession(parsed)
+    if (parsed.type === "simple" || parsed.type === "complex" || parsed.type === "time") return clampSession(parsed)
     return migrateLegacy(parsed) ?? createDefaultSession()
   } catch {
     return createDefaultSession()

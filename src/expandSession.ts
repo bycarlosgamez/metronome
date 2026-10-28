@@ -1,4 +1,4 @@
-import { lengthSeconds, sessionTitle, simplePlayedBpm } from "./session"
+import { lengthSeconds, sessionTitle, simplePlayedBpm, timeSteps } from "./session"
 import type { Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -15,6 +15,7 @@ export type Segment = {
   setIndex: number
   cycleIndex: number
   restRole?: "after" | "between"
+  steps?: { atSec: number; bpm: number }[]
 }
 
 type Resolved = {
@@ -23,9 +24,20 @@ type Resolved = {
   durationSec: number
   restSec: number
   restRole?: "after" | "between"
+  steps?: { atSec: number; bpm: number }[]
 }
 
 function resolved(session: Session): Resolved[] {
+  if (session.type === "time") {
+    const steps = timeSteps(session)
+    return [{
+      id: "time",
+      bpm: steps[0]?.bpm ?? session.bpm,
+      durationSec: Math.max(1, Math.round(session.time.seconds)),
+      restSec: 0,
+      steps,
+    }]
+  }
   if (session.type === "complex") {
     const pattern = session.complex
     const rounds = pattern.repeatRound ? pattern.rounds : 1
@@ -103,6 +115,7 @@ export function expandSession(session: Session): Segment[] {
         color: session.color,
         setIndex: index,
         cycleIndex: index,
+        ...(play.steps ? { steps: play.steps } : {}),
       },
     ]
     if (index < plays.length - 1 && play.restSec > 0) {

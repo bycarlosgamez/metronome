@@ -39,6 +39,13 @@ export type ComplexPattern = {
   restBetweenSec: number
 }
 
+export type TimePattern = {
+  seconds: number
+  increaseEvery: "time" | "bars"
+  everySec: number
+  everyBars: number
+}
+
 export type Session = {
   name: string
   color: SetColor
@@ -47,8 +54,9 @@ export type Session = {
   bpmIncrease: number
   every: number
   click: ClickId
-  type: "simple" | "complex"
+  type: "simple" | "complex" | "time"
   simple: SimplePattern
   complex: ComplexPattern
+  time: TimePattern
   cycles: Cycle[]
 }
