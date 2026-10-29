@@ -170,6 +170,7 @@ describe("App", () => {
         perSetMeter: false,
         bpmIncrease: 0,
         click: "click-1",
+        countIn: true,
         sets: [
           {
             id: "set-1",
@@ -236,6 +237,7 @@ describe("App", () => {
       perSetMeter: false,
       bpmIncrease: 0,
       click: "click-1",
+      countIn: true,
       sets: [
         {
           id: "set-1",

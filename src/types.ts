@@ -79,4 +79,5 @@ export type Session = {
   cycles: Cycle[]
   routineEnabled: boolean      // NEW
   routine: RoutinePattern      // NEW
+  countIn: boolean
 }

@@ -7,6 +7,7 @@ describe("clock", () => {
   it("starts on the first count-in beat and enters the playing stretch after that bar", () => {
     const session = createDefaultSession(() => "set-1")
     session.type = "simple"
+    session.countIn = true
     const segments = expandSession(session)
     const countIn = (4 * 60) / 80
     const start = snapshotAt(segments, 0)
@@ -34,6 +35,7 @@ describe("clock", () => {
   it("places four accented-on-one count-in clicks and no rest clicks", () => {
     const session = createDefaultSession(() => "set-1")
     session.type = "simple"
+    session.countIn = true
     session.simple.practices = 2
     session.simple.restAfterSec = 30
     const segments = expandSession(session)

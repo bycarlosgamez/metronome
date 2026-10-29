@@ -37,6 +37,7 @@ describe("session", () => {
       cycles: [{ id: "cycle-1", length: { unit: "time", seconds: 120 }, restSec: 30 }],
       routineEnabled: false,
       routine: freshRoutine(),
+      countIn: false,
     })
     // freshSimple / freshTime assertions stay unchanged
     expect(freshSimple()).toEqual({

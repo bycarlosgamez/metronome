@@ -19,10 +19,26 @@ function example() {
     restBetweenSec: 60,
     increaseEvery: "interval",
   }
+  session.countIn = true
   return session
 }
 
 describe("expandSession", () => {
+  it("produces no count-in by default (countIn defaults to false)", () => {
+    const session = createDefaultSession(() => "s1")
+    session.type = "simple"
+    const segments = expandSession(session)
+    expect(segments[0].kind).toBe("play")
+  })
+
+  it("produces a count-in segment when countIn is true", () => {
+    const session = createDefaultSession(() => "s1")
+    session.type = "simple"
+    session.countIn = true
+    const segments = expandSession(session)
+    expect(segments[0].kind).toBe("count-in")
+  })
+
   it("builds the 30 second session and does not end on a rest", () => {
     const segments = expandSession(example())
     const plays = segments.filter((segment) => segment.kind === "play")
@@ -48,6 +64,7 @@ describe("expandSession", () => {
   it("omits a 0 second rest and still counts in", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "complex"
+    session.countIn = true
     session.cycles = [
       { id: "a", length: { unit: "time", seconds: 30 }, restSec: 0 },
       { id: "b", length: { unit: "time", seconds: 30 }, restSec: 0 },
@@ -307,6 +324,7 @@ describe("routine", () => {
   it("generates count-in once then play/rest pairs per level", () => {
     const session = createDefaultSession()
     session.routineEnabled = true
+    session.countIn = true
     session.bpm = 80
     session.bpmIncrease = 5
     session.meter = "4/4"
@@ -342,6 +360,7 @@ describe("routine", () => {
   it("produces one play segment when numLevels is 1 (no ramp)", () => {
     const session = createDefaultSession()
     session.routineEnabled = true
+    session.countIn = true
     session.bpm = 100
     session.bpmIncrease = 5
     session.routine = { barsPerLevel: 8, numLevels: 1, repeatCount: 1, restAfterSec: 10, loop: false }

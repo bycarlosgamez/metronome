@@ -51,6 +51,7 @@ describe("scheduleSegment", () => {
   it("schedules four count-in clicks and one rest cue", () => {
     const session = createDefaultSession(() => "set-1")
     session.type = "simple"
+    session.countIn = true
     session.bpm = 60
     session.simple.practices = 2
     session.simple.restAfterSec = 30

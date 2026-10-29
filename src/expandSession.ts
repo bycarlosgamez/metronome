@@ -117,7 +117,7 @@ export function expandSession(session: Session): Segment[] {
   const plays = resolved(session)
   return plays.flatMap((play, index) => {
     const segments: Segment[] = []
-    const addCountIn = session.routineEnabled ? index === 0 : session.type !== "time"
+    const addCountIn = session.countIn && (session.routineEnabled ? index === 0 : session.type !== "time")
     if (addCountIn) {
       segments.push({
         kind: "count-in",

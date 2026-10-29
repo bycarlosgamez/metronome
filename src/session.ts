@@ -162,6 +162,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
     routineEnabled: false,
     routine: freshRoutine(),
+    countIn: false,
   }
 }
 
@@ -287,6 +288,7 @@ export function clampSession(session: Session): Session {
     cycles,
     routineEnabled,
     routine,
+    countIn: Boolean(session.countIn ?? false),
   }
 }
 
@@ -330,6 +332,7 @@ type LegacySession = {
   meter?: Meter
   bpmIncrease?: number
   click?: ClickId
+  countIn?: boolean
   sets?: LegacySet[]
 }
 
@@ -373,6 +376,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     })),
     routineEnabled: false,
     routine: freshRoutine(),
+    countIn: Boolean(legacy.countIn ?? false),
   })
 }
 
