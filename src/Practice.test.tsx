@@ -278,7 +278,7 @@ describe("Practice", () => {
     })
     render(<Practice {...props} />)
     expect(screen.getByText("Set")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Increase set rest" })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Set rest minutes" })).toBeInTheDocument()
   })
 
   it("Block section is hidden when set.enabled is false", () => {
@@ -371,5 +371,139 @@ describe("Practice", () => {
     render(<Practice {...props} />)
     // BpmSheet starts closed; verify Step label is not in DOM
     expect(screen.queryByLabelText("Step")).not.toBeInTheDocument()
+  })
+
+  describe("routine duration units", () => {
+    const timeRoutine = (over: Partial<Session["routine"]> = {}) => ({
+      ...createDefaultSession().routine,
+      unit: "sec" as const, playDuration: 150, restDuration: 30,
+      ...over,
+    })
+
+    it("offers Bars and Time, not sec", () => {
+      render(<Practice {...makeProps({ routineEnabled: true })} />)
+      expect(screen.getByRole("button", { name: "Bars" })).toHaveAttribute("aria-pressed", "true")
+      expect(screen.getByRole("button", { name: "Time" })).toHaveAttribute("aria-pressed", "false")
+      expect(screen.queryByRole("button", { name: "sec" })).not.toBeInTheDocument()
+    })
+
+    it("shows bar counts with their unit in Bars mode", () => {
+      render(<Practice {...makeProps({ routineEnabled: true })} />)
+      expect(screen.getByText("4 bars")).toBeInTheDocument()
+      expect(screen.getByText("0 bars")).toBeInTheDocument()
+      expect(screen.queryByRole("textbox", { name: "Play minutes" })).not.toBeInTheDocument()
+    })
+
+    it("switching to Time resets play to 1:00 and rest to 0:00", async () => {
+      const props = makeProps({ routineEnabled: true })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("button", { name: "Time" }))
+      expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ unit: "sec", playDuration: 60, restDuration: 0 }),
+      }))
+    })
+
+    it("switching back to Bars resets play to 4 bars and rest to 0", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine() })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("button", { name: "Bars" }))
+      expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ unit: "bars", playDuration: 4, restDuration: 0 }),
+      }))
+    })
+
+    it("shows MIN and SEC inputs in Time mode", () => {
+      render(<Practice {...makeProps({ routineEnabled: true, routine: timeRoutine() })} />)
+      expect(screen.getByRole("textbox", { name: "Play minutes" })).toHaveValue("2")
+      expect(screen.getByRole("textbox", { name: "Play seconds" })).toHaveValue("30")
+      expect(screen.getByRole("textbox", { name: "Rest minutes" })).toHaveValue("0")
+      expect(screen.getByRole("textbox", { name: "Rest seconds" })).toHaveValue("30")
+    })
+
+    it("pads seconds to two digits", () => {
+      render(<Practice {...makeProps({ routineEnabled: true, routine: timeRoutine({ playDuration: 65 }) })} />)
+      expect(screen.getByRole("textbox", { name: "Play seconds" })).toHaveValue("05")
+    })
+
+    it("commits a typed minutes value on blur", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine() })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      const min = screen.getByRole("textbox", { name: "Play minutes" })
+      await user.click(min)
+      await user.keyboard("4")
+      expect(props.onChange).not.toHaveBeenCalled()
+      await user.tab()
+      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ playDuration: 270 }),
+      }))
+    })
+
+    it("commits on Enter", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine() })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("textbox", { name: "Rest seconds" }))
+      await user.keyboard("45{Enter}")
+      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ restDuration: 45 }),
+      }))
+    })
+
+    it("carries seconds over 59 into minutes", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine({ playDuration: 0 + 60 }) })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("textbox", { name: "Play seconds" }))
+      await user.keyboard("90")
+      await user.tab()
+      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ playDuration: 150 }),
+      }))
+    })
+
+    it("ignores non-digit characters", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine() })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      const sec = screen.getByRole("textbox", { name: "Rest seconds" })
+      await user.click(sec)
+      await user.keyboard("1a5")
+      expect(sec).toHaveValue("15")
+    })
+
+    it("keeps play at least 1 sec and allows a 0 rest", async () => {
+      const props = makeProps({ routineEnabled: true, routine: timeRoutine() })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("textbox", { name: "Play minutes" }))
+      await user.keyboard("0")
+      await user.click(screen.getByRole("textbox", { name: "Play seconds" }))
+      await user.keyboard("0")
+      await user.tab()
+      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ playDuration: 1 }),
+      }))
+    })
+
+    it("uses MIN and SEC inputs for Set and Block rest", async () => {
+      const base = createDefaultSession().routine
+      const props = makeProps({
+        routineEnabled: true,
+        routine: { ...base, round: { enabled: true, count: 4, restDuration: 0 }, set: { enabled: true, count: 3, restDuration: 90 } },
+      })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      expect(screen.getByRole("textbox", { name: "Set rest minutes" })).toHaveValue("1")
+      expect(screen.getByRole("textbox", { name: "Set rest seconds" })).toHaveValue("30")
+      expect(screen.getByRole("textbox", { name: "Block rest minutes" })).toHaveValue("1")
+      await user.click(screen.getByRole("textbox", { name: "Block rest minutes" }))
+      await user.keyboard("2{Enter}")
+      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
+        routine: expect.objectContaining({ block: expect.objectContaining({ restDuration: 120 }) }),
+      }))
+    })
   })
 })

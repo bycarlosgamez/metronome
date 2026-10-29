@@ -502,7 +502,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .routine-stepper button:hover { color: var(--ink); }
 .routine-stepper-val {
-  min-width: 36px;
+  min-width: 56px;
+  white-space: nowrap;
   text-align: center;
   font-size: 14px;
   font-weight: 600;
@@ -527,7 +528,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: var(--blue);
 }
 
-/* Segment control (bars/sec and BPM row) */
+/* Segment control (Bars/Time and BPM row) */
 .routine-seg {
   display: flex;
   border: 1px solid var(--line);
@@ -547,6 +548,25 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .routine-seg-btn:last-child { border-right: none; }
 .routine-seg-btn[aria-pressed="true"] { background: var(--surface-high); color: var(--ink); }
+/* MIN : SEC input */
+.time-input { display: flex; align-items: flex-start; gap: 4px; }
+.time-input-box { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.time-input-box input {
+  width: 44px;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 6px 0;
+}
+.time-input-box input:focus { outline: none; border-color: var(--blue); }
+.time-input-box span { font-size: 9px; letter-spacing: 0.1em; color: var(--ink-muted); }
+.time-input-colon { font-size: 16px; font-weight: 600; color: var(--ink-muted); padding-top: 6px; }
 
 /* BPM row */
 .routine-bpm-row {

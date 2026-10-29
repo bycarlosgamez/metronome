@@ -7,6 +7,7 @@ import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { MeterSheet } from "./MeterSheet"
 import { SubdivisionSheet } from "./SubdivisionSheet"
+import { TimeInput } from "./TimeInput"
 import type { Session } from "./types"
 
 export type PlaybackStatus = "stopped" | "playing" | "paused" | "no-audio"
@@ -266,12 +267,18 @@ export function Practice(props: {
 
             {/* Unit toggle */}
             <div className="routine-unit-row">
-              <span className="routine-unit-label">Duration in</span>
+              <span className="routine-unit-label">Duration</span>
               <div className="routine-seg">
                 {(["bars", "sec"] as const).map((u) => (
                   <button key={u} type="button" className="routine-seg-btn" aria-pressed={routine.unit === u}
-                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, unit: u } }))}>
-                    {u}
+                    onClick={() => {
+                      if (routine.unit === u) return
+                      const reset = u === "bars"
+                        ? { unit: u, playDuration: 4, restDuration: 0 }
+                        : { unit: u, playDuration: 60, restDuration: 0 }
+                      props.onChange(clampSession({ ...props.session, routine: { ...routine, ...reset } }))
+                    }}>
+                    {u === "bars" ? "Bars" : "Time"}
                   </button>
                 ))}
               </div>
@@ -280,26 +287,28 @@ export function Practice(props: {
             {/* Round section */}
             <div className="routine-section">
               <div className="routine-section-title">Round</div>
-              <div className="routine-row">
-                <span className="routine-row-label">Play</span>
-                <div className="routine-stepper">
-                  <button type="button" aria-label="Decrease play duration"
-                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, playDuration: Math.max(1, routine.playDuration - 1) } }))}>−</button>
-                  <span className="routine-stepper-val">{routine.playDuration}</span>
-                  <button type="button" aria-label="Increase play duration"
-                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, playDuration: routine.playDuration + 1 } }))}>+</button>
-                </div>
-              </div>
-              <div className="routine-row">
-                <span className="routine-row-label">Rest</span>
-                <div className="routine-stepper">
-                  <button type="button" aria-label="Decrease rest duration"
-                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, restDuration: Math.max(0, routine.restDuration - 1) } }))}>−</button>
-                  <span className="routine-stepper-val">{routine.restDuration}</span>
-                  <button type="button" aria-label="Increase rest duration"
-                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, restDuration: routine.restDuration + 1 } }))}>+</button>
-                </div>
-              </div>
+              {([
+                { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
+                { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },
+              ] as const).map(({ key, label, durationKey, min }) => {
+                const value = routine[durationKey]
+                const update = (next: number) =>
+                  props.onChange(clampSession({ ...props.session, routine: { ...routine, [durationKey]: Math.max(min, next) } }))
+                return (
+                  <div className="routine-row" key={key}>
+                    <span className="routine-row-label">{label}</span>
+                    {routine.unit === "bars" ? (
+                      <div className="routine-stepper">
+                        <button type="button" aria-label={`Decrease ${key} duration`} onClick={() => update(value - 1)}>−</button>
+                        <span className="routine-stepper-val">{value} {value === 1 ? "bar" : "bars"}</span>
+                        <button type="button" aria-label={`Increase ${key} duration`} onClick={() => update(value + 1)}>+</button>
+                      </div>
+                    ) : (
+                      <TimeInput label={label} value={value} min={min} onCommit={update} />
+                    )}
+                  </div>
+                )
+              })}
               <div className="routine-row">
                 <span className="routine-row-label">Repeat</span>
                 <div className="routine-row-controls">
@@ -331,13 +340,8 @@ export function Practice(props: {
                 <div className="routine-section-title">Set</div>
                 <div className="routine-row">
                   <span className="routine-row-label">Rest between</span>
-                  <div className="routine-stepper">
-                    <button type="button" aria-label="Decrease set rest"
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: Math.max(0, set.restDuration - 5) } } }))}>−</button>
-                    <span className="routine-stepper-val">{set.restDuration}s</span>
-                    <button type="button" aria-label="Increase set rest"
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: set.restDuration + 5 } } }))}>+</button>
-                  </div>
+                  <TimeInput label="Set rest" value={set.restDuration}
+                    onCommit={(seconds) => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: seconds } } }))} />
                 </div>
                 <div className="routine-row">
                   <span className="routine-row-label">Repeat</span>
@@ -370,13 +374,8 @@ export function Practice(props: {
                 <div className="routine-section-title">Block</div>
                 <div className="routine-row">
                   <span className="routine-row-label">Rest between</span>
-                  <div className="routine-stepper">
-                    <button type="button" aria-label="Decrease block rest"
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, restDuration: Math.max(0, block.restDuration - 5) } } }))}>−</button>
-                    <span className="routine-stepper-val">{block.restDuration}s</span>
-                    <button type="button" aria-label="Increase block rest"
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, restDuration: block.restDuration + 5 } } }))}>+</button>
-                  </div>
+                  <TimeInput label="Block rest" value={block.restDuration}
+                    onCommit={(seconds) => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, restDuration: seconds } } }))} />
                 </div>
                 <div className="routine-row">
                   <span className="routine-row-label">Repeat</span>

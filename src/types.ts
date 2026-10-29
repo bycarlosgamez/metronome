@@ -61,9 +61,9 @@ export type RepeatLevel = {
 }
 
 export type RoutinePattern = {
-  unit: "bars" | "sec"   // applies to playDuration and restDuration only
-  playDuration: number   // one round's play duration (in unit)
-  restDuration: number   // one round's rest duration (in unit)
+  unit: "bars" | "sec"   // applies to playDuration and restDuration only; "sec" is shown as Time
+  playDuration: number   // one round's play duration (bars, or seconds when unit is "sec")
+  restDuration: number   // one round's rest duration (bars, or seconds when unit is "sec")
   round: RepeatLevel     // repeat the round (play + rest)
   set: RepeatLevel       // repeat the full round sequence
   block: RepeatLevel     // repeat the full set
