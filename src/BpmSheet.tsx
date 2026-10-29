@@ -121,7 +121,7 @@ export function BpmSheet(props: {
                     aria-pressed={increaseEvery === mode}
                     onClick={() => chooseMode(mode)}
                   >
-                    {mode === "off" ? "Off" : "Bars"}
+                    {mode === "off" ? "On" : "Bars"}
                   </button>
                 ))}
               </div>
