@@ -49,7 +49,7 @@ describe("Practice", () => {
 
   it("shows current BPM", () => {
     render(<Practice {...makeProps()} />)
-    expect(screen.getByTestId("bpm-current")).toHaveTextContent("80")
+    expect(screen.getByTestId("bpm-current")).toHaveDisplayValue("80")
   })
 
   it("shows Play button when stopped", () => {
