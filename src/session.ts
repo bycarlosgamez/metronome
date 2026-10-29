@@ -279,13 +279,14 @@ export function clampSession(session: Session): Session {
     const numLevels = step > 0 && targetBpm > startBpm
       ? Math.max(1, Math.ceil((targetBpm - startBpm) / step) + 1)
       : 1
+    const fresh = freshRoutine()
     routine = clampRoutine({
       unit: "bars",
       playDuration: everyBars,
       restDuration: 0,
       round: { enabled: numLevels > 1, count: Math.max(2, numLevels), restDuration: 0 },
-      set:   freshRoutine().set,
-      block: freshRoutine().block,
+      set:   fresh.set,
+      block: fresh.block,
       bpmIncreaseAt: numLevels > 1 ? "round" : "off",
     })
   }
