@@ -667,6 +667,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: var(--ink);
 }
 .increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.increase-fields--disabled { opacity: 0.4; pointer-events: none; }
 .increase-field { display: flex; flex-direction: column; gap: 5px; }
 .increase-field label { font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .increase-field input {

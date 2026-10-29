@@ -125,39 +125,39 @@ export function BpmSheet(props: {
                   </button>
                 ))}
               </div>
-              {increaseEvery !== "off" && (
-                <div className="increase-fields">
-                  <div className="increase-field target">
-                    <label htmlFor="bpm-sheet-target">Target BPM</label>
-                    <input
-                      id="bpm-sheet-target"
-                      inputMode="numeric"
-                      value={targetText ?? String(targetBpm)}
-                      onFocus={() => { targetRef.current = String(targetBpm); setTargetText(String(targetBpm)) }}
-                      onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
-                      onBlur={commitTarget}
-                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                    />
-                  </div>
-                  <div className="increase-field">
-                    <label htmlFor="bpm-sheet-step">Step</label>
-                    <input
-                      id="bpm-sheet-step"
-                      inputMode="numeric"
-                      value={stepText ?? String(bpmIncrease)}
-                      onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
-                      onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                      onBlur={commitStep}
-                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                    />
-                  </div>
-                  {bpmIncrease > 0 && targetBpm > bpm && (
-                    <div className="increase-derived">
-                      {bpm} → <span>{Math.min(300, targetBpm)} BPM</span>
-                    </div>
-                  )}
+              <div className={`increase-fields${increaseEvery === "off" ? " increase-fields--disabled" : ""}`}>
+                <div className="increase-field target">
+                  <label htmlFor="bpm-sheet-target">Target BPM</label>
+                  <input
+                    id="bpm-sheet-target"
+                    inputMode="numeric"
+                    disabled={increaseEvery === "off"}
+                    value={targetText ?? String(targetBpm)}
+                    onFocus={() => { targetRef.current = String(targetBpm); setTargetText(String(targetBpm)) }}
+                    onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
+                    onBlur={commitTarget}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                  />
                 </div>
-              )}
+                <div className="increase-field">
+                  <label htmlFor="bpm-sheet-step">Step</label>
+                  <input
+                    id="bpm-sheet-step"
+                    inputMode="numeric"
+                    disabled={increaseEvery === "off"}
+                    value={stepText ?? String(bpmIncrease)}
+                    onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
+                    onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                    onBlur={commitStep}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                  />
+                </div>
+                {increaseEvery !== "off" && bpmIncrease > 0 && targetBpm > bpm && (
+                  <div className="increase-derived">
+                    {bpm} → <span>{Math.min(300, targetBpm)} BPM</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
