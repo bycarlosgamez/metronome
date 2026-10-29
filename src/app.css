@@ -272,7 +272,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 0 0 auto;
+  flex: 1;
 }
 .bpm-ramp { display: flex; flex-direction: column; gap: 10px; }
 .bpm-ramp__top {
