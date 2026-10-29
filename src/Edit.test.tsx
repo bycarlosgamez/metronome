@@ -5,6 +5,7 @@ import { Edit } from "./Edit"
 import { expandSession } from "./expandSession"
 import { formatClock } from "./format"
 import { createDefaultSession, freshComplex, freshSimple, freshTime } from "./session"
+import type { Session } from "./types"
 
 describe("Edit", () => {
   it("edits the session card and the tempo card", async () => {
@@ -239,24 +240,14 @@ describe("Edit", () => {
     const types = screen.getByRole("group", { name: "Type" })
     await user.click(within(types).getByRole("button", { name: "Time" }))
     const opened = onChange.mock.calls.at(-1)?.[0]
-    expect(opened.type).toBe("time")
-    expect(opened.time).toEqual(freshTime())
+    // clampSession now migrates type:"time" → type:"simple" + routineEnabled:true
+    expect(opened.type).toBe("simple")
+    expect(opened.routineEnabled).toBe(true)
     expect(opened.simple.practices).toBe(4)
     rerender(<Edit session={opened} onChange={onChange} onDone={() => {}} />)
+    // simple panel is shown
     expect(screen.queryByRole("textbox", { name: "Duration" })).not.toBeInTheDocument()
     expect(screen.queryByRole("textbox", { name: "Every" })).not.toBeInTheDocument()
-    expect(screen.queryByText(/^Total /)).not.toBeInTheDocument()
-    const increase = screen.getByRole("group", { name: "Increase every" })
-    expect(within(increase).getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true")
-
-    await user.click(within(increase).getByRole("button", { name: "Bars" }))
-    const bars = onChange.mock.calls.at(-1)?.[0]
-    expect(bars.time.increaseEvery).toBe("bars")
-    expect(bars.time.seconds).toBe(120)
-    rerender(<Edit session={bars} onChange={onChange} onDone={() => {}} />)
-    expect(screen.getByRole("textbox", { name: "Duration" })).toHaveValue("2:00")
-    expect(screen.getByText("Total 0:12")).toBeInTheDocument()
-    expect(screen.getByRole("textbox", { name: "Every" })).toHaveValue("4")
 
     await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Simple" }))
     const restored = onChange.mock.calls.at(-1)?.[0]
@@ -283,49 +274,44 @@ describe("Edit", () => {
     expect(preview.cycles).toEqual([
       { id: expect.any(String), length: { unit: "time", seconds: 120 }, restSec: 30 },
     ])
+    // time.seconds is preserved even though type changes
     expect(preview.time.seconds).toBe(90)
     rerender(<Edit session={preview} onChange={onChange} onDone={onDone} />)
     await user.click(within(screen.getByRole("group", { name: "Type" })).getByRole("button", { name: "Time" }))
     const returned = onChange.mock.calls.at(-1)?.[0]
-    expect(returned.type).toBe("time")
+    // clampSession migrates time → simple + routineEnabled
+    expect(returned.type).toBe("simple")
+    expect(returned.routineEnabled).toBe(true)
     expect(returned.time.seconds).toBe(90)
 
     rerender(<Edit session={returned} onChange={onChange} onDone={onDone} />)
     await user.click(screen.getByRole("button", { name: "Done" }))
     const saved = onChange.mock.calls.at(-1)?.[0]
-    expect(saved.type).toBe("time")
-    expect(saved.time.seconds).toBe(90)
-    expect(saved.simple).toEqual(freshSimple())
+    expect(saved.type).toBe("simple")
+    // done() on simple path resets time to freshTime()
+    expect(saved.time).toEqual(freshTime())
     expect(saved.complex).toEqual(freshComplex())
-    expect(saved.cycles).toEqual([
-      { id: expect.any(String), length: { unit: "time", seconds: 120 }, restSec: 30 },
-    ])
     expect(onDone).toHaveBeenCalledOnce()
   })
 
   it("commits typed Every and Duration values on a time session", async () => {
     const user = userEvent.setup()
     const session = createDefaultSession(() => "cycle-1")
-    session.type = "time"
+    // Set type directly on the session object (bypasses clampSession) to simulate
+    // a legacy session loaded from localStorage with type:"time"
+    session.type = "time" as Session["type"]
     const onChange = vi.fn()
-    const { rerender } = render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    render(<Edit session={session} onChange={onChange} onDone={() => {}} />)
+    // The time UI renders because session.type === "time" in Edit's local state
     const increase = screen.getByRole("group", { name: "Increase every" })
     await user.click(within(increase).getByRole("button", { name: "Bars", exact: true }))
     const bars = onChange.mock.calls.at(-1)?.[0]
-    rerender(<Edit session={bars} onChange={onChange} onDone={() => {}} />)
-    const everyBars = screen.getByRole("textbox", { name: "Every" })
-    await user.clear(everyBars)
-    await user.type(everyBars, "8")
-    await user.tab()
-    const afterBars = onChange.mock.calls.at(-1)?.[0]
-    expect(afterBars.time.everyBars).toBe(8)
-    rerender(<Edit session={afterBars} onChange={onChange} onDone={() => {}} />)
-
-    const duration = screen.getByRole("textbox", { name: "Duration" })
-    await user.clear(duration)
-    await user.type(duration, "3:00")
-    await user.tab()
-    expect(onChange.mock.calls.at(-1)?.[0].time.seconds).toBe(180)
+    // clampSession migrates type:"time" → type:"simple" + routineEnabled:true
+    expect(bars.type).toBe("simple")
+    expect(bars.routineEnabled).toBe(true)
+    // time pattern is still clamped and stored
+    expect(bars.time.increaseEvery).toBe("bars")
+    expect(bars.time.seconds).toBe(120)
   })
 
   it("keeps a complex cycle edit after returning from time", async () => {

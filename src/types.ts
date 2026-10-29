@@ -54,6 +54,14 @@ export type TimePattern = {
   everyBars: number
 }
 
+export type RoutinePattern = {
+  barsPerLevel: number   // bars at each BPM step before advancing
+  numLevels: number      // how many BPM steps (1 = no ramp)
+  repeatCount: number    // how many times to run the full level sequence
+  restAfterSec: number   // rest between levels and between repeats
+  loop: boolean          // reserved; not yet implemented
+}
+
 export type Session = {
   name: string
   color: SetColor
@@ -69,4 +77,6 @@ export type Session = {
   complex: ComplexPattern
   time: TimePattern
   cycles: Cycle[]
+  routineEnabled: boolean      // NEW
+  routine: RoutinePattern      // NEW
 }

@@ -31,14 +31,14 @@ describe("store", () => {
     storage.setItem(SESSION_KEY, "{")
     const loaded = loadSession(storage)
     expect(loaded.name).toBe("Practice")
-    expect(loaded.type).toBe("time")
+    expect(loaded.type).toBe("simple")
     expect(loaded.bpm).toBe(80)
     expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
   })
 
   it("loads the first-visit session when nothing is saved", () => {
     const loaded = loadSession(memory())
-    expect(loaded.type).toBe("time")
+    expect(loaded.type).toBe("simple")
     expect(loaded.bpm).toBe(80)
     expect(loaded.simple.length).toEqual({ unit: "time", seconds: 120 })
   })
@@ -69,18 +69,20 @@ describe("store", () => {
     expect(loaded.color).toBe("green")
   })
 
-  it("loads a time session and fills a missing time pattern", () => {
+  it("loads a time session and migrates to simple with routineEnabled", () => {
     const storage = memory()
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
     session.time.seconds = 90
     saveSession(session, storage)
-    expect(loadSession(storage)).toMatchObject({ type: "time", time: { seconds: 90 } })
+    // clampSession migrates type:"time" → type:"simple" + routineEnabled:true
+    expect(loadSession(storage)).toMatchObject({ type: "simple", routineEnabled: true, time: { seconds: 90 } })
 
     const { time: _time, ...withoutTime } = createDefaultSession(() => "cycle-1")
     storage.setItem(SESSION_KEY, JSON.stringify(withoutTime))
     const loaded = loadSession(storage)
-    expect(loaded.type).toBe("time")
+    // missing time field → freshTime() defaults; type is already "simple" so no migration
+    expect(loaded.type).toBe("simple")
     expect(loaded.time).toEqual(freshTime())
   })
 })

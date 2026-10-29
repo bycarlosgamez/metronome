@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -40,6 +40,27 @@ export function freshTime(): TimePattern {
     increaseEvery: "off",
     everySec: 30,
     everyBars: 4,
+  }
+}
+
+export function freshRoutine(): RoutinePattern {
+  return {
+    barsPerLevel: 8,
+    numLevels: 4,
+    repeatCount: 1,
+    restAfterSec: 10,
+    loop: false,
+  }
+}
+
+function clampRoutine(pattern: RoutinePattern | undefined): RoutinePattern {
+  const base = pattern ?? freshRoutine()
+  return {
+    barsPerLevel: Math.max(1, integer(base.barsPerLevel)),
+    numLevels: Math.max(1, integer(base.numLevels)),
+    repeatCount: Math.max(1, integer(base.repeatCount)),
+    restAfterSec: Math.max(0, integer(base.restAfterSec)),
+    loop: Boolean(base.loop),
   }
 }
 
@@ -134,11 +155,13 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     click: "click-1",
     subdivision: "quarter",
     slots: ["click-1"],
-    type: "time",
+    type: "simple",
     simple: freshSimple(),
     complex: freshComplex(),
     time: freshTime(),
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
+    routineEnabled: false,
+    routine: freshRoutine(),
   }
 }
 
@@ -222,6 +245,31 @@ export function clampSession(session: Session): Session {
   const cycles = (session.cycles?.length ? session.cycles : fallback.cycles).map(clampCycle)
   const click = CLICKS.includes(session.click) ? session.click : "click-1"
   const subdivision = SUBDIVISIONS.includes(session.subdivision) ? session.subdivision : "quarter"
+
+  // Migrate legacy time sessions → simple + routineEnabled
+  let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
+  let routineEnabled = Boolean(session.routineEnabled)
+  let routine = clampRoutine(session.routine)
+
+  if (session.type === "time") {
+    type = "simple"
+    routineEnabled = true
+    const everyBars = Math.max(1, integer(session.time?.everyBars ?? 4))
+    const startBpm = clampBpm(session.bpm)
+    const targetBpm = clampBpm(session.time?.targetBpm ?? 120)
+    const step = Math.max(0, integer(session.bpmIncrease))
+    const numLevels = step > 0 && targetBpm > startBpm
+      ? Math.max(1, Math.ceil((targetBpm - startBpm) / step))
+      : 1
+    routine = clampRoutine({
+      barsPerLevel: everyBars,
+      numLevels,
+      repeatCount: 1,
+      restAfterSec: Math.max(0, integer((session.simple as SimplePattern | undefined)?.restAfterSec ?? 10)),
+      loop: false,
+    })
+  }
+
   return {
     name: session.name ?? "",
     color: COLORS.includes(session.color) ? session.color : "red",
@@ -232,11 +280,13 @@ export function clampSession(session: Session): Session {
     click,
     subdivision,
     slots: clampSlots(subdivision, session.slots, click),
-    type: session.type === "complex" || session.type === "time" ? session.type : "simple",
+    type,
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
     time: clampTime(session.time),
     cycles,
+    routineEnabled,
+    routine,
   }
 }
 

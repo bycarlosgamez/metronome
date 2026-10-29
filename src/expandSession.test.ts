@@ -253,6 +253,7 @@ describe("expandSession", () => {
 
   it("plays an Off session as one endless play with no count-in", () => {
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
     session.bpm = 60
     const segments = expandSession(session)
     expect(segments.map((segment) => segment.kind)).toEqual(["play"])

@@ -128,6 +128,7 @@ describe("clock", () => {
 
   it("places the next two seconds of an endless play and then the following stretch", () => {
     const session = createDefaultSession(() => "cycle-1")
+    session.type = "time"
     session.bpm = 60
     const play = expandSession(session).find((segment) => segment.kind === "play")!
     const first = clickWindow(play, 0)

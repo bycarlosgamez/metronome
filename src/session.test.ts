@@ -5,6 +5,7 @@ import {
   cycleGroupFromSimple,
   cyclesFromSimple,
   freshComplex,
+  freshRoutine,
   freshSimple,
   freshTime,
   ladderBpm,
@@ -15,6 +16,7 @@ import {
   timeDurationSec,
   timeSteps,
 } from "./session"
+import type { Session } from "./types"
 
 describe("session", () => {
   it("builds the first-visit session", () => {
@@ -28,12 +30,15 @@ describe("session", () => {
       click: "click-1",
       subdivision: "quarter",
       slots: ["click-1"],
-      type: "time",
+      type: "simple",
       simple: freshSimple(),
       complex: freshComplex(),
       time: freshTime(),
       cycles: [{ id: "cycle-1", length: { unit: "time", seconds: 120 }, restSec: 30 }],
+      routineEnabled: false,
+      routine: freshRoutine(),
     })
+    // freshSimple / freshTime assertions stay unchanged
     expect(freshSimple()).toEqual({
       practices: 1,
       length: { unit: "time", seconds: 120 },
@@ -54,30 +59,49 @@ describe("session", () => {
     })
   })
 
-  it("loads a missing time pattern as fresh and keeps the saved type", () => {
+  it("migrates a saved time session to simple with routineEnabled", () => {
     const session = createDefaultSession(() => "cycle-1")
-    delete (session as { time?: unknown }).time
-    expect(clampSession(session).type).toBe("time")
-    expect(clampSession(session).time).toEqual(freshTime())
+    session.type = "time" as Session["type"]
+    session.bpm = 80
+    session.bpmIncrease = 10
+    session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    const clamped = clampSession(session)
+    expect(clamped.type).toBe("simple")
+    expect(clamped.routineEnabled).toBe(true)
+    // numLevels = ceil((100 - 80) / 10) = 2
+    expect(clamped.routine.numLevels).toBe(2)
+    expect(clamped.routine.barsPerLevel).toBe(4)
+    expect(clamped.routine.repeatCount).toBe(1)
+  })
 
+  it("clamps a time pattern and migrates type to simple", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    // time field still gets clamped regardless
     session.time = freshTime()
-    session.type = "time"
+    session.type = "time" as Session["type"]
     session.time.increaseEvery = "nope" as "off"
     session.time.seconds = 0
     session.time.everySec = 0
     session.time.everyBars = 0
-    expect(clampSession(session).time).toEqual({
+    const clamped = clampSession(session)
+    expect(clamped.time).toEqual({
       seconds: 1,
       targetBpm: 120,
       increaseEvery: "off",
       everySec: 1,
       everyBars: 1,
     })
-    session.time.increaseEvery = "time" as "bars" // legacy value migrates to bars
+    // type migrates to simple
+    expect(clamped.type).toBe("simple")
+    expect(clamped.routineEnabled).toBe(true)
+
+    // "time" as string legacy value in increaseEvery stays internal to clampTime
+    session.time.increaseEvery = "time" as "bars"
     expect(clampSession(session).time.increaseEvery).toBe("bars")
     session.time.increaseEvery = "bars"
     expect(clampSession(session).time.increaseEvery).toBe("bars")
 
+    // unknown type falls back to simple
     session.type = "nope" as "simple"
     expect(clampSession(session).type).toBe("simple")
   })

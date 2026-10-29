@@ -124,6 +124,7 @@ describe("Practice", () => {
 
   it("shows target BPM and progress bar in ramp mode", () => {
     const props = makeProps({
+      type: "time",
       bpm: 80,
       bpmIncrease: 10,
       time: { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 },
