@@ -3,7 +3,7 @@ import { expandSession } from "./expandSession"
 import { formatClock, formatDuration, parseDuration } from "./format"
 import { clampSession, sessionTitle } from "./session"
 import { Signature } from "./Signature"
-import { COLORS, type Cycle, type Length, type Session } from "./types"
+import { COLORS, type Length, type Session } from "./types"
 
 function lengthText(length: Length): string {
   return length.unit === "time" ? formatDuration(length.seconds) : String(length.bars)
@@ -141,103 +141,6 @@ function SimpleFields(props: { session: Session; commit(session: Session): void 
           <DraftField label="Between" value={formatDuration(pattern.restBetweenSec)} onCommit={(text) => patch({ restBetweenSec: parseDuration(text) })} />
         </div>
       )}
-    </>
-  )
-}
-
-function withoutBpm(cycle: Cycle): Cycle {
-  const next = { ...cycle }
-  delete next.bpm
-  return next
-}
-
-function CycleList(props: { session: Session; commit(session: Session): void }) {
-  const { session, commit } = props
-
-  function replace(index: number, cycle: Cycle) {
-    commit({
-      ...session,
-      cycles: session.cycles.map((item, i) => i === index ? cycle : item),
-    })
-  }
-
-  function move(index: number, direction: -1 | 1) {
-    const target = index + direction
-    if (target < 0 || target >= session.cycles.length) return
-    const cycles = session.cycles.slice()
-    const [cycle] = cycles.splice(index, 1)
-    cycles.splice(target, 0, cycle)
-    commit({ ...session, cycles })
-  }
-
-  function add() {
-    const last = session.cycles[session.cycles.length - 1]
-    commit({
-      ...session,
-      cycles: [
-        ...session.cycles,
-        { id: crypto.randomUUID(), length: { ...last.length }, restSec: last.restSec },
-      ],
-    })
-  }
-
-  return (
-    <>
-      {session.cycles.map((cycle, index) => (
-        <div className="cycle-row" key={cycle.id}>
-          <div className="cycle-head">
-            <span className="cycle-index">{index + 1}</span>
-            <div className="cycle-actions">
-              <button type="button" aria-label={`Move cycle ${index + 1} up`} disabled={index === 0} onClick={() => move(index, -1)}>
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10 L8 6 L12 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              <button type="button" aria-label={`Move cycle ${index + 1} down`} disabled={index === session.cycles.length - 1} onClick={() => move(index, 1)}>
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6 L8 10 L12 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              <button
-                type="button"
-                aria-label={`Remove cycle ${index + 1}`}
-                disabled={session.cycles.length === 1}
-                onClick={() => {
-                  if (session.cycles.length === 1) return
-                  commit({ ...session, cycles: session.cycles.filter((_, i) => i !== index) })
-                }}
-              >
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5 L11.5 11.5 M11.5 4.5 L4.5 11.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-              </button>
-            </div>
-          </div>
-          <div className="cycle-fields">
-            <div>
-              <LengthField
-                label="Practice"
-                length={cycle.length}
-                onText={(text) => replace(index, { ...cycle, length: lengthFromText(cycle.length.unit, text) })}
-                onUnit={(length) => replace(index, { ...cycle, length })}
-              />
-              {cycle.bpm !== undefined && (
-                <DraftField
-                  label={`Cycle ${index + 1} BPM`}
-                  value={String(cycle.bpm)}
-                  type="number"
-                  onCommit={(text) => replace(index, { ...cycle, bpm: Number(text) })}
-                />
-              )}
-            </div>
-            <DraftField
-              label="Rest"
-              value={formatDuration(cycle.restSec)}
-              onCommit={(text) => replace(index, { ...cycle, restSec: parseDuration(text) })}
-            />
-          </div>
-          {cycle.bpm !== undefined && (
-            <button type="button" onClick={() => replace(index, withoutBpm(cycle))}>
-              Use session tempo
-            </button>
-          )}
-        </div>
-      ))}
-      <button type="button" className="add-cycle" onClick={add}>Add cycle</button>
     </>
   )
 }
