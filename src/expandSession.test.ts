@@ -471,4 +471,39 @@ describe("routine", () => {
     expect(plays[0].setIndex).toBe(0)
     expect(plays[1].setIndex).toBe(1)
   })
+
+  it("BPM increases at block boundary", () => {
+    const session = makeRoutineSession()
+    session.bpm = 80
+    session.bpmIncrease = 10
+    session.routine = {
+      ...session.routine,
+      round: { enabled: true, count: 2, restDuration: 0 },
+      set:   { enabled: true, count: 2, restDuration: 0 },
+      block: { enabled: true, count: 3, restDuration: 0 },
+      bpmIncreaseAt: "block",
+    }
+    const plays = expandSession(session).filter((s) => s.kind === "play")
+    // Block 1: [80,80,80,80], Block 2: [90,90,90,90], Block 3: [100,100,100,100]
+    expect(plays.map((s) => s.bpm)).toEqual([80,80,80,80,90,90,90,90,100,100,100,100])
+  })
+
+  it("set-boundary rest stacks round rest on top of set rest", () => {
+    const session = makeRoutineSession()
+    // restDuration: 2 bars @ 80bpm 4/4 = 6s per bar * 2 = ... let's use sec unit for simplicity
+    session.routine = {
+      ...session.routine,
+      unit: "sec",
+      playDuration: 10,
+      restDuration: 5,  // 5s round rest
+      round: { enabled: true, count: 2, restDuration: 0 },
+      set:   { enabled: true, count: 2, restDuration: 30 },  // 30s set rest
+    }
+    const segments = expandSession(session)
+    const rests = segments.filter((s) => s.kind === "rest")
+    // Between set 1 and set 2: the last round's rest (5s) + set rest (30s) = 35s
+    expect(rests.some((r) => r.durationSec === 35)).toBe(true)
+    // Within each set, round-to-round rest is 5s
+    expect(rests.filter((r) => r.durationSec === 5).length).toBeGreaterThan(0)
+  })
 })
