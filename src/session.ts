@@ -371,6 +371,8 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
       restSec: play.restSec,
       ...(play.bpm === firstBpm ? {} : { bpm: play.bpm }),
     })),
+    routineEnabled: false,
+    routine: freshRoutine(),
   })
 }
 
