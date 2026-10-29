@@ -327,6 +327,29 @@ describe("Practice", () => {
     )
   })
 
+  it("toggling Set repeat off clears block enabled", async () => {
+    const props = makeProps({
+      routineEnabled: true,
+      routine: {
+        ...createDefaultSession().routine,
+        round: { enabled: true, count: 4, restDuration: 0 },
+        set:   { enabled: true, count: 3, restDuration: 30 },
+        block: { enabled: true, count: 2, restDuration: 60 },
+      },
+    })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    await user.click(screen.getByRole("button", { name: "Toggle set repeat" }))
+    expect(props.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routine: expect.objectContaining({
+          set:   expect.objectContaining({ enabled: false }),
+          block: expect.objectContaining({ enabled: false }),
+        }),
+      })
+    )
+  })
+
   it("BPM row is hidden when bpmIncrease is 0", () => {
     render(<Practice {...makeProps({ routineEnabled: true, bpmIncrease: 0 })} />)
     expect(screen.queryByText(/BPM \+/)).not.toBeInTheDocument()
