@@ -592,4 +592,49 @@ describe("Practice", () => {
       expect(document.querySelector(".routine-card")).toContainElement(toggle)
     })
   })
+
+  describe("per-beat subdivision display", () => {
+    const mixed = () => [
+      { subdivision: "triplet" as const, slots: ["click-1" as const, "click-1" as const, "click-1" as const] },
+      { subdivision: "triplet" as const, slots: ["click-1" as const, "click-1" as const, "click-1" as const] },
+      { subdivision: "sixteenth" as const, slots: ["click-1" as const, "click-1" as const, "click-1" as const, "click-1" as const] },
+      { subdivision: "sixteenth" as const, slots: ["click-1" as const, "click-1" as const, "click-1" as const, "click-1" as const] },
+    ]
+    const subsOf = (beat: number) => screen.getByTestId(`beat-${beat}`).parentElement!.querySelectorAll(".beat-sub")
+
+    it("shows each beat's own number of sub-dots", () => {
+      render(<Practice {...makeProps({ beats: mixed() })} />)
+      expect(subsOf(1)).toHaveLength(3)
+      expect(subsOf(3)).toHaveLength(4)
+    })
+
+    it("lights the sub-dot of the current beat's own subdivision", () => {
+      const props = makeProps({ bpm: 60, beats: mixed() })
+      render(<Practice {...props} status="playing" snapshot={snapshotAt(props.segments, 2.5)} />)
+      expect(subsOf(3)[2]).toHaveClass("lit")
+      expect(subsOf(3)[1]).not.toHaveClass("lit")
+    })
+
+    it("labels the Subdiv button Mixed when beats differ", () => {
+      render(<Practice {...makeProps({ beats: mixed() })} />)
+      expect(screen.getByRole("button", { name: "Subdivision: mixed" })).toHaveTextContent("Mixed")
+    })
+
+    it("names the shared subdivision when every beat matches", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.getByRole("button", { name: "Subdivision: quarter" })).toBeInTheDocument()
+    })
+  })
+
+  it("keeps the subdivision sheet open while building a pattern", async () => {
+    const props = makeProps()
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    await user.click(screen.getByRole("button", { name: /Subdivision/ }))
+    await user.click(screen.getByRole("button", { name: "Triplet" }))
+    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({
+      beats: expect.arrayContaining([expect.objectContaining({ subdivision: "triplet" })]),
+    }))
+    expect(screen.getByRole("dialog", { name: "Subdivision" })).toHaveClass("open")
+  })
 })

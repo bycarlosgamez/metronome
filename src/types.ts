@@ -8,6 +8,11 @@ export type Subdivision = (typeof SUBDIVISIONS)[number]
 
 export type Slot = ClickId | "off"
 
+export type BeatPattern = {
+  subdivision: Subdivision
+  slots: Slot[] // one entry per click in the beat; "off" is muted
+}
+
 export const COLORS = ["red", "orange", "yellow", "green", "blue", "pink"] as const
 export type SetColor = (typeof COLORS)[number]
 
@@ -78,8 +83,7 @@ export type Session = {
   bpmIncrease: number
   every: number
   click: ClickId
-  subdivision: Subdivision
-  slots: Slot[]
+  beats: BeatPattern[] // one entry per beat of the session meter
   type: "simple" | "complex" | "time"
   simple: SimplePattern
   complex: ComplexPattern

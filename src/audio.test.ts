@@ -72,8 +72,7 @@ describe("scheduleSegment", () => {
     session.bpm = 80
     session.routineEnabled = true
     session.routine = { ...session.routine, unit: "sec", playDuration: 4 }
-    session.subdivision = "eighth"
-    session.slots = ["click-1", "click-2"]
+    session.beats = Array.from({ length: 4 }, () => ({ subdivision: "eighth" as const, slots: ["click-1" as const, "click-2" as const] }))
     const play = expandSession(session).find((segment) => segment.kind === "play")!
     const { ctx, sounds, started } = fakeContext()
     scheduleSegment(ctx, sounds, play, 0)

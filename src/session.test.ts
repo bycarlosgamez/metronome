@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  sharedSubdivision,
   clampSession,
   createDefaultSession,
   cycleGroupFromSimple,
@@ -28,8 +29,7 @@ describe("session", () => {
       bpmIncrease: 0,
       every: 1,
       click: "click-1",
-      subdivision: "quarter",
-      slots: ["click-1"],
+      beats: [1, 2, 3, 4].map(() => ({ subdivision: "quarter", slots: ["click-1"] })),
       type: "simple",
       simple: freshSimple(),
       complex: freshComplex(),
@@ -396,29 +396,62 @@ describe("session", () => {
     expect(clampSession(session).meter).toBe("4/4")
     session.meter = "0/4"
     expect(clampSession(session).meter).toBe("4/4")
-    delete (session as { subdivision?: unknown }).subdivision
-    delete (session as { slots?: unknown }).slots
-    session.click = "click-2"
-    const loaded = clampSession(session)
-    expect(loaded.subdivision).toBe("quarter")
-    expect(loaded.slots).toEqual(["click-2"])
-    session.subdivision = "nope" as "quarter"
-    session.slots = ["click-3", "off", "click-4", "click-1"]
-    const unknown = clampSession(session)
-    expect(unknown.subdivision).toBe("quarter")
-    expect(unknown.slots).toEqual(["click-3"])
-    session.subdivision = "eighth"
-    session.click = "click-2"
-    session.slots = ["click-3"]
-    expect(clampSession(session).slots).toEqual(["click-3", "click-2"])
-    session.slots = ["off", "nope"]
-    expect(clampSession(session).slots).toEqual(["off", "click-2"])
-    session.subdivision = "quintuplet"
-    session.slots = ["click-1"]
-    session.click = "click-3"
-    expect(clampSession(session).slots).toEqual(["click-1", "click-3", "click-3", "click-3", "click-3"])
-    session.subdivision = "sextuplet"
-    session.slots = ["off", "click-1", "click-1", "click-1", "click-1", "click-1", "click-4"]
-    expect(clampSession(session).slots).toEqual(["off", "click-1", "click-1", "click-1", "click-1", "click-1"])
+  })
+
+  describe("per-beat subdivision", () => {
+    const legacy = (fields: Record<string, unknown>) => {
+      const session = createDefaultSession(() => "cycle-1") as unknown as Record<string, unknown>
+      delete session.beats
+      return clampSession({ ...session, ...fields } as unknown as Session)
+    }
+
+    it("gives every beat a saved session's old subdivision and slots", () => {
+      const loaded = legacy({ subdivision: "eighth", slots: ["click-3", "off"], click: "click-2" })
+      expect(loaded.beats).toEqual([1, 2, 3, 4].map(() => ({ subdivision: "eighth", slots: ["click-3", "off"] })))
+    })
+
+    it("falls back to quarter beats with the session click", () => {
+      expect(legacy({ click: "click-2" }).beats).toEqual([1, 2, 3, 4].map(() => ({ subdivision: "quarter", slots: ["click-2"] })))
+      expect(legacy({ subdivision: "nope", slots: ["click-3", "off"] }).beats[0]).toEqual({ subdivision: "quarter", slots: ["click-3"] })
+    })
+
+    it("pads and trims each beat's slots to its subdivision", () => {
+      const session = createDefaultSession(() => "cycle-1")
+      session.click = "click-2"
+      session.beats = [
+        { subdivision: "triplet", slots: ["off"] },
+        { subdivision: "eighth", slots: ["click-1", "nope" as "off", "click-1"] },
+        { subdivision: "nope" as "quarter", slots: [] },
+        { subdivision: "sixteenth", slots: ["click-1", "off", "click-1", "click-1"] },
+      ]
+      expect(clampSession(session).beats).toEqual([
+        { subdivision: "triplet", slots: ["off", "click-2", "click-2"] },
+        { subdivision: "eighth", slots: ["click-1", "click-2"] },
+        { subdivision: "quarter", slots: ["click-2"] },
+        { subdivision: "sixteenth", slots: ["click-1", "off", "click-1", "click-1"] },
+      ])
+    })
+
+    it("keeps beats when the meter shrinks and copies the last beat when it grows", () => {
+      const session = createDefaultSession(() => "cycle-1")
+      session.beats = [
+        { subdivision: "triplet", slots: ["click-1", "click-1", "click-1"] },
+        { subdivision: "triplet", slots: ["click-1", "off", "click-1"] },
+        { subdivision: "sixteenth", slots: ["click-1", "click-1", "click-1", "click-1"] },
+        { subdivision: "eighth", slots: ["click-1", "off"] },
+      ]
+      const three = clampSession({ ...session, meter: "3/4" })
+      expect(three.beats.map((beat) => beat.subdivision)).toEqual(["triplet", "triplet", "sixteenth"])
+      const five = clampSession({ ...session, meter: "5/4" })
+      expect(five.beats.map((beat) => beat.subdivision)).toEqual(["triplet", "triplet", "sixteenth", "eighth", "eighth"])
+      expect(five.beats[4].slots).toEqual(["click-1", "off"])
+    })
+
+    it("reports a shared subdivision or null when beats differ", () => {
+      const session = createDefaultSession(() => "cycle-1")
+      expect(sharedSubdivision(session.beats)).toBe("quarter")
+      session.beats[2] = { subdivision: "triplet", slots: ["click-1", "click-1", "click-1"] }
+      expect(sharedSubdivision(session.beats)).toBeNull()
+    })
   })
 })

@@ -2,7 +2,7 @@ import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
-import { clampBpm, clampSession, sessionTitle, SUBDIVISION_SLOTS } from "./session"
+import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { MeterSheet } from "./MeterSheet"
@@ -60,7 +60,9 @@ export function Practice(props: {
   const segment = props.segments[props.snapshot.segmentIndex]
   const isPlaying = props.status === "playing" || props.status === "no-audio"
   const beatCount = segment.kind === "count-in" ? 4 : Number(props.session.meter.split("/")[0])
-  const subCount = SUBDIVISION_SLOTS[props.session.subdivision]
+  const { beats } = props.session
+  const subsInBeat = (beat: number) => beats[Math.min(beat, beats.length) - 1]?.slots.length ?? 1
+  const shared = sharedSubdivision(beats)
   const intoSec = Math.max(0, segment.durationSec - props.snapshot.segmentRemainingSec)
   const currentBpm = bpmAt(segment, intoSec)
 
@@ -70,7 +72,7 @@ export function Practice(props: {
   // Current beat subdivision dot index (0-based within beat)
   // Use elapsedSec — intoSec is Infinity for endless sessions and breaks % math
   const beatDur = currentBpm > 0 ? 60 / currentBpm : 1
-  const subDur = beatDur / subCount
+  const subDur = beatDur / subsInBeat(Math.max(1, props.snapshot.beat))
   const posInBeat = elapsedSec % beatDur
   const activeSubSlot = isPlaying ? Math.floor(posInBeat / subDur) : -1
 
@@ -173,7 +175,7 @@ export function Practice(props: {
                   {beat}
                 </div>
                 <div className="beat-subs">
-                  {Array.from({ length: subCount }, (_, si) => (
+                  {Array.from({ length: subsInBeat(beat) }, (_, si) => (
                     <div
                       key={si}
                       className={`beat-sub${isLit && si === activeSubSlot ? " lit" : ""}`}
@@ -271,10 +273,10 @@ export function Practice(props: {
             <button
               type="button"
               className="pick-btn"
-              aria-label={`Subdivision: ${props.session.subdivision}`}
+              aria-label={`Subdivision: ${shared ?? "mixed"}`}
               onClick={() => setSheet("subdiv")}
             >
-              <SubdivIcon subdivision={props.session.subdivision} size="sm" />
+              {shared ? <SubdivIcon subdivision={shared} size="sm" /> : <strong className="pick-mixed">Mixed</strong>}
               <span>Subdiv</span>
             </button>
           </div>
@@ -476,7 +478,7 @@ export function Practice(props: {
         session={props.session}
         open={sheet === "subdiv"}
         onClose={closeSheet}
-        onChange={(next) => { props.onChange(clampSession(next)); closeSheet() }}
+        onChange={(next) => props.onChange(clampSession(next))}
       />
       <BpmSheet
         session={props.session}

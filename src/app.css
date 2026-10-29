@@ -657,6 +657,51 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .meter-slash { color: var(--ink-muted); font-size: 24px; font-weight: 300; }
 
 /* Subdivision sheet */
+/* Per-beat subdivision tiles */
+.beat-tiles-label { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+.beat-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.beat-tile {
+  flex: 1 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px 10px;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+}
+.beat-tile.selected { background: color-mix(in srgb, var(--blue) 15%, transparent); border-color: var(--blue); }
+.beat-tile__select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.beat-tile__select strong { font-size: 18px; }
+.beat-tile__select span { font-size: 10px; color: var(--ink-muted); }
+.beat-tile__dots { display: flex; justify-content: center; gap: 4px; }
+.beat-dot { width: 12px; height: 12px; padding: 0; border-radius: 50%; border: 1.5px solid var(--surface-high); background: none; cursor: pointer; }
+.beat-dot[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
+.beat-dot.first[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); }
+.all-beats {
+  margin: 8px 0 14px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.pick-mixed { font-size: 12px; }
+
 .subdiv-grid {
   display: flex;
   gap: 10px;

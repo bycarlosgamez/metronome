@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -170,8 +170,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     bpmIncrease: 0,
     every: 1,
     click: "click-1",
-    subdivision: "quarter",
-    slots: ["click-1"],
+    beats: Array.from({ length: 4 }, () => ({ subdivision: "quarter" as const, slots: ["click-1" as const] })),
     type: "simple",
     simple: freshSimple(),
     complex: freshComplex(),
@@ -214,6 +213,34 @@ function clampSlot(value: unknown, fallback: ClickId): Slot {
 export function clampSlots(subdivision: Subdivision, slots: unknown, click: ClickId): Slot[] {
   const list = Array.isArray(slots) ? slots : []
   return Array.from({ length: SUBDIVISION_SLOTS[subdivision] }, (_, index) => clampSlot(list[index], click))
+}
+
+function clampSubdivision(value: unknown): Subdivision {
+  return SUBDIVISIONS.includes(value as Subdivision) ? value as Subdivision : "quarter"
+}
+
+function clampBeat(beat: unknown, click: ClickId): BeatPattern {
+  const base = (beat && typeof beat === "object" ? beat : {}) as Partial<BeatPattern>
+  const subdivision = clampSubdivision(base.subdivision)
+  return { subdivision, slots: clampSlots(subdivision, base.slots, click) }
+}
+
+// One pattern per beat of the meter. Saved sessions from before per-beat subdivision
+// carry a single subdivision + slots, which every beat takes. Extra beats copy the last one.
+function clampBeats(session: Session, meter: Meter, click: ClickId): BeatPattern[] {
+  const legacy = session as unknown as { subdivision?: unknown; slots?: unknown }
+  const saved = Array.isArray(session.beats) && session.beats.length
+    ? session.beats.map((beat) => clampBeat(beat, click))
+    : [clampBeat({ subdivision: legacy.subdivision, slots: legacy.slots }, click)]
+  return Array.from({ length: beatsInMeter(meter) }, (_, index) => {
+    const beat = saved[Math.min(index, saved.length - 1)]
+    return { subdivision: beat.subdivision, slots: [...beat.slots] }
+  })
+}
+
+export function sharedSubdivision(beats: BeatPattern[]): Subdivision | null {
+  const first = beats[0]?.subdivision
+  return first && beats.every((beat) => beat.subdivision === first) ? first : null
 }
 
 export function beatsInMeter(meter: Meter): number {
@@ -262,7 +289,7 @@ export function clampSession(session: Session): Session {
   const fallback = createDefaultSession()
   const cycles = (session.cycles?.length ? session.cycles : fallback.cycles).map(clampCycle)
   const click = CLICKS.includes(session.click) ? session.click : "click-1"
-  const subdivision = SUBDIVISIONS.includes(session.subdivision) ? session.subdivision : "quarter"
+  const meter = clampMeter(session.meter)
 
   // Migrate legacy time sessions → simple + routineEnabled
   let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
@@ -294,13 +321,12 @@ export function clampSession(session: Session): Session {
   return {
     name: session.name ?? "",
     color: COLORS.includes(session.color) ? session.color : "red",
-    meter: clampMeter(session.meter),
+    meter,
     bpm: clampBpm(session.bpm),
     bpmIncrease: Math.max(0, integer(session.bpmIncrease)),
     every: Math.max(1, integer(session.every)),
     click,
-    subdivision,
-    slots: clampSlots(subdivision, session.slots, click),
+    beats: clampBeats(session, meter, click),
     type,
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
@@ -382,8 +408,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     bpmIncrease: 0,
     every: 1,
     click,
-    subdivision: "quarter",
-    slots: [click],
+    beats: [{ subdivision: "quarter", slots: [click] }],
     type: "complex",
     simple: freshSimple(),
     complex: freshComplex(),

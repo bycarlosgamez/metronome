@@ -56,7 +56,7 @@ export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segmen
   )
   const start = Math.max(0, fromSec)
   if (segment.kind === "rest" || !(end > start)) return []
-  const slots = segment.kind === "count-in" || !segment.slots?.length ? [segment.click] : segment.slots
+  const pattern = segment.kind === "count-in" || !segment.beats?.length ? [] : segment.beats
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
   const marks: ClickMark[] = []
   let offsetSec = 0
@@ -65,6 +65,7 @@ export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segmen
     const beatDur = 60 / bpmAt(segment, offsetSec)
     if (!(beatDur > 0)) break
     const beat = (beatIndex % beats) + 1
+    const slots = pattern.length ? pattern[Math.min(beat, pattern.length) - 1].slots : [segment.click]
     const slotDur = beatDur / slots.length
     slots.forEach((slot, index) => {
       const at = offsetSec + index * slotDur

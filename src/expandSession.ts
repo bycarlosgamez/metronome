@@ -1,5 +1,5 @@
 import { beatsInMeter, clampBpm, sessionTitle, timeSteps } from "./session"
-import type { ClickId, Meter, Session, SetColor, Slot } from "./types"
+import type { BeatPattern, ClickId, Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
 
@@ -15,7 +15,7 @@ export type Segment = {
   setIndex: number
   cycleIndex: number
   click: ClickId
-  slots?: Slot[]
+  beats?: BeatPattern[] // per-beat clicks for play segments; count-in and rest have none
   restRole?: "after" | "between"
   steps?: { atSec: number; bpm: number }[]
 }
@@ -129,7 +129,7 @@ export function expandSession(session: Session): Segment[] {
       setIndex: index,
       cycleIndex: index,
       click: session.click,
-      slots: session.slots,
+      beats: session.beats,
       ...(play.steps ? { steps: play.steps } : {}),
     })
     if (index < plays.length - 1 && play.restSec > 0) {

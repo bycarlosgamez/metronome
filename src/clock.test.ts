@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest"
 import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt } from "./clock"
 import { expandSession, type Segment } from "./expandSession"
 import { createDefaultSession } from "./session"
+import type { BeatPattern, Slot, Subdivision } from "./types"
+
+function uniform(subdivision: Subdivision, slots: Slot[], beats = 4): BeatPattern[] {
+  return Array.from({ length: beats }, () => ({ subdivision, slots: [...slots] }))
+}
 
 describe("clock", () => {
   it("starts on the first count-in beat and enters the playing stretch after that bar", () => {
@@ -84,8 +89,7 @@ describe("clock", () => {
     session.bpm = 80
     session.meter = "4/4"
     session.time.increaseEvery = "bars"
-    session.subdivision = "eighth"
-    session.slots = ["click-1", "click-1"]
+    session.beats = uniform("eighth", ["click-1", "click-1"])
     const segments = expandSession(session)
 
     const play = segments.find((segment) => segment.kind === "play")!
@@ -97,13 +101,12 @@ describe("clock", () => {
     expect(clicks[2]).toMatchObject({ beat: 2, accent: false })
     expect(snapshotAt(segments, 0.4).beat).toBe(1)
 
-    session.slots = ["click-1", "off"]
+    session.beats = uniform("eighth", ["click-1", "off"])
     const beatsOnly = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!, 0, 4)
     expect(beatsOnly.slice(0, 4).map((click) => click.offsetSec)).toEqual([0, 0.75, 1.5, 2.25])
 
     session.meter = "6/8"
-    session.subdivision = "quarter"
-    session.slots = ["click-1"]
+    session.beats = Array.from({ length: 6 }, () => ({ subdivision: "quarter" as const, slots: ["click-1" as const] }))
     const six = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!, 0, 4)
     expect(six.slice(0, 6).map((click) => click.beat)).toEqual([1, 2, 3, 4, 5, 6])
     expect(six[1].offsetSec - six[0].offsetSec).toBeCloseTo(60 / 80)
@@ -117,8 +120,7 @@ describe("clock", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
     session.time.increaseEvery = "bars"
-    session.subdivision = "quintuplet"
-    session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
+    session.beats = uniform("quintuplet", ["click-1", "click-1", "click-1", "click-1", "click-1"])
     const segments = expandSession(session)
     const play = segments.find((segment) => segment.kind === "play")!
     expect(clicksInSegment(play, 0, 4).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
@@ -146,5 +148,30 @@ describe("clock", () => {
     const origin = scheduleOrigin(0.02)
     expect(origin).toBe(0)
     expect(clickWindow(play, origin).marks[0].offsetSec).toBe(0)
+  })
+
+  it("gives each beat its own subdivision: 1-2 triplets, 3-4 sixteenths", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 60
+    session.beats = [...uniform("triplet", ["click-1", "click-1", "click-1"], 2), ...uniform("sixteenth", ["click-1", "off", "click-1", "click-1"], 2)]
+    const play = expandSession(session).find((segment) => segment.kind === "play")!
+    const bar = clicksInSegment(play, 0, 4)
+    expect(bar.map((click) => click.beat)).toEqual([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4])
+    expect(bar.map((click) => click.offsetSec)).toEqual([
+      0, expect.closeTo(1 / 3), expect.closeTo(2 / 3),
+      1, expect.closeTo(4 / 3), expect.closeTo(5 / 3),
+      2, 2.5, 2.75,
+      3, 3.5, 3.75,
+    ])
+    expect(bar.filter((click) => click.accent).map((click) => click.beat)).toEqual([1, 1, 1])
+    const nextBar = clicksInSegment(play, 4, 5)
+    expect(nextBar.map((click) => click.offsetSec)).toEqual([4, expect.closeTo(13 / 3), expect.closeTo(14 / 3)])
+  })
+
+  it("keeps the count-in at one click per beat with a mixed pattern", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.countIn = true
+    session.beats = [...uniform("triplet", ["click-1", "click-1", "click-1"], 2), ...uniform("sixteenth", ["click-1", "click-1", "click-1", "click-1"], 2)]
+    expect(clicksInSegment(expandSession(session)[0])).toHaveLength(4)
   })
 })

@@ -37,7 +37,7 @@ Speed practice: the player wants the metronome to click exactly the grid they're
 
 - **Meter changes:** when the meter changes (e.g. 4/4 → 3/4 or 4/4 → 5/4), existing beats keep their subdivision and slots. Beats that drop off are discarded. New beats copy the last existing beat.
 - **Defensive lookup:** if a segment ever has more beats than the pattern, beat *i* uses entry *i*, or the last entry if there aren't enough.
-- **Click sound:** no screen currently changes `session.click`, so the slots' click sounds stay as they are. A new subdivision fills its clicks with `session.click`.
+- **Click sound:** muting is the only per-click control (user decision; per-click sound choice was removed along with the Edit screen). New or unmuted clicks use `session.click`. Per-click sounds already stored in saved sessions are kept, so old sessions sound the same.
 - **Accent:** unchanged. Every click within beat 1 is accented, as `clicksInSegment` does today.
 - **Practice "Subdiv" button:** shows the shared icon when every beat matches, and a "Mixed" label when they differ. Its `aria-label` becomes `Subdivision: mixed` in that case.
 
@@ -50,5 +50,5 @@ Speed practice: the player wants the metronome to click exactly the grid they're
 ## Left to the builder
 
 - **Data shape.** My suggestion is to replace `session.subdivision` and `session.slots` with `session.beats: { subdivision: Subdivision; slots: Slot[] }[]`, one entry per beat of the session meter, and to have `Segment` carry the pattern instead of the flat `slots`. Any shape that meets the goals and loads legacy sessions works.
-- Where resizing happens. The meter only changes in `MeterSheet` (Practice), and its result already goes through `clampSession`, so resizing the pattern inside `clampSession` covers it.
+- Where resizing happens. The Edit screen has been removed, so the meter only changes in `MeterSheet` (Practice). Its result already goes through `clampSession`, so resizing the pattern inside `clampSession` covers it.
 - Exact styling of the beat tiles. Reuse the existing `.subdiv-opt` look and the design tokens.
