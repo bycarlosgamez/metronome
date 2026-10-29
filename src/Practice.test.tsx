@@ -114,6 +114,16 @@ describe("Practice", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
+  it("does not commit step when cleared", async () => {
+    const props = makeProps({ bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    const input = screen.getByRole("textbox", { name: "BPM step" })
+    await user.clear(input)
+    await user.tab()
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("shows Play button when stopped", () => {
     render(<Practice {...makeProps()} />)
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
