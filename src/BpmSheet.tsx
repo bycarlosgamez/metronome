@@ -112,16 +112,16 @@ export function BpmSheet(props: {
           {!routineEnabled && (
             <div className="bpm-sheet-card bpm-sheet-target-card">
               <p className="sheet-title">Increase to target</p>
-              <div className="increase-mode-row">
+              <div className="increase-toggle" role="group" aria-label="BPM increase">
                 {(["off", "bars"] as const).map((mode) => (
                   <button
                     key={mode}
                     type="button"
-                    className="increase-mode-btn"
+                    className="increase-toggle-btn"
                     aria-pressed={increaseEvery === mode}
                     onClick={() => chooseMode(mode)}
                   >
-                    {mode === "off" ? "On" : "Bars"}
+                    {mode === "off" ? "Off" : "On"}
                   </button>
                 ))}
               </div>
