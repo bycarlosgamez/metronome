@@ -150,11 +150,6 @@ export function BpmSheet(props: {
                     onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
                   />
                 </div>
-                {increaseEvery !== "off" && bpmIncrease > 0 && targetBpm > bpm && (
-                  <div className="increase-derived">
-                    {bpm} → <span>{Math.min(300, targetBpm)} BPM</span>
-                  </div>
-                )}
               </div>
             </div>
           )}
