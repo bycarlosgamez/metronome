@@ -122,19 +122,61 @@ describe("Practice", () => {
     expect(bpmDialog).toHaveClass("open")
   })
 
-  it("shows target BPM and progress bar in ramp mode", () => {
-    const props = makeProps({
-      type: "time",
-      bpm: 80,
-      bpmIncrease: 10,
-      time: { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 },
-    })
-    render(<Practice {...props} />)
-    expect(screen.getByTestId("bpm-target")).toHaveTextContent("100")
-  })
-
   it("does not show strip for time sessions", () => {
     render(<Practice {...makeProps()} />)
     expect(document.querySelector(".strip")).not.toBeInTheDocument()
+  })
+
+  it("renders Simple and Routine mode buttons", () => {
+    render(<Practice {...makeProps()} />)
+    expect(screen.getByRole("button", { name: "Simple" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Routine" })).toBeInTheDocument()
+  })
+
+  it("Simple is pressed by default", () => {
+    render(<Practice {...makeProps()} />)
+    expect(screen.getByRole("button", { name: "Simple" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Routine" })).toHaveAttribute("aria-pressed", "false")
+  })
+
+  it("toggling to Routine calls onChange with routineEnabled true and stops play", async () => {
+    const props = { ...makeProps(), status: "playing" as const }
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    await user.click(screen.getByRole("button", { name: "Routine" }))
+    expect(props.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ routineEnabled: true })
+    )
+    expect(props.onReset).toHaveBeenCalledOnce()
+  })
+
+  it("routine timer block is hidden in Simple mode", () => {
+    render(<Practice {...makeProps()} />)
+    expect(document.querySelector(".routine-timer")).not.toBeInTheDocument()
+  })
+
+  it("routine timer block shows when routineEnabled is true", () => {
+    const props = makeProps({ routineEnabled: true })
+    render(<Practice {...props} />)
+    expect(document.querySelector(".routine-timer")).toBeInTheDocument()
+  })
+
+  it("routine timer shows cycle/level/rep labels", () => {
+    const props = makeProps({ routineEnabled: true })
+    render(<Practice {...props} />)
+    expect(screen.getByText(/Cycle/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Level/).length).toBeGreaterThan(0)
+  })
+
+  it("routine timer fields are rendered with correct values", () => {
+    const props = makeProps({
+      routineEnabled: true,
+      routine: { barsPerLevel: 8, numLevels: 4, repeatCount: 3, restAfterSec: 10, loop: false },
+    })
+    render(<Practice {...props} />)
+    expect(screen.getByRole("spinbutton", { name: "Bars / level" })).toHaveValue(8)
+    expect(screen.getByRole("spinbutton", { name: "Levels" })).toHaveValue(4)
+    expect(screen.getByRole("spinbutton", { name: "Repeat ×" })).toHaveValue(3)
+    expect(screen.getByRole("spinbutton", { name: "Rest (sec)" })).toHaveValue(10)
   })
 })

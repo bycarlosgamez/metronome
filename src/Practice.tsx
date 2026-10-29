@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { bpmAt, stepIndexAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
@@ -25,9 +25,18 @@ export function Practice(props: {
 }) {
   const [sheet, setSheet] = useState<"bpm" | "meter" | "subdiv" | null>(null)
 
+  // Routine inline field state
+  const barsRef = useRef<string | null>(null)
+  const levelsRef = useRef<string | null>(null)
+  const repeatRef = useRef<string | null>(null)
+  const restRef = useRef<string | null>(null)
+  const [barsText, setBarsText] = useState<string | null>(null)
+  const [levelsText, setLevelsText] = useState<string | null>(null)
+  const [repeatText, setRepeatText] = useState<string | null>(null)
+  const [restText, setRestText] = useState<string | null>(null)
+
   const segment = props.segments[props.snapshot.segmentIndex]
   const isPlaying = props.status === "playing" || props.status === "no-audio"
-  const isRamping = props.session.type === "time" && props.session.time.increaseEvery !== "off"
   const beatCount = segment.kind === "count-in" ? 4 : Number(props.session.meter.split("/")[0])
   const subCount = SUBDIVISION_SLOTS[props.session.subdivision]
   const intoSec = Math.max(0, segment.durationSec - props.snapshot.segmentRemainingSec)
@@ -43,17 +52,32 @@ export function Practice(props: {
   const posInBeat = elapsedSec % beatDur
   const activeSubSlot = isPlaying ? Math.floor(posInBeat / subDur) : -1
 
-  // BPM ramp info
-  const startBpm = props.session.bpm
-  const targetBpm = props.session.time.targetBpm ?? startBpm
-  const progressPct = isRamping && targetBpm > startBpm
-    ? Math.min(100, ((currentBpm - startBpm) / (targetBpm - startBpm)) * 100)
+  // Routine state
+  const { routineEnabled, routine } = props.session
+  const { numLevels, repeatCount } = routine
+  const setIdx = segment.setIndex
+  const cycleN = Math.floor(setIdx / numLevels) + 1
+  const levelN = (setIdx % numLevels) + 1
+  const levelProgress = segment.kind === "play" && Number.isFinite(segment.durationSec) && segment.durationSec > 0
+    ? Math.min(1, intoSec / segment.durationSec)
     : 0
+
+  // BPM ramp info (for time sessions only, kept for backward compat)
   const stepIndex = stepIndexAt(segment, intoSec)
   const nextStepAtSec = segment.steps?.[stepIndex + 1]?.atSec
   const timeUntilNext = nextStepAtSec !== undefined ? nextStepAtSec - intoSec : null
 
   function closeSheet() { setSheet(null) }
+
+  function switchMode(enable: boolean) {
+    if (enable === routineEnabled) return
+    props.onChange(clampSession({ ...props.session, routineEnabled: enable }))
+    if (isPlaying) props.onReset()
+  }
+
+  function commitRoutine(partial: Partial<Session["routine"]>) {
+    props.onChange(clampSession({ ...props.session, routine: { ...routine, ...partial } }))
+  }
 
   return (
     <main className="practice">
@@ -63,6 +87,25 @@ export function Practice(props: {
       </header>
 
       <div className="practice-body">
+        {/* Simple | Routine segmented control */}
+        <div className="mode-seg" role="group" aria-label="Session mode">
+          {(["Simple", "Routine"] as const).map((label) => {
+            const isRoutine = label === "Routine"
+            const active = isRoutine === routineEnabled
+            return (
+              <button
+                key={label}
+                type="button"
+                className="mode-seg-btn"
+                aria-pressed={active}
+                onClick={() => switchMode(isRoutine)}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Beat grid */}
         <div className="beat-grid" role="region" aria-label="Beat display">
           {Array.from({ length: beatCount }, (_, i) => {
@@ -98,53 +141,117 @@ export function Practice(props: {
           aria-label="Edit BPM settings"
           onClick={() => setSheet("bpm")}
         >
-          {isRamping ? (
-            <div className="bpm-ramp">
-              <div className="bpm-ramp__top">
-                <div>
-                  <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
-                  <div className="bpm-label">
-                    BPM · +{props.session.bpmIncrease} every{" "}
-                    {props.session.time.increaseEvery === "bars"
-                      ? `${props.session.time.everyBars} bars`
-                      : `${props.session.time.everySec}s`}
-                  </div>
-                </div>
-                <div className="bpm-ramp__right">
-                  <div className="bpm-target" data-testid="bpm-target">{targetBpm}</div>
-                  <div className="bpm-target-label">Target</div>
-                </div>
-              </div>
-              <div className="bpm-progress-wrap">
-                <div className="bpm-progress-bar">
-                  <div className="bpm-progress-fill" style={{ width: `${progressPct}%` }} />
-                </div>
-                <div className="bpm-progress-labels">
-                  <span>{startBpm} BPM</span>
-                  <span className="bpm-step-info" data-testid="bpm-step-info">
-                    {isPlaying && timeUntilNext !== null
-                      ? `next ↑ in ${formatClock(Math.max(0, timeUntilNext))}`
-                      : formatClock(elapsedSec)}
-                  </span>
-                  <span>→ {targetBpm}</span>
-                </div>
-              </div>
+          <div className="bpm-endless">
+            <div className="bpm-endless__left">
+              <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
+              <div className="bpm-label">BPM · endless</div>
             </div>
-          ) : (
-            <div className="bpm-endless">
-              <div className="bpm-endless__left">
-                <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
-                <div className="bpm-label">BPM · endless</div>
-              </div>
+            {!routineEnabled && (
               <div className="bpm-endless__right">
                 <div className="bpm-elapsed" data-testid="bpm-elapsed">
                   {isPlaying ? formatClock(elapsedSec) : "0:00"}
                 </div>
                 <div className="bpm-hint">Tap to edit ›</div>
               </div>
-            </div>
-          )}
+            )}
+            {routineEnabled && (
+              <div className="bpm-endless__right">
+                <div className="bpm-hint">Tap to edit ›</div>
+              </div>
+            )}
+          </div>
         </button>
+
+        {/* Routine timer block */}
+        {routineEnabled && (
+          <div className="routine-timer">
+            <div className="routine-progress-row">
+              <div className="routine-elapsed" data-testid="routine-elapsed">
+                {isPlaying ? formatClock(elapsedSec) : "0:00"}
+              </div>
+              <div className="routine-cycle-info">
+                <div>Cycle {cycleN}/{repeatCount}</div>
+                <div>Level {levelN}/{numLevels}</div>
+              </div>
+            </div>
+            <div className="routine-progress-bar-wrap">
+              <div
+                className="routine-progress-bar-fill"
+                style={{ width: `${Math.round(levelProgress * 100)}%` }}
+              />
+            </div>
+            <div className="routine-fields">
+              <div className="routine-field">
+                <label htmlFor="routine-bars">Bars / level</label>
+                <input
+                  id="routine-bars"
+                  type="number"
+                  aria-label="Bars / level"
+                  inputMode="numeric"
+                  value={barsText ?? String(routine.barsPerLevel)}
+                  onFocus={() => { barsRef.current = String(routine.barsPerLevel); setBarsText(String(routine.barsPerLevel)) }}
+                  onChange={(e) => { barsRef.current = e.target.value; setBarsText(e.target.value) }}
+                  onBlur={() => {
+                    const v = barsRef.current; setBarsText(null); barsRef.current = null
+                    if (v !== null) commitRoutine({ barsPerLevel: Math.max(1, Math.round(Number(v))) })
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
+              </div>
+              <div className="routine-field">
+                <label htmlFor="routine-levels">Levels</label>
+                <input
+                  id="routine-levels"
+                  type="number"
+                  aria-label="Levels"
+                  inputMode="numeric"
+                  value={levelsText ?? String(routine.numLevels)}
+                  onFocus={() => { levelsRef.current = String(routine.numLevels); setLevelsText(String(routine.numLevels)) }}
+                  onChange={(e) => { levelsRef.current = e.target.value; setLevelsText(e.target.value) }}
+                  onBlur={() => {
+                    const v = levelsRef.current; setLevelsText(null); levelsRef.current = null
+                    if (v !== null) commitRoutine({ numLevels: Math.max(1, Math.round(Number(v))) })
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
+              </div>
+              <div className="routine-field">
+                <label htmlFor="routine-repeat">Repeat ×</label>
+                <input
+                  id="routine-repeat"
+                  type="number"
+                  aria-label="Repeat ×"
+                  inputMode="numeric"
+                  value={repeatText ?? String(routine.repeatCount)}
+                  onFocus={() => { repeatRef.current = String(routine.repeatCount); setRepeatText(String(routine.repeatCount)) }}
+                  onChange={(e) => { repeatRef.current = e.target.value; setRepeatText(e.target.value) }}
+                  onBlur={() => {
+                    const v = repeatRef.current; setRepeatText(null); repeatRef.current = null
+                    if (v !== null) commitRoutine({ repeatCount: Math.max(1, Math.round(Number(v))) })
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
+              </div>
+              <div className="routine-field">
+                <label htmlFor="routine-rest">Rest (sec)</label>
+                <input
+                  id="routine-rest"
+                  type="number"
+                  aria-label="Rest (sec)"
+                  inputMode="numeric"
+                  value={restText ?? String(routine.restAfterSec)}
+                  onFocus={() => { restRef.current = String(routine.restAfterSec); setRestText(String(routine.restAfterSec)) }}
+                  onChange={(e) => { restRef.current = e.target.value; setRestText(e.target.value) }}
+                  onBlur={() => {
+                    const v = restRef.current; setRestText(null); restRef.current = null
+                    if (v !== null) commitRoutine({ restAfterSec: Math.max(0, Math.round(Number(v))) })
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pick row */}
         <div className="pick-row">
