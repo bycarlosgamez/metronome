@@ -328,7 +328,7 @@ describe("session", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 0
-      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps).toEqual([{ atSec: 0, bpm: 80 }])
     })
@@ -337,7 +337,7 @@ describe("session", () => {
       const session = createDefaultSession()
       session.bpm = 120
       session.bpmIncrease = 5
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "time", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps).toEqual([{ atSec: 0, bpm: 120 }])
     })
