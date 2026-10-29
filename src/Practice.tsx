@@ -129,49 +129,43 @@ export function Practice(props: {
           })}
         </div>
 
-        {/* BPM block */}
-        <button
-          type="button"
-          className="bpm-block"
-          aria-label="Edit BPM settings"
-          onClick={() => setSheet("bpm")}
-        >
-          <div className="bpm-endless">
-            <div className="bpm-endless__left">
-              <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
-              <div className="bpm-label">BPM · endless</div>
-            </div>
-            <div className="bpm-endless__right">
-              {!routineEnabled && (
-                <div className="bpm-elapsed" data-testid="bpm-elapsed">
-                  {isPlaying ? formatClock(elapsedSec) : "0:00"}
-                </div>
-              )}
-              <div className="bpm-hint">Tap to edit ›</div>
-            </div>
+        {/* BPM + time sig/subdiv side by side */}
+        <div className="bpm-pick-row">
+          <button
+            type="button"
+            className="bpm-block"
+            aria-label="Edit BPM settings"
+            onClick={() => setSheet("bpm")}
+          >
+            <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
+            <div className="bpm-label">BPM</div>
+            {!routineEnabled && (
+              <div className="bpm-elapsed" data-testid="bpm-elapsed">
+                {isPlaying ? formatClock(elapsedSec) : "0:00"}
+              </div>
+            )}
+            <div className="bpm-hint">Tap ›</div>
+          </button>
+          <div className="pick-col">
+            <button
+              type="button"
+              className="pick-btn"
+              aria-label={`Time signature: ${props.session.meter}`}
+              onClick={() => setSheet("meter")}
+            >
+              <strong>{props.session.meter}</strong>
+              <span>Time Sig</span>
+            </button>
+            <button
+              type="button"
+              className="pick-btn"
+              aria-label={`Subdivision: ${props.session.subdivision}`}
+              onClick={() => setSheet("subdiv")}
+            >
+              <SubdivIcon subdivision={props.session.subdivision} size="sm" />
+              <span>Subdiv</span>
+            </button>
           </div>
-        </button>
-
-        {/* Pick row */}
-        <div className="pick-row">
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Time signature: ${props.session.meter}`}
-            onClick={() => setSheet("meter")}
-          >
-            <strong>{props.session.meter}</strong>
-            <span>Time Signature</span>
-          </button>
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Subdivision: ${props.session.subdivision}`}
-            onClick={() => setSheet("subdiv")}
-          >
-            <SubdivIcon subdivision={props.session.subdivision} size="sm" />
-            <span>Subdivision</span>
-          </button>
         </div>
 
         {/* Routine timer block */}

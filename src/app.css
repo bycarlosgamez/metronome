@@ -244,36 +244,36 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 
 /* BPM block */
-.bpm-block {
+.bpm-pick-row {
+  display: flex;
+  gap: 12px;
   width: 100%;
   max-width: 520px;
+}
+.bpm-block {
+  flex: 1;
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
-  padding: 18px 20px;
+  padding: 18px 16px;
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
-}
-.bpm-block:hover { border-color: var(--surface-high); }
-.bpm-endless {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.bpm-endless__left { display: flex; flex-direction: column; gap: 4px; }
-.bpm-endless__right {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 4px;
-  padding-top: 4px;
 }
+.bpm-block:hover { border-color: var(--surface-high); }
 .bpm-current { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
 .bpm-elapsed { font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.bpm-hint { font-size: 11px; color: var(--surface-high); }
+.bpm-hint { font-size: 11px; color: var(--surface-high); margin-top: auto; }
+.pick-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 auto;
+}
 .bpm-ramp { display: flex; flex-direction: column; gap: 10px; }
 .bpm-ramp__top {
   display: flex;
@@ -405,14 +405,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 
 /* Pick row (Meter + Subdivision buttons) */
-.pick-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  max-width: 520px;
-}
 .pick-btn {
-  flex: 1;
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
@@ -422,6 +415,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  flex: 1;
 }
 .pick-btn:hover { border-color: var(--surface-high); }
 .pick-btn strong { font-size: 20px; color: var(--ink); }
