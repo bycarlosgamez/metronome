@@ -60,6 +60,18 @@ describe("session", () => {
     })
   })
 
+  it("freshRoutine returns the new 3-level shape", () => {
+    expect(freshRoutine()).toEqual({
+      unit: "bars",
+      playDuration: 4,
+      restDuration: 0,
+      round:  { enabled: false, count: 4, restDuration: 0 },
+      set:    { enabled: false, count: 3, restDuration: 30 },
+      block:  { enabled: false, count: 2, restDuration: 60 },
+      bpmIncreaseAt: "off",
+    })
+  })
+
   it("migrates a saved time session to simple with routineEnabled", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time" as Session["type"]
@@ -69,10 +81,42 @@ describe("session", () => {
     const clamped = clampSession(session)
     expect(clamped.type).toBe("simple")
     expect(clamped.routineEnabled).toBe(true)
-    // numLevels = ceil((100 - 80) / 10) + 1 = 3
-    expect(clamped.routine.numLevels).toBe(3)
-    expect(clamped.routine.barsPerLevel).toBe(4)
-    expect(clamped.routine.repeatCount).toBe(1)
+    // numLevels = ceil((100 - 80) / 10) + 1 = 3 → round.count
+    expect(clamped.routine.round.enabled).toBe(true)
+    expect(clamped.routine.round.count).toBe(3)
+    expect(clamped.routine.playDuration).toBe(4)  // everyBars
+    expect(clamped.routine.bpmIncreaseAt).toBe("round")
+  })
+
+  it("clampSession falls back to freshRoutine defaults when routine has old shape", () => {
+    const session = createDefaultSession(() => "s1")
+    session.routineEnabled = true
+    // Old shape — TypeScript cast needed since type changed
+    ;(session as any).routine = { barsPerLevel: 8, numLevels: 4, repeatCount: 3, restAfterSec: 10, loop: false }
+    const clamped = clampSession(session)
+    expect(clamped.routine.unit).toBe("bars")
+    expect(clamped.routine.playDuration).toBe(4)  // freshRoutine default
+    expect(clamped.routine.round.enabled).toBe(false)
+  })
+
+  it("clampSession enforces minimums on RepeatLevel fields", () => {
+    const session = createDefaultSession(() => "s1")
+    session.routineEnabled = true
+    session.routine = {
+      unit: "sec",
+      playDuration: 0,
+      restDuration: -1,
+      round:  { enabled: true,  count: 1,  restDuration: -5 },
+      set:    { enabled: true,  count: 0,  restDuration: 0  },
+      block:  { enabled: false, count: 2,  restDuration: 60 },
+      bpmIncreaseAt: "round",
+    }
+    const r = clampSession(session).routine
+    expect(r.playDuration).toBe(1)
+    expect(r.restDuration).toBe(0)
+    expect(r.round.count).toBe(2)
+    expect(r.round.restDuration).toBe(0)
+    expect(r.set.count).toBe(2)
   })
 
   it("clamps a time pattern and migrates type to simple", () => {

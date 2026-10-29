@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -45,22 +45,39 @@ export function freshTime(): TimePattern {
 
 export function freshRoutine(): RoutinePattern {
   return {
-    barsPerLevel: 8,
-    numLevels: 4,
-    repeatCount: 1,
-    restAfterSec: 10,
-    loop: false,
+    unit: "bars",
+    playDuration: 4,
+    restDuration: 0,
+    round:  { enabled: false, count: 4, restDuration: 0 },
+    set:    { enabled: false, count: 3, restDuration: 30 },
+    block:  { enabled: false, count: 2, restDuration: 60 },
+    bpmIncreaseAt: "off",
   }
 }
 
-function clampRoutine(pattern: RoutinePattern | undefined): RoutinePattern {
-  const base = pattern ?? freshRoutine()
+function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
+  const base = (level && typeof level === "object" ? level : {}) as Partial<RepeatLevel>
   return {
-    barsPerLevel: Math.max(1, integer(base.barsPerLevel)),
-    numLevels: Math.max(1, integer(base.numLevels)),
-    repeatCount: Math.max(1, integer(base.repeatCount)),
-    restAfterSec: Math.max(0, integer(base.restAfterSec)),
-    loop: Boolean(base.loop),
+    enabled: Boolean(base.enabled),
+    count: Math.max(2, integer(base.count ?? defaults.count)),
+    restDuration: Math.max(0, integer(base.restDuration ?? defaults.restDuration)),
+  }
+}
+
+function clampRoutine(pattern: unknown): RoutinePattern {
+  const fresh = freshRoutine()
+  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern>
+  const BPM_AT = ["off", "round", "set", "block"] as const
+  return {
+    unit: base.unit === "sec" ? "sec" : "bars",
+    playDuration: Math.max(1, integer(base.playDuration ?? fresh.playDuration)),
+    restDuration: Math.max(0, integer(base.restDuration ?? fresh.restDuration)),
+    round:  clampRepeatLevel(base.round,  fresh.round),
+    set:    clampRepeatLevel(base.set,    fresh.set),
+    block:  clampRepeatLevel(base.block,  fresh.block),
+    bpmIncreaseAt: BPM_AT.includes(base.bpmIncreaseAt as typeof BPM_AT[number])
+      ? base.bpmIncreaseAt as RoutinePattern["bpmIncreaseAt"]
+      : "off",
   }
 }
 
@@ -250,7 +267,7 @@ export function clampSession(session: Session): Session {
   // Migrate legacy time sessions → simple + routineEnabled
   let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
   let routineEnabled = Boolean(session.routineEnabled)
-  let routine = clampRoutine(session.routine)
+  let routine = clampRoutine(session.routine as unknown)
 
   if (session.type === "time") {
     type = "simple"
@@ -263,11 +280,13 @@ export function clampSession(session: Session): Session {
       ? Math.max(1, Math.ceil((targetBpm - startBpm) / step) + 1)
       : 1
     routine = clampRoutine({
-      barsPerLevel: everyBars,
-      numLevels,
-      repeatCount: 1,
-      restAfterSec: Math.max(0, integer((session.simple as SimplePattern | undefined)?.restAfterSec ?? 10)),
-      loop: false,
+      unit: "bars",
+      playDuration: everyBars,
+      restDuration: 0,
+      round: { enabled: numLevels > 1, count: Math.max(2, numLevels), restDuration: 0 },
+      set:   freshRoutine().set,
+      block: freshRoutine().block,
+      bpmIncreaseAt: numLevels > 1 ? "round" : "off",
     })
   }
 

@@ -54,12 +54,20 @@ export type TimePattern = {
   everyBars: number
 }
 
+export type RepeatLevel = {
+  enabled: boolean
+  count: number        // number of repetitions (min 2)
+  restDuration: number // rest before next repetition, always seconds
+}
+
 export type RoutinePattern = {
-  barsPerLevel: number   // bars at each BPM step before advancing
-  numLevels: number      // how many BPM steps (1 = no ramp)
-  repeatCount: number    // how many times to run the full level sequence
-  restAfterSec: number   // rest between levels and between repeats
-  loop: boolean          // reserved; not yet implemented
+  unit: "bars" | "sec"   // applies to playDuration and restDuration only
+  playDuration: number   // one round's play duration (in unit)
+  restDuration: number   // one round's rest duration (in unit)
+  round: RepeatLevel     // repeat the round (play + rest)
+  set: RepeatLevel       // repeat the full round sequence
+  block: RepeatLevel     // repeat the full set
+  bpmIncreaseAt: "off" | "round" | "set" | "block"
 }
 
 export type Session = {
