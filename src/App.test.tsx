@@ -287,6 +287,7 @@ describe("App", () => {
     session.bpm = 80
     session.bpmIncrease = 5
     session.time = { seconds: 180, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    session.countIn = true
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
     vi.spyOn(performance, "now").mockReturnValue(0)
@@ -323,6 +324,7 @@ describe("App", () => {
     vi.stubGlobal("cancelAnimationFrame", () => {})
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 80
+    session.countIn = true
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     const user = userEvent.setup()
     render(<App />)
