@@ -259,7 +259,7 @@ export function clampSession(session: Session): Session {
     const targetBpm = clampBpm(session.time?.targetBpm ?? 120)
     const step = Math.max(0, integer(session.bpmIncrease))
     const numLevels = step > 0 && targetBpm > startBpm
-      ? Math.max(1, Math.ceil((targetBpm - startBpm) / step))
+      ? Math.max(1, Math.ceil((targetBpm - startBpm) / step) + 1)
       : 1
     routine = clampRoutine({
       barsPerLevel: everyBars,

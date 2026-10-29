@@ -68,8 +68,8 @@ describe("session", () => {
     const clamped = clampSession(session)
     expect(clamped.type).toBe("simple")
     expect(clamped.routineEnabled).toBe(true)
-    // numLevels = ceil((100 - 80) / 10) = 2
-    expect(clamped.routine.numLevels).toBe(2)
+    // numLevels = ceil((100 - 80) / 10) + 1 = 3
+    expect(clamped.routine.numLevels).toBe(3)
     expect(clamped.routine.barsPerLevel).toBe(4)
     expect(clamped.routine.repeatCount).toBe(1)
   })

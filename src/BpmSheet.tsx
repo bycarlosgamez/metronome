@@ -44,7 +44,7 @@ export function BpmSheet(props: {
   }
 
   const { routineEnabled, routine, bpm, bpmIncrease } = props.session
-  const derivedTarget = bpm + (routine.numLevels - 1) * bpmIncrease
+  const derivedTarget = Math.min(300, bpm + (routine.numLevels - 1) * bpmIncrease)
 
   return (
     <div
