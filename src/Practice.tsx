@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { bpmAt, stepIndexAt, type ClockSnapshot } from "./clock"
+import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
 import { clampSession, sessionTitle, SUBDIVISION_SLOTS } from "./session"
@@ -61,11 +61,6 @@ export function Practice(props: {
   const levelProgress = segment.kind === "play" && Number.isFinite(segment.durationSec) && segment.durationSec > 0
     ? Math.min(1, intoSec / segment.durationSec)
     : 0
-
-  // BPM ramp info (for time sessions only, kept for backward compat)
-  const stepIndex = stepIndexAt(segment, intoSec)
-  const nextStepAtSec = segment.steps?.[stepIndex + 1]?.atSec
-  const timeUntilNext = nextStepAtSec !== undefined ? nextStepAtSec - intoSec : null
 
   function closeSheet() { setSheet(null) }
 
@@ -146,19 +141,14 @@ export function Practice(props: {
               <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
               <div className="bpm-label">BPM · endless</div>
             </div>
-            {!routineEnabled && (
-              <div className="bpm-endless__right">
+            <div className="bpm-endless__right">
+              {!routineEnabled && (
                 <div className="bpm-elapsed" data-testid="bpm-elapsed">
                   {isPlaying ? formatClock(elapsedSec) : "0:00"}
                 </div>
-                <div className="bpm-hint">Tap to edit ›</div>
-              </div>
-            )}
-            {routineEnabled && (
-              <div className="bpm-endless__right">
-                <div className="bpm-hint">Tap to edit ›</div>
-              </div>
-            )}
+              )}
+              <div className="bpm-hint">Tap to edit ›</div>
+            </div>
           </div>
         </button>
 
