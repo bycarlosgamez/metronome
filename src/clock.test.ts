@@ -94,7 +94,7 @@ describe("clock", () => {
     const clicks = clicksInSegment(play)
     expect(clicks[0]).toMatchObject({ offsetSec: 0, beat: 1, accent: true, click: "click-1" })
     expect(clicks[1].offsetSec).toBeCloseTo(0.375)
-    expect(clicks[1]).toMatchObject({ beat: 1, accent: false, click: "click-1" })
+    expect(clicks[1]).toMatchObject({ beat: 1, accent: true, click: "click-1" })
     expect(clicks[2].offsetSec).toBeCloseTo(0.75)
     expect(clicks[2]).toMatchObject({ beat: 2, accent: false })
     expect(snapshotAt(segments, 0.4).beat).toBe(1)
@@ -125,7 +125,7 @@ describe("clock", () => {
     const play = segments.find((segment) => segment.kind === "play")!
     expect(clicksInSegment(play).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
     expect(clicksInSegment(play)[0].accent).toBe(true)
-    expect(clicksInSegment(play)[1].accent).toBe(false)
+    expect(clicksInSegment(play)[1].accent).toBe(true)
   })
 
   it("places the next two seconds of an endless play and then the following stretch", () => {

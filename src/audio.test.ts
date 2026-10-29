@@ -68,7 +68,7 @@ describe("scheduleSegment", () => {
     expect(started).toEqual([{ when: 20, name: "cue" }])
   })
 
-  it("plays an eighth slot from that slot's normal buffer", () => {
+  it("plays an eighth slot from that slot's accent buffer on beat 1", () => {
     const session = createDefaultSession(() => "set-1")
     session.bpm = 80
     session.time.increaseEvery = "bars"
@@ -79,6 +79,6 @@ describe("scheduleSegment", () => {
     scheduleSegment(ctx, sounds, play, 0)
     expect(started[0]).toEqual({ when: 0, name: "accent" })
     expect(started[1].when).toBeCloseTo(0.375)
-    expect(started[1].name).toBe("click-2-normal")
+    expect(started[1].name).toBe("click-2-accent")
   })
 })
