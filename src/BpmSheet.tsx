@@ -67,6 +67,7 @@ export function BpmSheet(props: {
     <div
       ref={overlayRef}
       inert={!props.open}
+      aria-hidden={!props.open}
       className={`sheet-overlay${props.open ? " open" : ""}`}
       aria-modal={props.open}
       role="dialog"

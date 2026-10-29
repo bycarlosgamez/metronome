@@ -29,11 +29,32 @@ export function Practice(props: {
   const bpmRef = useRef<string | null>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
 
+  // Inline target / step editing
+  const targetRef = useRef<string | null>(null)
+  const stepRef = useRef<string | null>(null)
+  const [targetText, setTargetText] = useState<string | null>(null)
+  const [stepText, setStepText] = useState<string | null>(null)
+
   function commitBpm() {
     const v = bpmRef.current; setBpmText(null); bpmRef.current = null
     if (v === null || v.trim() === "") return
     const next = clampBpm(Number(v))
     if (next !== props.session.bpm) props.onChange(clampSession({ ...props.session, bpm: next }))
+  }
+
+  function commitTarget() {
+    const v = targetRef.current; setTargetText(null); targetRef.current = null
+    if (v === null || v.trim() === "") return
+    const next = clampBpm(Number(v))
+    if (next !== props.session.time.targetBpm) props.onChange(clampSession({ ...props.session, time: { ...props.session.time, targetBpm: next } }))
+  }
+
+  function commitStep() {
+    const v = stepRef.current; setStepText(null); stepRef.current = null
+    if (v === null || v.trim() === "") return
+    const n = Math.max(0, Math.round(Number(v)))
+    if (!Number.isFinite(n) || n === props.session.bpmIncrease) return
+    props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
   }
 
   // Routine inline field state
@@ -144,18 +165,50 @@ export function Practice(props: {
         <div className="bpm-pick-row">
           <div className="bpm-block">
             <div className="bpm-top">
-              <input
-                className="bpm-current"
-                data-testid="bpm-current"
-                inputMode="numeric"
-                aria-label="BPM"
-                value={bpmText ?? String(currentBpm)}
-                onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
-                onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
-                onBlur={commitBpm}
-                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-              />
-              <span className="bpm-label">BPM</span>
+              <div className="bpm-left">
+                <input
+                  className="bpm-current"
+                  data-testid="bpm-current"
+                  inputMode="numeric"
+                  aria-label="BPM"
+                  value={bpmText ?? String(currentBpm)}
+                  onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
+                  onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
+                  onBlur={commitBpm}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
+                <span className="bpm-label">BPM</span>
+              </div>
+              {!routineEnabled && props.session.time.increaseEvery !== "off" && (
+                <div className="bpm-right">
+                  <div className="bpm-target-group">
+                    <span className="bpm-field-label">Target</span>
+                    <input
+                      className="bpm-field-value"
+                      inputMode="numeric"
+                      aria-label="Target BPM"
+                      value={targetText ?? String(props.session.time.targetBpm)}
+                      onFocus={() => { targetRef.current = String(props.session.time.targetBpm); setTargetText(String(props.session.time.targetBpm)) }}
+                      onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
+                      onBlur={commitTarget}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                  <div className="bpm-target-group">
+                    <span className="bpm-field-label">Step</span>
+                    <input
+                      className="bpm-field-value"
+                      inputMode="numeric"
+                      aria-label="BPM step"
+                      value={stepText ?? String(props.session.bpmIncrease)}
+                      onFocus={() => { stepRef.current = String(props.session.bpmIncrease); setStepText(String(props.session.bpmIncrease)) }}
+                      onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                      onBlur={commitStep}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="bpm-step-bar">
               <button

@@ -272,7 +272,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   box-sizing: border-box;
 }
 .bpm-block:focus-within { border-color: var(--blue); }
-.bpm-top { display: flex; justify-content: space-between; align-items: flex-end; padding: 14px 16px 12px; }
+.bpm-top { display: flex; justify-content: space-between; align-items: stretch; padding: 14px 16px 12px; }
 .bpm-step-bar { display: flex; border-top: 1px solid var(--line); }
 .bpm-bar-btn {
   flex: 1;
@@ -317,6 +317,25 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .bpm-current:focus { color: var(--blue); }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
+.bpm-left { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 0; }
+.bpm-right { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
+.bpm-target-group { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.bpm-field-label { font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
+.bpm-field-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  width: 44px;
+  padding: 0;
+  font-family: inherit;
+  line-height: 1.15;
+  outline: none;
+}
+.bpm-field-value:focus { border-bottom-color: var(--blue); color: var(--ink); }
 
 .bpm-ramp { display: flex; flex-direction: column; gap: 10px; }
 .bpm-ramp__top {

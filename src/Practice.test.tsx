@@ -62,6 +62,58 @@ describe("Practice", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
+  it("shows Target and Step inputs when target is on in simple mode", () => {
+    render(<Practice {...makeProps({ bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })} />)
+    expect(screen.getByRole("textbox", { name: "Target BPM" })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "BPM step" })).toBeInTheDocument()
+  })
+
+  it("hides Target and Step when target is off", () => {
+    render(<Practice {...makeProps()} />)
+    expect(screen.queryByRole("textbox", { name: "Target BPM" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "BPM step" })).not.toBeInTheDocument()
+  })
+
+  it("hides Target and Step in routine mode even when increaseEvery is bars", () => {
+    render(<Practice {...makeProps({ routineEnabled: true, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })} />)
+    expect(screen.queryByRole("textbox", { name: "Target BPM" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "BPM step" })).not.toBeInTheDocument()
+  })
+
+  it("commits target BPM on blur", async () => {
+    const props = makeProps({ bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    const input = screen.getByRole("textbox", { name: "Target BPM" })
+    await user.clear(input)
+    await user.type(input, "140")
+    await user.tab()
+    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({
+      time: expect.objectContaining({ targetBpm: 140 })
+    }))
+  })
+
+  it("commits step on blur", async () => {
+    const props = makeProps({ bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    const input = screen.getByRole("textbox", { name: "BPM step" })
+    await user.clear(input)
+    await user.type(input, "10")
+    await user.tab()
+    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ bpmIncrease: 10 }))
+  })
+
+  it("does not commit target when cleared", async () => {
+    const props = makeProps({ bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 } })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    const input = screen.getByRole("textbox", { name: "Target BPM" })
+    await user.clear(input)
+    await user.tab()
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("shows Play button when stopped", () => {
     render(<Practice {...makeProps()} />)
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
