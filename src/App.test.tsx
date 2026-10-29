@@ -48,7 +48,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
     await user.keyboard(" ")
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
-    await user.click(screen.getByRole("textbox", { name: "BPM" }))
+    await user.click(screen.getByTestId("bpm-current"))
     await user.keyboard(" ")
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
   })
@@ -90,7 +90,7 @@ describe("App", () => {
     await user.type(screen.getByLabelText("Length"), "0:01")
     await user.tab()
     await user.click(screen.getByRole("button", { name: "Done" }))
-    expect(screen.getByTestId("bpm-elapsed")).toHaveTextContent("0:00")
+    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
   })
 
   it("starts again from the beginning when Play is pressed at the end", async () => {
@@ -301,13 +301,13 @@ describe("App", () => {
     await act(async () => {
       tick?.((countInSec + 30) * 1000)
     })
-    await user.click(screen.getByRole("button", { name: "Edit BPM settings" }))
-    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
+    const bpm = screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!
     expect(bpm).toHaveValue("80")
     await user.clear(bpm)
     await user.type(bpm, "150")
     await user.tab()
-    expect(screen.getByRole("textbox", { name: "BPM" })).toHaveValue("150")
+    expect(screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!).toHaveValue("150")
   })
 
   it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
@@ -330,12 +330,12 @@ describe("App", () => {
       tick?.((countInSec + 10) * 1000)
     })
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Edit BPM settings" }))
-    const bpm = screen.getByRole("textbox", { name: "BPM" })
+    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
+    const bpm = screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!
     await user.clear(bpm)
     await user.type(bpm, "100")
     await user.tab()
-    expect(screen.getByTestId("bpm-elapsed")).toHaveTextContent("0:13")
+    expect(screen.getByTestId("play-elapsed")).toHaveTextContent("0:13")
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
 })
