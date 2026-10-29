@@ -389,47 +389,43 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: var(--ink);
 }
 
-/* ── Routine timer block ── */
-.routine-timer {
+/* Routine card */
+.routine-card {
   background: var(--surface-raised);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  overflow: hidden;
   width: 100%;
   max-width: 520px;
   box-sizing: border-box;
 }
 
+/* Progress row (reused) */
 .routine-progress-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  padding: 14px 16px 0;
 }
-
 .routine-elapsed {
   font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-
 .routine-cycle-info {
   text-align: right;
   font-size: 12px;
   color: var(--ink-muted);
   line-height: 1.6;
 }
-
 .routine-progress-bar-wrap {
   height: 3px;
   background: var(--surface-high);
+  margin: 8px 16px 0;
   border-radius: 2px;
   overflow: hidden;
 }
-
 .routine-progress-bar-fill {
   height: 100%;
   background: var(--ink);
@@ -437,35 +433,130 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   transition: width 0.3s linear;
 }
 
-.routine-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* Unit toggle row */
+.routine-unit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.routine-unit-label {
+  font-size: 10px;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* Sections */
+.routine-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.routine-section:last-child { border-bottom: none; }
+.routine-section--set  { background: var(--surface); }
+.routine-section--block { background: color-mix(in srgb, var(--surface) 50%, transparent); }
+.routine-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
+/* Field rows */
+.routine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
   gap: 8px;
 }
+.routine-row:last-child { margin-bottom: 0; }
+.routine-row-label { font-size: 12px; color: var(--ink-muted); flex: 1; }
+.routine-row-controls { display: flex; align-items: center; gap: 8px; }
 
-.routine-field {
+/* Stepper */
+.routine-stepper {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
 }
-
-.routine-field label {
-  font-size: 11px;
-  color: var(--ink-muted);
-  font-weight: 500;
-}
-
-.routine-field input {
+.routine-stepper button {
+  width: 28px;
+  height: 28px;
   background: var(--surface-high);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-field);
-  color: var(--ink);
-  font-size: 14px;
-  padding: 6px 10px;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
+  border: none;
+  color: var(--ink-muted);
+  font-size: 16px;
+  font-weight: 300;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.routine-stepper button:hover { color: var(--ink); }
+.routine-stepper-val {
+  min-width: 36px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 4px;
+}
+
+/* Toggle button */
+.routine-toggle-btn {
+  background: var(--surface-high);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.routine-toggle-btn[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--blue) 15%, transparent);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+/* Segment control (bars/sec and BPM row) */
+.routine-seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.routine-seg-btn {
+  padding: 4px 8px;
+  font-size: 10px;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  border-right: 1px solid var(--line);
+  font-family: inherit;
+  cursor: pointer;
+  text-transform: none;
+}
+.routine-seg-btn:last-child { border-right: none; }
+.routine-seg-btn[aria-pressed="true"] { background: var(--surface-high); color: var(--ink); }
+
+/* BPM row */
+.routine-bpm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+}
+.routine-bpm-label { font-size: 11px; color: var(--ink-muted); }
 
 /* Pick buttons (Meter + Subdivision) */
 .pick-btn {
@@ -477,6 +568,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   cursor: pointer;
 }
