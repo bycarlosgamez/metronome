@@ -35,7 +35,7 @@ function resolved(session: Session): Resolved[] {
     const items: Resolved[] = []
     for (let repeat = 0; repeat < repeatCount; repeat++) {
       for (let level = 0; level < numLevels; level++) {
-        const bpm = Math.min(300, clampBpm(session.bpm + level * session.bpmIncrease))
+        const bpm = clampBpm(session.bpm + level * session.bpmIncrease)
         const durationSec = barsPerLevel * beatsInMeter(session.meter) * 60 / bpm
         const isLast = repeat === repeatCount - 1 && level === numLevels - 1
         items.push({
