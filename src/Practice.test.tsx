@@ -365,4 +365,11 @@ describe("Practice", () => {
     render(<Practice {...props} />)
     expect(screen.getByText(/Round 1\//)).toBeInTheDocument()
   })
+
+  it("BpmSheet does not show BPM step card in routine mode", () => {
+    const props = makeProps({ routineEnabled: true, bpmIncrease: 5 })
+    render(<Practice {...props} />)
+    // BpmSheet starts closed; verify Step label is not in DOM
+    expect(screen.queryByLabelText("Step")).not.toBeInTheDocument()
+  })
 })

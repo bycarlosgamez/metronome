@@ -59,9 +59,8 @@ export function BpmSheet(props: {
     props.onChange(clampSession({ ...props.session, time: { ...props.session.time, increaseEvery: mode } }))
   }
 
-  const { routineEnabled, routine, bpm, bpmIncrease } = props.session
+  const { routineEnabled, bpm, bpmIncrease } = props.session
   const { increaseEvery, targetBpm } = props.session.time
-  const derivedTarget = Math.min(300, bpm + (routine.numLevels - 1) * bpmIncrease)
 
   return (
     <div
@@ -155,31 +154,7 @@ export function BpmSheet(props: {
             </div>
           )}
 
-          {/* Routine mode: Step + derived target */}
-          {routineEnabled && (
-            <div className="bpm-sheet-card bpm-sheet-target-card">
-              <p className="sheet-title">BPM step</p>
-              <div className="increase-fields">
-                <div className="increase-field">
-                  <label htmlFor="bpm-sheet-step">Step</label>
-                  <input
-                    id="bpm-sheet-step"
-                    inputMode="numeric"
-                    value={stepText ?? String(bpmIncrease)}
-                    onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
-                    onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                    onBlur={commitStep}
-                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                  />
-                </div>
-              </div>
-              {bpmIncrease > 0 && (
-                <div className="increase-derived">
-                  {bpm} → <span>{derivedTarget} BPM</span>
-                </div>
-              )}
-            </div>
-          )}
+
         </div>
       </div>
     </div>
