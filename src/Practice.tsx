@@ -31,7 +31,7 @@ export function Practice(props: {
 
   function commitBpm() {
     const v = bpmRef.current; setBpmText(null); bpmRef.current = null
-    if (v === null) return
+    if (v === null || v.trim() === "") return
     const next = clampBpm(Number(v))
     if (next !== props.session.bpm) props.onChange(clampSession({ ...props.session, bpm: next }))
   }

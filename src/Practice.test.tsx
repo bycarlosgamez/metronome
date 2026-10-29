@@ -52,6 +52,16 @@ describe("Practice", () => {
     expect(screen.getByTestId("bpm-current")).toHaveDisplayValue("80")
   })
 
+  it("does not commit BPM when input is cleared", async () => {
+    const props = makeProps()
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    const input = screen.getByTestId("bpm-current")
+    await user.clear(input)
+    await user.tab()
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("shows Play button when stopped", () => {
     render(<Practice {...makeProps()} />)
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
