@@ -1,4 +1,4 @@
-import { lengthSeconds, sessionTitle, simplePlayedBpm, timeDurationSec, timeSteps } from "./session"
+import { beatsInMeter, clampBpm, lengthSeconds, sessionTitle, simplePlayedBpm, timeDurationSec, timeSteps } from "./session"
 import type { ClickId, Meter, Session, SetColor, Slot } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -30,6 +30,26 @@ type Resolved = {
 }
 
 function resolved(session: Session): Resolved[] {
+  if (session.routineEnabled) {
+    const { barsPerLevel, numLevels, repeatCount, restAfterSec } = session.routine
+    const items: Resolved[] = []
+    for (let repeat = 0; repeat < repeatCount; repeat++) {
+      for (let level = 0; level < numLevels; level++) {
+        const bpm = Math.min(300, clampBpm(session.bpm + level * session.bpmIncrease))
+        const durationSec = barsPerLevel * beatsInMeter(session.meter) * 60 / bpm
+        const isLast = repeat === repeatCount - 1 && level === numLevels - 1
+        items.push({
+          id: `routine-${repeat}-${level}`,
+          bpm,
+          durationSec,
+          restSec: isLast ? 0 : restAfterSec,
+          restRole: isLast ? undefined : "after",
+          steps: [{ atSec: 0, bpm }],
+        })
+      }
+    }
+    return items
+  }
   if (session.type === "time") {
     const steps = timeSteps(session)
     return [{
@@ -94,7 +114,8 @@ export function expandSession(session: Session): Segment[] {
   const plays = resolved(session)
   return plays.flatMap((play, index) => {
     const segments: Segment[] = []
-    if (session.type !== "time") {
+    const addCountIn = session.routineEnabled ? index === 0 : session.type !== "time"
+    if (addCountIn) {
       segments.push({
         kind: "count-in",
         setId: play.id,
