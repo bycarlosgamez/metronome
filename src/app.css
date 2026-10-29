@@ -664,14 +664,10 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .increase-toggle-btn[aria-pressed="true"] {
   background: var(--surface-raised);
-  color: var(--ink-muted);
-}
-.increase-toggle-btn[aria-pressed="true"]:last-child {
-  background: var(--stage-play);
-  color: #fff;
+  color: var(--ink);
 }
 .increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-.increase-fields--active .increase-field input { border-color: var(--blue); }
+.increase-fields--active .increase-field input { border-color: var(--stage-play); }
 .increase-fields--active .increase-field label { color: var(--ink); }
 .increase-field { display: flex; flex-direction: column; gap: 5px; }
 .increase-field label { font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
