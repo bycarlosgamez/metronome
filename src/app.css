@@ -657,6 +657,11 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .meter-slash { color: var(--ink-muted); font-size: 24px; font-weight: 300; }
 
 /* Subdivision sheet */
+/* Click sheet */
+.click-sounds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.click-sounds .subdiv-opt strong { font-size: 20px; }
+.click-accent-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; color: var(--ink); font-size: 14px; }
+
 /* Per-beat subdivision tiles */
 .beat-tiles-label { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
 .beat-tiles { display: flex; flex-wrap: wrap; gap: 6px; }

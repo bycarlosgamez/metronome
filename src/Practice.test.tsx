@@ -637,4 +637,19 @@ describe("Practice", () => {
     }))
     expect(screen.getByRole("dialog", { name: "Subdivision" })).toHaveClass("open")
   })
+
+  it("opens the Click sheet and applies a new sound from it", async () => {
+    const props = makeProps()
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    await user.click(screen.getByRole("button", { name: "Click: Sound 1, accent on" }))
+    expect(screen.getByRole("dialog", { name: "Click" })).toHaveClass("open")
+    await user.click(screen.getByRole("button", { name: "Sound 2" }))
+    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ click: "click-2" }))
+  })
+
+  it("shows accent off on the Click button", () => {
+    render(<Practice {...makeProps({ accent: false })} />)
+    expect(screen.getByRole("button", { name: "Click: Sound 1, accent off" })).toBeInTheDocument()
+  })
 })

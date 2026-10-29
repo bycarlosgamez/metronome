@@ -179,6 +179,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     routineEnabled: false,
     routine: freshRoutine(),
     countIn: false,
+    accent: true,
   }
 }
 
@@ -335,6 +336,7 @@ export function clampSession(session: Session): Session {
     routineEnabled,
     routine,
     countIn: Boolean(session.countIn ?? false),
+    accent: session.accent !== false,
   }
 }
 
@@ -422,6 +424,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     routineEnabled: false,
     routine: freshRoutine(),
     countIn: Boolean(legacy.countIn ?? false),
+    accent: true,
   })
 }
 

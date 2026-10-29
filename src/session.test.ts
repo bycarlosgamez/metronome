@@ -38,6 +38,7 @@ describe("session", () => {
       routineEnabled: false,
       routine: freshRoutine(),
       countIn: false,
+      accent: true,
     })
     // freshSimple / freshTime assertions stay unchanged
     expect(freshSimple()).toEqual({
@@ -453,5 +454,12 @@ describe("session", () => {
       session.beats[2] = { subdivision: "triplet", slots: ["click-1", "click-1", "click-1"] }
       expect(sharedSubdivision(session.beats)).toBeNull()
     })
+  })
+
+  it("keeps the beat-1 accent on unless a session turned it off", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    delete (session as { accent?: boolean }).accent
+    expect(clampSession(session).accent).toBe(true)
+    expect(clampSession({ ...session, accent: false }).accent).toBe(false)
   })
 })

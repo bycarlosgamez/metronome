@@ -92,4 +92,5 @@ export type Session = {
   routineEnabled: boolean      // NEW
   routine: RoutinePattern      // NEW
   countIn: boolean
+  accent: boolean // beat 1 plays the accent tone
 }

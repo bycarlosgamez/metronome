@@ -174,4 +174,14 @@ describe("clock", () => {
     session.beats = [...uniform("triplet", ["click-1", "click-1", "click-1"], 2), ...uniform("sixteenth", ["click-1", "click-1", "click-1", "click-1"], 2)]
     expect(clicksInSegment(expandSession(session)[0])).toHaveLength(4)
   })
+
+  it("plays every click unaccented when the accent is off, count-in included", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.countIn = true
+    session.accent = false
+    session.beats = uniform("eighth", ["click-1", "click-1"])
+    const [countIn, play] = expandSession(session)
+    expect(clicksInSegment(countIn).some((click) => click.accent)).toBe(false)
+    expect(clicksInSegment(play, 0, 4).some((click) => click.accent)).toBe(false)
+  })
 })

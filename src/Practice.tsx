@@ -5,10 +5,11 @@ import { formatClock } from "./format"
 import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
+import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
 import { SubdivisionSheet } from "./SubdivisionSheet"
 import { TimeInput } from "./TimeInput"
-import type { Session } from "./types"
+import { CLICKS, type Session } from "./types"
 
 export type PlaybackStatus = "stopped" | "playing" | "paused" | "no-audio"
 
@@ -23,7 +24,7 @@ export function Practice(props: {
   onChange(session: Session): void
   onSeek(index: number): void
 }) {
-  const [sheet, setSheet] = useState<"bpm" | "meter" | "subdiv" | null>(null)
+  const [sheet, setSheet] = useState<"bpm" | "meter" | "subdiv" | "click" | null>(null)
 
   // Inline BPM editing
   const bpmRef = useRef<string | null>(null)
@@ -279,6 +280,15 @@ export function Practice(props: {
               {shared ? <SubdivIcon subdivision={shared} size="sm" /> : <strong className="pick-mixed">Mixed</strong>}
               <span>Subdiv</span>
             </button>
+            <button
+              type="button"
+              className="pick-btn"
+              aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, accent ${props.session.accent ? "on" : "off"}`}
+              onClick={() => setSheet("click")}
+            >
+              <strong>{CLICKS.indexOf(props.session.click) + 1}</strong>
+              <span>Click</span>
+            </button>
           </div>
         </div>
 
@@ -477,6 +487,12 @@ export function Practice(props: {
       <SubdivisionSheet
         session={props.session}
         open={sheet === "subdiv"}
+        onClose={closeSheet}
+        onChange={(next) => props.onChange(clampSession(next))}
+      />
+      <ClickSheet
+        session={props.session}
+        open={sheet === "click"}
         onClose={closeSheet}
         onChange={(next) => props.onChange(clampSession(next))}
       />
