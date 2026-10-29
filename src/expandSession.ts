@@ -87,13 +87,16 @@ function resolved(session: Session): Resolved[] {
     for (let step = 0; step < steps; step += 1) {
       for (let practice = 0; practice < session.simple.practices; practice += 1) {
         const index = items.length
-        const bpm = simplePlayedBpm(
+        const rawBpm = simplePlayedBpm(
           session.bpm,
           session.bpmIncrease,
           session.simple.increaseEvery,
           round,
           step,
         )
+        const bpm = session.time.increaseEvery !== "off" && session.bpmIncrease > 0 && session.time.targetBpm > session.bpm
+          ? Math.min(session.time.targetBpm, rawBpm)
+          : rawBpm
         const lastOfRound = step === steps - 1 && practice === session.simple.practices - 1
         const lastOfSession = round === rounds - 1 && lastOfRound
         items.push({

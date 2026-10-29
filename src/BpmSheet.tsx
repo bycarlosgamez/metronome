@@ -10,8 +10,10 @@ export function BpmSheet(props: {
 }) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
+  const [targetText, setTargetText] = useState<string | null>(null)
   const [stepText, setStepText] = useState<string | null>(null)
   const bpmRef = useRef<string | null>(null)
+  const targetRef = useRef<string | null>(null)
   const stepRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -33,6 +35,16 @@ export function BpmSheet(props: {
     props.onChange(clampSession({ ...props.session, bpm: next }))
   }
 
+  function commitTarget() {
+    const typed = targetRef.current
+    setTargetText(null)
+    targetRef.current = null
+    if (typed === null) return
+    const next = clampBpm(Number(typed))
+    if (next === props.session.time.targetBpm) return
+    props.onChange(clampSession({ ...props.session, time: { ...props.session.time, targetBpm: next } }))
+  }
+
   function commitStep() {
     const typed = stepRef.current
     setStepText(null)
@@ -43,7 +55,12 @@ export function BpmSheet(props: {
     props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
   }
 
+  function chooseMode(mode: "off" | "bars") {
+    props.onChange(clampSession({ ...props.session, time: { ...props.session.time, increaseEvery: mode } }))
+  }
+
   const { routineEnabled, routine, bpm, bpmIncrease } = props.session
+  const { increaseEvery, targetBpm } = props.session.time
   const derivedTarget = Math.min(300, bpm + (routine.numLevels - 1) * bpmIncrease)
 
   return (
@@ -91,29 +108,84 @@ export function BpmSheet(props: {
             </div>
           </div>
 
-          {/* Step card — always shown; derived target only in Routine mode */}
-          <div className="bpm-sheet-card bpm-sheet-target-card">
-            <p className="sheet-title">BPM step</p>
-            <div className="increase-fields">
-              <div className="increase-field">
-                <label htmlFor="bpm-sheet-step">Step</label>
-                <input
-                  id="bpm-sheet-step"
-                  inputMode="numeric"
-                  value={stepText ?? String(bpmIncrease)}
-                  onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
-                  onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                  onBlur={commitStep}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
+          {/* Simple mode: Off/Bars toggle + Target BPM + Step */}
+          {!routineEnabled && (
+            <div className="bpm-sheet-card bpm-sheet-target-card">
+              <p className="sheet-title">Increase to target</p>
+              <div className="increase-mode-row">
+                {(["off", "bars"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className="increase-mode-btn"
+                    aria-pressed={increaseEvery === mode}
+                    onClick={() => chooseMode(mode)}
+                  >
+                    {mode === "off" ? "Off" : "Bars"}
+                  </button>
+                ))}
               </div>
+              {increaseEvery !== "off" && (
+                <div className="increase-fields">
+                  <div className="increase-field target">
+                    <label htmlFor="bpm-sheet-target">Target BPM</label>
+                    <input
+                      id="bpm-sheet-target"
+                      inputMode="numeric"
+                      value={targetText ?? String(targetBpm)}
+                      onFocus={() => { targetRef.current = String(targetBpm); setTargetText(String(targetBpm)) }}
+                      onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
+                      onBlur={commitTarget}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                  <div className="increase-field">
+                    <label htmlFor="bpm-sheet-step">Step</label>
+                    <input
+                      id="bpm-sheet-step"
+                      inputMode="numeric"
+                      value={stepText ?? String(bpmIncrease)}
+                      onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
+                      onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                      onBlur={commitStep}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    />
+                  </div>
+                  {bpmIncrease > 0 && targetBpm > bpm && (
+                    <div className="increase-derived">
+                      {bpm} → <span>{Math.min(300, targetBpm)} BPM</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {routineEnabled && bpmIncrease > 0 && (
-              <div className="increase-derived">
-                {bpm} → <span>{derivedTarget} BPM</span>
+          )}
+
+          {/* Routine mode: Step + derived target */}
+          {routineEnabled && (
+            <div className="bpm-sheet-card bpm-sheet-target-card">
+              <p className="sheet-title">BPM step</p>
+              <div className="increase-fields">
+                <div className="increase-field">
+                  <label htmlFor="bpm-sheet-step">Step</label>
+                  <input
+                    id="bpm-sheet-step"
+                    inputMode="numeric"
+                    value={stepText ?? String(bpmIncrease)}
+                    onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
+                    onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                    onBlur={commitStep}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                  />
+                </div>
               </div>
-            )}
-          </div>
+              {bpmIncrease > 0 && (
+                <div className="increase-derived">
+                  {bpm} → <span>{derivedTarget} BPM</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
