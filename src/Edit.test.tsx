@@ -5,6 +5,7 @@ import { Edit } from "./Edit"
 import { expandSession } from "./expandSession"
 import { formatClock } from "./format"
 import { createDefaultSession } from "./session"
+import type { Session } from "./types"
 
 describe("Edit", () => {
   it("edits the session card and the tempo card", async () => {
@@ -119,6 +120,17 @@ describe("Edit", () => {
     const totalSec = expandSession(session).reduce((sum, segment) => sum + segment.durationSec, 0)
     render(<Edit session={session} onChange={() => {}} onDone={() => {}} />)
     expect(screen.getByText(`Total ${formatClock(totalSec)}`)).toBeInTheDocument()
+  })
+
+  it("toggles Count-in on and off", async () => {
+    const session: Session = { ...createDefaultSession(() => "s1"), countIn: false }
+    const onChange = vi.fn()
+    const user = userEvent.setup()
+    render(<Edit session={session} onChange={onChange} onDone={vi.fn()} />)
+    const btn = screen.getByRole("button", { name: "Count-in" })
+    expect(btn).toHaveAttribute("aria-pressed", "false")
+    await user.click(btn)
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ countIn: true }))
   })
 
   it("calls onDone when Done is clicked", async () => {

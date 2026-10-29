@@ -201,6 +201,18 @@ export function Edit(props: {
               ))}
             </div>
           </div>
+          <div className="switch-row">
+            <span>Count-in</span>
+            <button
+              type="button"
+              className="switch"
+              aria-label="Count-in"
+              aria-pressed={session.countIn}
+              onClick={() => commit({ ...session, countIn: !session.countIn })}
+            >
+              {session.countIn ? "On" : "Off"}
+            </button>
+          </div>
         </section>
         <section className="editor-card">
           <p className="card-title">Tempo</p>
