@@ -50,11 +50,10 @@ function fakeContext() {
 describe("scheduleSegment", () => {
   it("schedules four count-in clicks and one rest cue", () => {
     const session = createDefaultSession(() => "set-1")
-    session.type = "simple"
     session.countIn = true
     session.bpm = 60
-    session.simple.practices = 2
-    session.simple.restAfterSec = 30
+    session.routineEnabled = true
+    session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const { ctx, sounds, started } = fakeContext()
     scheduleSegment(ctx, sounds, segments[0], 10)
@@ -71,7 +70,8 @@ describe("scheduleSegment", () => {
   it("plays an eighth slot from that slot's accent buffer on beat 1", () => {
     const session = createDefaultSession(() => "set-1")
     session.bpm = 80
-    session.time.increaseEvery = "bars"
+    session.routineEnabled = true
+    session.routine = { ...session.routine, unit: "sec", playDuration: 4 }
     session.subdivision = "eighth"
     session.slots = ["click-1", "click-2"]
     const play = expandSession(session).find((segment) => segment.kind === "play")!

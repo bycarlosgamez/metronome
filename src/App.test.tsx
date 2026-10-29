@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { App } from "./App"
 import { clicksInSegment } from "./clock"
 import { expandSession } from "./expandSession"
-import { createDefaultSession, migrateLegacy } from "./session"
+import { createDefaultSession } from "./session"
 import { SESSION_KEY } from "./store"
 
 class FakeAudioContext {
@@ -53,69 +53,11 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
   })
 
-  it("stops playback when Edit opens", async () => {
-    vi.stubGlobal("AudioContext", FakeAudioContext)
-    const session = createDefaultSession(() => "cycle-1")
-    session.type = "simple"
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole("button", { name: "Play" }))
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    expect(screen.getByRole("textbox", { name: "Length" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Done" }))
-    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
-  })
-
-  it("returns elapsed to the start when Edit opens", async () => {
-    vi.stubGlobal("AudioContext", FakeAudioContext)
-    vi.spyOn(performance, "now").mockReturnValue(0)
-    let tick: FrameRequestCallback | null = null
-    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      tick ??= callback
-      return 1
-    })
-    vi.stubGlobal("cancelAnimationFrame", () => {})
-    const session = createDefaultSession(() => "cycle-1")
-    session.type = "simple"
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole("button", { name: "Play" }))
-    await act(async () => {
-      tick?.(10_000)
-    })
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    await user.clear(screen.getByLabelText("Length"))
-    await user.type(screen.getByLabelText("Length"), "0:01")
-    await user.tab()
-    await user.click(screen.getByRole("button", { name: "Done" }))
-    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
-  })
-
   it("starts again from the beginning when Play is pressed at the end", async () => {
-    window.localStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify({
-        name: "Practice",
-        meter: "4/4",
-        perSetMeter: false,
-        bpmIncrease: 0,
-        click: "click-1",
-        sets: [
-          {
-            id: "set-1",
-            name: "Set 1",
-            durationSec: 1,
-            bpm: 80,
-            restSec: 0,
-            repeats: 1,
-            color: "red",
-            meter: "4/4",
-          },
-        ],
-      }),
-    )
+    const session = createDefaultSession(() => "cycle-1")
+    session.routineEnabled = true
+    session.routine = { ...session.routine, unit: "sec", playDuration: 1 }
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
     vi.spyOn(performance, "now").mockReturnValue(0)
     let tick: FrameRequestCallback | null = null
@@ -231,27 +173,12 @@ describe("App", () => {
         return node
       }
     }
-    const saved = {
-      name: "Practice",
-      meter: "4/4",
-      perSetMeter: false,
-      bpmIncrease: 0,
-      click: "click-1",
-      countIn: true,
-      sets: [
-        {
-          id: "set-1",
-          name: "Set 1",
-          durationSec: 120,
-          bpm,
-          restSec: 0,
-          repeats: 1,
-          color: "red",
-          meter: "4/4",
-        },
-      ],
-    }
-    const play = expandSession(migrateLegacy(saved)!).find((segment) => segment.kind === "play")!
+    const saved = createDefaultSession(() => "cycle-1")
+    saved.bpm = bpm
+    saved.countIn = true
+    saved.routineEnabled = true
+    saved.routine = { ...saved.routine, unit: "sec", playDuration: 120 }
+    const play = expandSession(saved).find((segment) => segment.kind === "play")!
     const marks = clicksInSegment(play)
     const next = marks.find((mark) => mark.offsetSec > intoSec)!
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(saved))

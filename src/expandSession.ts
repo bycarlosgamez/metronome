@@ -1,4 +1,4 @@
-import { beatsInMeter, clampBpm, lengthSeconds, sessionTitle, simplePlayedBpm, timeDurationSec, timeSteps } from "./session"
+import { beatsInMeter, clampBpm, sessionTitle, timeSteps } from "./session"
 import type { ClickId, Meter, Session, SetColor, Slot } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -85,66 +85,15 @@ function resolved(session: Session): Resolved[] {
     }
     return items
   }
-  if (session.type === "time") {
-    const steps = timeSteps(session)
-    return [{
-      id: "time",
-      bpm: steps[0]?.bpm ?? session.bpm,
-      durationSec: timeDurationSec(session),
-      restSec: 0,
-      steps,
-    }]
-  }
-  if (session.type === "complex") {
-    const pattern = session.complex
-    const rounds = pattern.repeatRound ? pattern.rounds : 1
-    const items: Resolved[] = []
-    for (let round = 0; round < rounds; round += 1) {
-      session.cycles.forEach((cycle, index) => {
-        const lastOfRound = index === session.cycles.length - 1
-        const lastOfSession = round === rounds - 1 && lastOfRound
-        const bpm = cycle.bpm ?? simplePlayedBpm(session.bpm, session.bpmIncrease, pattern.increaseEvery, round, index)
-        items.push({
-          id: cycle.id,
-          bpm,
-          durationSec: lengthSeconds(cycle.length, session.meter, bpm),
-          restSec: lastOfSession ? 0 : lastOfRound ? pattern.restBetweenSec : cycle.restSec,
-          restRole: lastOfSession ? undefined : lastOfRound ? "between" : "after",
-        })
-      })
-    }
-    return items
-  }
-  const steps = session.simple.stepTempo ? session.simple.times : 1
-  const rounds = session.simple.repeatRound ? session.simple.rounds : 1
-  const items: Resolved[] = []
-  for (let round = 0; round < rounds; round += 1) {
-    for (let step = 0; step < steps; step += 1) {
-      for (let practice = 0; practice < session.simple.practices; practice += 1) {
-        const index = items.length
-        const rawBpm = simplePlayedBpm(
-          session.bpm,
-          session.bpmIncrease,
-          session.simple.increaseEvery,
-          round,
-          step,
-        )
-        const bpm = session.time.increaseEvery !== "off" && session.bpmIncrease > 0 && session.time.targetBpm > session.bpm
-          ? Math.min(session.time.targetBpm, rawBpm)
-          : rawBpm
-        const lastOfRound = step === steps - 1 && practice === session.simple.practices - 1
-        const lastOfSession = round === rounds - 1 && lastOfRound
-        items.push({
-          id: `simple-${index}`,
-          bpm,
-          durationSec: lengthSeconds(session.simple.length, session.meter, bpm),
-          restSec: lastOfSession ? 0 : lastOfRound ? session.simple.restBetweenSec : session.simple.restAfterSec,
-          restRole: lastOfSession ? undefined : lastOfRound ? "between" : "after",
-        })
-      }
-    }
-  }
-  return items
+  // Simple mode: one endless stretch; an active increase ramps up to the target and holds there.
+  const steps = session.time.increaseEvery === "off" ? [{ atSec: 0, bpm: session.bpm }] : timeSteps(session)
+  return [{
+    id: "simple",
+    bpm: steps[0].bpm,
+    durationSec: Number.POSITIVE_INFINITY,
+    restSec: 0,
+    steps,
+  }]
 }
 
 export function expandSession(session: Session): Segment[] {
@@ -152,7 +101,7 @@ export function expandSession(session: Session): Segment[] {
   const plays = resolved(session)
   return plays.flatMap((play, index) => {
     const segments: Segment[] = []
-    const addCountIn = session.countIn && (session.routineEnabled ? index === 0 : session.type !== "time")
+    const addCountIn = session.countIn && index === 0
     if (addCountIn) {
       segments.push({
         kind: "count-in",

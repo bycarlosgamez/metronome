@@ -20,7 +20,6 @@ export function Practice(props: {
   onToggle(): void
   onJump(direction: -1 | 1): void
   onReset(): void
-  onEdit(): void
   onChange(session: Session): void
   onSeek(index: number): void
 }) {
@@ -112,6 +111,15 @@ export function Practice(props: {
       >
         ■ Stop
       </button>
+      <button
+        type="button"
+        className="count-in-toggle"
+        aria-label="Count-in"
+        aria-pressed={props.session.countIn}
+        onClick={() => props.onChange(clampSession({ ...props.session, countIn: !props.session.countIn }))}
+      >
+        Count-in
+      </button>
     </div>
   )
 
@@ -127,7 +135,6 @@ export function Practice(props: {
     <main className="practice">
       <header className="topbar">
         <h1 aria-label="Mentronome">{sessionTitle(props.session)}</h1>
-        <button type="button" className="quiet" onClick={props.onEdit}>Edit</button>
       </header>
 
       <div className="practice-body">

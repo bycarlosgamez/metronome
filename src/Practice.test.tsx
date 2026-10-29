@@ -18,20 +18,16 @@ function makeProps(overrides: Partial<Session> = {}) {
     onToggle: vi.fn(),
     onJump: vi.fn(),
     onReset: vi.fn(),
-    onEdit: vi.fn(),
     onChange: vi.fn(),
     onSeek: vi.fn(),
   }
 }
 
 describe("Practice", () => {
-  it("renders the session name and Edit button", async () => {
-    const props = makeProps()
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
+  it("renders the session name and no Edit button", () => {
+    render(<Practice {...makeProps()} />)
     expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    expect(props.onEdit).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument()
   })
 
   it("shows beat squares for the current meter", () => {
@@ -574,6 +570,26 @@ describe("Practice", () => {
       render(<Practice {...makeProps()} />)
       expect(document.querySelector(".routine-card")).not.toBeInTheDocument()
       expect(screen.getByRole("button", { name: "Play" }).closest(".play-controls")).not.toBeNull()
+    })
+  })
+
+  describe("count-in toggle", () => {
+    it("toggles Count-in from the play controls in Simple mode", async () => {
+      const props = makeProps({ countIn: false })
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      const toggle = screen.getByRole("button", { name: "Count-in" })
+      expect(toggle).toHaveAttribute("aria-pressed", "false")
+      expect(toggle.closest(".play-controls")).not.toBeNull()
+      await user.click(toggle)
+      expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ countIn: true }))
+    })
+
+    it("shows Count-in on inside the routine card", () => {
+      render(<Practice {...makeProps({ routineEnabled: true, countIn: true })} />)
+      const toggle = screen.getByRole("button", { name: "Count-in" })
+      expect(toggle).toHaveAttribute("aria-pressed", "true")
+      expect(document.querySelector(".routine-card")).toContainElement(toggle)
     })
   })
 })

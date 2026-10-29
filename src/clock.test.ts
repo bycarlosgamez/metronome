@@ -23,9 +23,8 @@ describe("clock", () => {
 
   it("reports no beat during a rest", () => {
     const session = createDefaultSession(() => "set-1")
-    session.type = "simple"
-    session.simple.practices = 2
-    session.simple.restAfterSec = 30
+    session.routineEnabled = true
+    session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const restIndex = segments.findIndex((segment) => segment.kind === "rest")
     const restStart = segments.slice(0, restIndex).reduce((sum, segment) => sum + segment.durationSec, 0)
@@ -34,10 +33,9 @@ describe("clock", () => {
 
   it("places four accented-on-one count-in clicks and no rest clicks", () => {
     const session = createDefaultSession(() => "set-1")
-    session.type = "simple"
     session.countIn = true
-    session.simple.practices = 2
-    session.simple.restAfterSec = 30
+    session.routineEnabled = true
+    session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const countIn = clicksInSegment(segments[0])
     expect(countIn).toHaveLength(4)
@@ -91,7 +89,7 @@ describe("clock", () => {
     const segments = expandSession(session)
 
     const play = segments.find((segment) => segment.kind === "play")!
-    const clicks = clicksInSegment(play)
+    const clicks = clicksInSegment(play, 0, 4)
     expect(clicks[0]).toMatchObject({ offsetSec: 0, beat: 1, accent: true, click: "click-1" })
     expect(clicks[1].offsetSec).toBeCloseTo(0.375)
     expect(clicks[1]).toMatchObject({ beat: 1, accent: true, click: "click-1" })
@@ -100,18 +98,18 @@ describe("clock", () => {
     expect(snapshotAt(segments, 0.4).beat).toBe(1)
 
     session.slots = ["click-1", "off"]
-    const beatsOnly = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    const beatsOnly = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!, 0, 4)
     expect(beatsOnly.slice(0, 4).map((click) => click.offsetSec)).toEqual([0, 0.75, 1.5, 2.25])
 
     session.meter = "6/8"
     session.subdivision = "quarter"
     session.slots = ["click-1"]
-    const six = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    const six = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!, 0, 4)
     expect(six.slice(0, 6).map((click) => click.beat)).toEqual([1, 2, 3, 4, 5, 6])
     expect(six[1].offsetSec - six[0].offsetSec).toBeCloseTo(60 / 80)
 
     session.meter = "4/8"
-    const fourEight = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!)
+    const fourEight = clicksInSegment(expandSession(session).find((segment) => segment.kind === "play")!, 0, 4)
     expect(fourEight[1].offsetSec - fourEight[0].offsetSec).toBeCloseTo(60 / 80)
   })
 
@@ -123,9 +121,9 @@ describe("clock", () => {
     session.slots = ["click-1", "click-1", "click-1", "click-1", "click-1"]
     const segments = expandSession(session)
     const play = segments.find((segment) => segment.kind === "play")!
-    expect(clicksInSegment(play).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
-    expect(clicksInSegment(play)[0].accent).toBe(true)
-    expect(clicksInSegment(play)[1].accent).toBe(true)
+    expect(clicksInSegment(play, 0, 4).slice(0, 5).map((click) => click.offsetSec)).toEqual([0, 0.2, 0.4, expect.closeTo(0.6), 0.8])
+    expect(clicksInSegment(play, 0, 4)[0].accent).toBe(true)
+    expect(clicksInSegment(play, 0, 4)[1].accent).toBe(true)
   })
 
   it("places the next two seconds of an endless play and then the following stretch", () => {

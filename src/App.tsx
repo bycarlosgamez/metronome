@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClickSounds, scheduleClicks, scheduleSegment, type ClickSounds } from "./audio"
 import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt, stepIndexAt } from "./clock"
-import { Edit } from "./Edit"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
 import { loadSession, saveSession } from "./store"
@@ -9,20 +8,17 @@ import type { Session } from "./types"
 
 export function App() {
   const [session, setSession] = useState(() => loadSession(window.localStorage))
-  const [view, setView] = useState<"practice" | "edit">("practice")
   const segments = useMemo(() => expandSession(session), [session])
   const { elapsed, status, setStatus, elapsedRef, setElapsed } = usePlayback(segments)
   const snapshot = snapshotAt(segments, elapsed)
   const audioRef = useRef<AudioContext | null>(null)
   const buffersRef = useRef<ClickSounds | null>(null)
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
-  const viewRef = useRef(view)
   const playGen = useRef(0)
   const toggleRef = useRef<() => void>(() => {})
   const [seekCount, setSeekCount] = useState(0)
   const segmentsRef = useRef(segments)
   const remainingRef = useRef(snapshot.segmentRemainingSec)
-  viewRef.current = view
   segmentsRef.current = segments
   remainingRef.current = snapshot.segmentRemainingSec
 
@@ -103,7 +99,7 @@ export function App() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== " " || event.repeat || viewRef.current === "edit") return
+      if (event.key !== " " || event.repeat) return
       const target = event.target
       if (
         target instanceof HTMLElement &&
@@ -134,11 +130,11 @@ export function App() {
       }
       await audioRef.current.resume()
     } catch {
-      if (gen !== playGen.current || viewRef.current === "edit") return
+      if (gen !== playGen.current) return
       setStatus("no-audio")
       return
     }
-    if (gen !== playGen.current || viewRef.current === "edit") return
+    if (gen !== playGen.current) return
     setStatus(audioRef.current.state === "running" ? "playing" : "no-audio")
   }
 
@@ -167,14 +163,6 @@ export function App() {
     stopNodes()
     writeElapsed(0)
     setStatus("stopped")
-  }
-
-  function onEdit() {
-    playGen.current += 1
-    stopNodes()
-    writeElapsed(0)
-    setStatus("stopped")
-    setView("edit")
   }
 
   function onChange(next: Session) {
@@ -213,12 +201,6 @@ export function App() {
     saveSession(next, window.localStorage)
   }
 
-  if (view === "edit") {
-    return (
-      <Edit session={session} onChange={onChange} onDone={() => setView("practice")} />
-    )
-  }
-
   return (
     <Practice
       session={session}
@@ -230,7 +212,6 @@ export function App() {
       }}
       onJump={onJump}
       onReset={onReset}
-      onEdit={onEdit}
       onChange={onChange}
       onSeek={onSeek}
     />

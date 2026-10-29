@@ -32,12 +32,13 @@ Session (localStorage) → expandSession() → Segment[] → clock.ts → audio.
                                                         App.tsx (schedules clicks via requestAnimationFrame)
 ```
 
-### Session Types
+### Practice Modes
 
-Three session types (`types.ts`) with different expansion logic in `expandSession.ts`:
-- **Simple** — fixed length, repeating with BPM increases
-- **Complex** — custom cycles with flexible repeat logic
-- **Time** — freeform duration with optional auto-ramping tempo
+Practice has two modes, chosen with the Simple | Routine control (`session.routineEnabled`):
+- **Simple** — one endless stretch at the session BPM; an optional increase (every N bars by a step) ramps up to the target BPM and holds there until stopped
+- **Routine** — Round/Set/Block structure with play/rest durations (bars or MIN:SEC) and BPM increases at a chosen level
+
+Legacy fields (`type`, `simple`, `complex`, `cycles`, `name`, `color`) are still loaded and clamped for old saved sessions but no longer drive playback or UI.
 
 ### Key Modules
 
@@ -50,9 +51,8 @@ Three session types (`types.ts`) with different expansion logic in `expandSessio
 
 ### UI Components
 
-- **`App.tsx`** — Root: owns session state, view switching (practice ↔ edit), audio context, playback loop via `requestAnimationFrame`
-- **`Practice.tsx`** — Playback view: beat display, play/pause/reset/seek, BPM display
-- **`Edit.tsx`** — Configuration view: session type switcher, pattern fields, cycle management
+- **`App.tsx`** — Root: owns session state, audio context, playback loop via `requestAnimationFrame`
+- **`Practice.tsx`** — The only screen: beat display, BPM card, meter/subdivision sheets, routine card, play controls and count-in toggle
 
 ### Styling
 
@@ -60,4 +60,4 @@ Plain CSS — `tokens.css` defines design tokens (colors, spacing); `app.css` co
 
 ### Testing
 
-Vitest 3 + Testing Library. Tests run sequentially (file parallelism disabled in `vite.config.ts`). Each test file covers its corresponding module; `App.test.tsx`, `Practice.test.tsx`, and `Edit.test.tsx` are integration-level tests using a mocked Web Audio API.
+Vitest 3 + Testing Library. Tests run sequentially (file parallelism disabled in `vite.config.ts`). Each test file covers its corresponding module; `App.test.tsx` and `Practice.test.tsx` are integration-level tests using a mocked Web Audio API.
