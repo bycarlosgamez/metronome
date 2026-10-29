@@ -152,6 +152,28 @@ export function Practice(props: {
           </div>
         </button>
 
+        {/* Pick row */}
+        <div className="pick-row">
+          <button
+            type="button"
+            className="pick-btn"
+            aria-label={`Time signature: ${props.session.meter}`}
+            onClick={() => setSheet("meter")}
+          >
+            <strong>{props.session.meter}</strong>
+            <span>Time Signature</span>
+          </button>
+          <button
+            type="button"
+            className="pick-btn"
+            aria-label={`Subdivision: ${props.session.subdivision}`}
+            onClick={() => setSheet("subdiv")}
+          >
+            <SubdivIcon subdivision={props.session.subdivision} size="sm" />
+            <span>Subdivision</span>
+          </button>
+        </div>
+
         {/* Routine timer block */}
         {routineEnabled && (
           <div className="routine-timer">
@@ -242,28 +264,6 @@ export function Practice(props: {
             </div>
           </div>
         )}
-
-        {/* Pick row */}
-        <div className="pick-row">
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Time signature: ${props.session.meter}`}
-            onClick={() => setSheet("meter")}
-          >
-            <strong>{props.session.meter}</strong>
-            <span>Time Signature</span>
-          </button>
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Subdivision: ${props.session.subdivision}`}
-            onClick={() => setSheet("subdiv")}
-          >
-            <SubdivIcon subdivision={props.session.subdivision} size="sm" />
-            <span>Subdivision</span>
-          </button>
-        </div>
 
         {/* Play controls */}
         <div className="play-controls">
