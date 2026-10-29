@@ -259,15 +259,15 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 .bpm-block:hover { border-color: var(--surface-high); }
+.bpm-endless { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.bpm-endless__left { display: flex; flex-direction: column; gap: 4px; }
+.bpm-endless__right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-top: 2px; }
 .bpm-current { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
 .bpm-elapsed { font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.bpm-hint { font-size: 11px; color: var(--surface-high); margin-top: auto; }
+.bpm-hint { font-size: 11px; color: var(--surface-high); }
 .pick-col {
   display: flex;
   flex-direction: column;

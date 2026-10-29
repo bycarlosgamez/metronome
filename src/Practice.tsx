@@ -137,14 +137,20 @@ export function Practice(props: {
             aria-label="Edit BPM settings"
             onClick={() => setSheet("bpm")}
           >
-            <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
-            <div className="bpm-label">BPM</div>
-            {!routineEnabled && (
-              <div className="bpm-elapsed" data-testid="bpm-elapsed">
-                {isPlaying ? formatClock(elapsedSec) : "0:00"}
+            <div className="bpm-endless">
+              <div className="bpm-endless__left">
+                <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
+                <div className="bpm-label">BPM</div>
               </div>
-            )}
-            <div className="bpm-hint">Tap ›</div>
+              <div className="bpm-endless__right">
+                {!routineEnabled && (
+                  <div className="bpm-elapsed" data-testid="bpm-elapsed">
+                    {isPlaying ? formatClock(elapsedSec) : "0:00"}
+                  </div>
+                )}
+                <div className="bpm-hint">Tap ›</div>
+              </div>
+            </div>
           </button>
           <div className="pick-col">
             <button
