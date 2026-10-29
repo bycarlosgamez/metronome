@@ -31,22 +31,57 @@ type Resolved = {
 
 function resolved(session: Session): Resolved[] {
   if (session.routineEnabled) {
-    const { barsPerLevel, numLevels, repeatCount, restAfterSec } = session.routine
+    const { unit, playDuration, restDuration, round, set, block, bpmIncreaseAt } = session.routine
     const items: Resolved[] = []
-    for (let repeat = 0; repeat < repeatCount; repeat++) {
-      for (let level = 0; level < numLevels; level++) {
-        const bpm = clampBpm(session.bpm + level * session.bpmIncrease)
-        const durationSec = barsPerLevel * beatsInMeter(session.meter) * 60 / bpm
-        const isLast = repeat === repeatCount - 1 && level === numLevels - 1
-        items.push({
-          id: `routine-${repeat}-${level}`,
-          bpm,
-          durationSec,
-          restSec: isLast ? 0 : restAfterSec,
-          restRole: isLast ? undefined : "after",
-          steps: [{ atSec: 0, bpm }],
-        })
+    const blockPasses = block.enabled ? block.count : 1
+    const setPasses   = set.enabled   ? set.count   : 1
+    const roundPasses = round.enabled ? round.count  : 1
+    let crossings = 0
+
+    for (let b = 0; b < blockPasses; b++) {
+      const isLastBlock = b === blockPasses - 1
+      for (let s = 0; s < setPasses; s++) {
+        const isLastSet = s === setPasses - 1
+        for (let r = 0; r < roundPasses; r++) {
+          const isLastRound = r === roundPasses - 1
+          const isLast = isLastRound && isLastSet && isLastBlock
+          const bpm = clampBpm(session.bpm + crossings * session.bpmIncrease)
+          const durationSec = unit === "bars"
+            ? playDuration * beatsInMeter(session.meter) * 60 / bpm
+            : playDuration
+          const roundRestSec = unit === "bars"
+            ? restDuration * beatsInMeter(session.meter) * 60 / bpm
+            : restDuration
+
+          let restSec = 0
+          let restRole: "after" | "between" | undefined
+          if (!isLast) {
+            if (!isLastRound) {
+              restSec = roundRestSec
+              restRole = "after"
+            } else if (!isLastSet) {
+              restSec = roundRestSec + set.restDuration
+              restRole = "between"
+            } else {
+              restSec = roundRestSec + block.restDuration
+              restRole = "between"
+            }
+          }
+
+          items.push({
+            id: `routine-${b}-${s}-${r}`,
+            bpm,
+            durationSec,
+            restSec,
+            restRole,
+            steps: [{ atSec: 0, bpm }],
+          })
+
+          if (bpmIncreaseAt === "round") crossings++
+        }
+        if (bpmIncreaseAt === "set") crossings++
       }
+      if (bpmIncreaseAt === "block") crossings++
     }
     return items
   }

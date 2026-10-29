@@ -321,61 +321,154 @@ describe("expandSession", () => {
 })
 
 describe("routine", () => {
-  it("generates count-in once then play/rest pairs per level", () => {
+  function makeRoutineSession() {
     const session = createDefaultSession()
     session.routineEnabled = true
-    session.countIn = true
     session.bpm = 80
     session.bpmIncrease = 5
     session.meter = "4/4"
-    session.routine = { barsPerLevel: 4, numLevels: 3, repeatCount: 1, restAfterSec: 10, loop: false }
+    session.routine = {
+      unit: "bars",
+      playDuration: 4,
+      restDuration: 0,
+      round:  { enabled: false, count: 4, restDuration: 0 },
+      set:    { enabled: false, count: 3, restDuration: 30 },
+      block:  { enabled: false, count: 2, restDuration: 60 },
+      bpmIncreaseAt: "off",
+    }
+    return session
+  }
+
+  it("produces a single play segment when no repeats are enabled", () => {
+    const session = makeRoutineSession()
     const segments = expandSession(session)
-    // count-in, play@80, rest, play@85, rest, play@90 (no trailing rest)
-    expect(segments.map((s) => s.kind)).toEqual(["count-in", "play", "rest", "play", "rest", "play"])
-    const plays = segments.filter((s) => s.kind === "play")
-    expect(plays.map((s) => s.bpm)).toEqual([80, 85, 90])
-    // durationSec = barsPerLevel * beats * 60 / bpm = 4*4*60/80 = 12
-    expect(plays[0].durationSec).toBe(12)
-    const rests = segments.filter((s) => s.kind === "rest")
-    expect(rests.every((r) => r.durationSec === 10)).toBe(true)
-    // each play has a constant steps array
-    expect(plays[0].steps).toEqual([{ atSec: 0, bpm: 80 }])
-    expect(plays[1].steps).toEqual([{ atSec: 0, bpm: 85 }])
+    expect(segments.map((s) => s.kind)).toEqual(["play"])
+    expect(segments[0].bpm).toBe(80)
+    // 4 bars × 4 beats × 60 / 80 = 12s
+    expect(segments[0].durationSec).toBe(12)
   })
 
-  it("repeats the full level sequence repeatCount times", () => {
-    const session = createDefaultSession()
-    session.routineEnabled = true
-    session.bpm = 80
-    session.bpmIncrease = 5
-    session.routine = { barsPerLevel: 4, numLevels: 2, repeatCount: 2, restAfterSec: 10, loop: false }
+  it("produces count-in only on first segment", () => {
+    const session = makeRoutineSession()
+    session.countIn = true
+    const segments = expandSession(session)
+    expect(segments[0].kind).toBe("count-in")
+    expect(segments[1].kind).toBe("play")
+    expect(segments.filter((s) => s.kind === "count-in")).toHaveLength(1)
+  })
+
+  it("round repeat: repeats play with rest between, no trailing rest", () => {
+    const session = makeRoutineSession()
+    session.routine = { ...session.routine, restDuration: 2, round: { enabled: true, count: 3, restDuration: 0 } }
+    const segments = expandSession(session)
+    // play rest play rest play (no trailing rest)
+    expect(segments.map((s) => s.kind)).toEqual(["play", "rest", "play", "rest", "play"])
+    const plays = segments.filter((s) => s.kind === "play")
+    expect(plays).toHaveLength(3)
+    // restDuration is in bars: 2 bars × 4 beats × 60 / 80 = 6s
+    expect(segments[1].durationSec).toBe(6)
+  })
+
+  it("round repeat with sec unit", () => {
+    const session = makeRoutineSession()
+    session.routine = {
+      ...session.routine,
+      unit: "sec",
+      playDuration: 30,
+      restDuration: 10,
+      round: { enabled: true, count: 2, restDuration: 0 },
+    }
+    const segments = expandSession(session)
+    expect(segments.map((s) => s.kind)).toEqual(["play", "rest", "play"])
+    expect(segments[0].durationSec).toBe(30)
+    expect(segments[1].durationSec).toBe(10)
+  })
+
+  it("set repeat: rest between sets uses set.restDuration (seconds)", () => {
+    const session = makeRoutineSession()
+    session.routine = {
+      ...session.routine,
+      restDuration: 0,
+      round: { enabled: true, count: 2, restDuration: 0 },
+      set:   { enabled: true, count: 2, restDuration: 30 },
+    }
     const segments = expandSession(session)
     const plays = segments.filter((s) => s.kind === "play")
-    expect(plays).toHaveLength(4)
-    expect(plays.map((s) => s.bpm)).toEqual([80, 85, 80, 85])
-    // last segment has no rest
+    const rests = segments.filter((s) => s.kind === "rest")
+    expect(plays).toHaveLength(4)  // 2 rounds × 2 sets
+    // Between the two sets there should be a rest of set.restDuration (30s)
+    // The last play of set 1 should be followed by a 30s rest
+    expect(rests.some((r) => r.durationSec === 30)).toBe(true)
+    // Last segment is play (no trailing rest)
     expect(segments.at(-1)?.kind).toBe("play")
   })
 
-  it("produces one play segment when numLevels is 1 (no ramp)", () => {
-    const session = createDefaultSession()
-    session.routineEnabled = true
-    session.countIn = true
-    session.bpm = 100
-    session.bpmIncrease = 5
-    session.routine = { barsPerLevel: 8, numLevels: 1, repeatCount: 1, restAfterSec: 10, loop: false }
+  it("block repeat: rest between blocks uses block.restDuration (seconds)", () => {
+    const session = makeRoutineSession()
+    session.routine = {
+      ...session.routine,
+      restDuration: 0,
+      round: { enabled: true, count: 2, restDuration: 0 },
+      set:   { enabled: true, count: 2, restDuration: 10 },
+      block: { enabled: true, count: 2, restDuration: 60 },
+    }
     const segments = expandSession(session)
-    expect(segments.map((s) => s.kind)).toEqual(["count-in", "play"])
-    expect(segments[1].bpm).toBe(100)
+    const plays = segments.filter((s) => s.kind === "play")
+    expect(plays).toHaveLength(8)  // 2 rounds × 2 sets × 2 blocks
+    // There should be a rest of 60s (block rest)
+    expect(segments.some((s) => s.kind === "rest" && s.durationSec === 60)).toBe(true)
+    expect(segments.at(-1)?.kind).toBe("play")
   })
 
-  it("caps BPM at 300 in routine levels", () => {
-    const session = createDefaultSession()
-    session.routineEnabled = true
+  it("BPM increases at round boundary", () => {
+    const session = makeRoutineSession()
+    session.bpm = 80
+    session.bpmIncrease = 5
+    session.routine = {
+      ...session.routine,
+      round: { enabled: true, count: 3, restDuration: 0 },
+      bpmIncreaseAt: "round",
+    }
+    const plays = expandSession(session).filter((s) => s.kind === "play")
+    expect(plays.map((s) => s.bpm)).toEqual([80, 85, 90])
+  })
+
+  it("BPM increases at set boundary", () => {
+    const session = makeRoutineSession()
+    session.bpm = 80
+    session.bpmIncrease = 10
+    session.routine = {
+      ...session.routine,
+      round: { enabled: true, count: 2, restDuration: 0 },
+      set:   { enabled: true, count: 3, restDuration: 0 },
+      bpmIncreaseAt: "set",
+    }
+    const plays = expandSession(session).filter((s) => s.kind === "play")
+    // Set 1: [80, 80], Set 2: [90, 90], Set 3: [100, 100]
+    expect(plays.map((s) => s.bpm)).toEqual([80, 80, 90, 90, 100, 100])
+  })
+
+  it("caps BPM at 300", () => {
+    const session = makeRoutineSession()
     session.bpm = 290
     session.bpmIncrease = 20
-    session.routine = { barsPerLevel: 4, numLevels: 3, repeatCount: 1, restAfterSec: 0, loop: false }
+    session.routine = {
+      ...session.routine,
+      round: { enabled: true, count: 3, restDuration: 0 },
+      bpmIncreaseAt: "round",
+    }
     const plays = expandSession(session).filter((s) => s.kind === "play")
     expect(plays.map((s) => s.bpm)).toEqual([290, 300, 300])
+  })
+
+  it("setIndex increments across all segments for progress tracking", () => {
+    const session = makeRoutineSession()
+    session.routine = {
+      ...session.routine,
+      round: { enabled: true, count: 2, restDuration: 0 },
+    }
+    const plays = expandSession(session).filter((s) => s.kind === "play")
+    expect(plays[0].setIndex).toBe(0)
+    expect(plays[1].setIndex).toBe(1)
   })
 })
