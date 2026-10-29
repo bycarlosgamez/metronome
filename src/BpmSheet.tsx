@@ -91,31 +91,29 @@ export function BpmSheet(props: {
             </div>
           </div>
 
-          {/* Step + derived target (only in Routine mode) */}
-          {routineEnabled && (
-            <div className="bpm-sheet-card bpm-sheet-target-card">
-              <p className="sheet-title">BPM step</p>
-              <div className="increase-fields">
-                <div className="increase-field">
-                  <label htmlFor="bpm-sheet-step">Step</label>
-                  <input
-                    id="bpm-sheet-step"
-                    inputMode="numeric"
-                    value={stepText ?? String(bpmIncrease)}
-                    onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
-                    onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                    onBlur={commitStep}
-                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                  />
-                </div>
+          {/* Step card — always shown; derived target only in Routine mode */}
+          <div className="bpm-sheet-card bpm-sheet-target-card">
+            <p className="sheet-title">BPM step</p>
+            <div className="increase-fields">
+              <div className="increase-field">
+                <label htmlFor="bpm-sheet-step">Step</label>
+                <input
+                  id="bpm-sheet-step"
+                  inputMode="numeric"
+                  value={stepText ?? String(bpmIncrease)}
+                  onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
+                  onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
+                  onBlur={commitStep}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                />
               </div>
-              {bpmIncrease > 0 && (
-                <div className="increase-derived">
-                  {bpm} → <span>{derivedTarget} BPM</span>
-                </div>
-              )}
             </div>
-          )}
+            {routineEnabled && bpmIncrease > 0 && (
+              <div className="increase-derived">
+                {bpm} → <span>{derivedTarget} BPM</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
