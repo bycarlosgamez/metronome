@@ -671,6 +671,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: #fff;
 }
 .increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.increase-fields--active .increase-field input { border-color: var(--blue); }
+.increase-fields--active .increase-field label { color: var(--ink); }
 .increase-field { display: flex; flex-direction: column; gap: 5px; }
 .increase-field label { font-size: 10px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .increase-field input {
@@ -683,8 +685,6 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   width: 90px;
   text-align: center;
 }
-.increase-field.target input { border-color: color-mix(in srgb, var(--stage-play) 60%, transparent); }
-.increase-field.target label { color: color-mix(in srgb, var(--stage-play) 70%, transparent); }
 .increase-derived {
   margin-top: 12px;
   padding: 8px 12px;

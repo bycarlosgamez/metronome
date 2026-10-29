@@ -125,7 +125,7 @@ export function BpmSheet(props: {
                   </button>
                 ))}
               </div>
-              <div className="increase-fields">
+              <div className={`increase-fields${increaseEvery !== "off" ? " increase-fields--active" : ""}`}>
                 <div className="increase-field target">
                   <label htmlFor="bpm-sheet-target">Target BPM</label>
                   <input
