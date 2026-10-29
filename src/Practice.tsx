@@ -85,9 +85,35 @@ export function Practice(props: {
   const roundN  = (setIdx % roundPasses) + 1
   const setN    = (Math.floor(setIdx / roundPasses) % setPasses) + 1
   const blockN  = Math.floor(setIdx / (roundPasses * setPasses)) + 1
-  const levelProgress = segment.kind === "play" && Number.isFinite(segment.durationSec) && segment.durationSec > 0
+  const levelProgress = Number.isFinite(segment.durationSec) && segment.durationSec > 0
     ? Math.min(1, intoSec / segment.durationSec)
     : 0
+  const isRest = segment.kind === "rest"
+  const phaseLabel = segment.kind === "count-in" ? "Count-in" : isRest ? "Rest" : "Play"
+
+  const transport = (
+    <div className="play-controls">
+      {isPlaying && !routineEnabled && (
+        <div className="play-elapsed" data-testid="play-elapsed">{formatClock(elapsedSec)}</div>
+      )}
+      <button
+        type="button"
+        className={`play-btn${isPlaying ? " playing" : ""}`}
+        aria-label={isPlaying ? "Pause" : "Play"}
+        onClick={props.onToggle}
+      >
+        {isPlaying ? "❚❚" : "▶"}
+      </button>
+      <button
+        type="button"
+        className="stop-link"
+        aria-label="Stop"
+        onClick={props.onReset}
+      >
+        ■ Stop
+      </button>
+    </div>
+  )
 
   function closeSheet() { setSheet(null) }
 
@@ -250,10 +276,16 @@ export function Practice(props: {
         {/* Routine card */}
         {routineEnabled && (
           <div className="routine-card">
-            {/* Progress */}
+            {/* Countdown */}
             <div className="routine-progress-row">
-              <div className="routine-elapsed" data-testid="routine-elapsed">
-                {isPlaying ? formatClock(elapsedSec) : "0:00"}
+              <div>
+                <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="routine-phase">{phaseLabel}</div>
+                <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="routine-countdown">
+                  {formatClock(Math.ceil(props.snapshot.segmentRemainingSec))}
+                </div>
+                <div className="routine-total-left" data-testid="routine-total-left">
+                  {formatClock(Math.ceil(props.snapshot.remainingSec))} left
+                </div>
               </div>
               <div className="routine-cycle-info">
                 <div>Round {roundN}/{roundPasses}</div>
@@ -262,8 +294,9 @@ export function Practice(props: {
               </div>
             </div>
             <div className="routine-progress-bar-wrap">
-              <div className="routine-progress-bar-fill" style={{ width: `${Math.round(levelProgress * 100)}%` }} />
+              <div className={`routine-progress-bar-fill${isRest ? " is-rest" : ""}`} style={{ width: `${Math.round(levelProgress * 100)}%` }} />
             </div>
+            {transport}
 
             {/* Unit toggle */}
             <div className="routine-unit-row">
@@ -415,28 +448,8 @@ export function Practice(props: {
           </div>
         )}
 
-        {/* Play controls */}
-        <div className="play-controls">
-          {isPlaying && !routineEnabled && (
-            <div className="play-elapsed" data-testid="play-elapsed">{formatClock(elapsedSec)}</div>
-          )}
-          <button
-            type="button"
-            className={`play-btn${isPlaying ? " playing" : ""}`}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            onClick={props.onToggle}
-          >
-            {isPlaying ? "❚❚" : "▶"}
-          </button>
-          <button
-            type="button"
-            className="stop-link"
-            aria-label="Stop"
-            onClick={props.onReset}
-          >
-            ■ Stop
-          </button>
-        </div>
+        {/* Play controls (Routine mode shows them inside the card) */}
+        {!routineEnabled && transport}
 
         {props.status === "no-audio" && (
           <p role="status">Sound is unavailable. The countdown is still running.</p>

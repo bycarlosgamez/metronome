@@ -506,4 +506,74 @@ describe("Practice", () => {
       }))
     })
   })
+
+  describe("routine countdown", () => {
+    // Play 1:00, Rest 0:10, Play 1:00 → 2:10 total
+    function routineProps(atSec: number, status: "stopped" | "playing" = "playing") {
+      const props = makeProps({
+        routineEnabled: true,
+        countIn: false,
+        routine: {
+          ...createDefaultSession().routine,
+          unit: "sec", playDuration: 60, restDuration: 10,
+          round: { enabled: true, count: 2, restDuration: 0 },
+        },
+      })
+      return { ...props, status, snapshot: snapshotAt(props.segments, atSec) }
+    }
+
+    it("shows the first stretch and the full routine length when stopped", () => {
+      render(<Practice {...routineProps(0, "stopped")} />)
+      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Play")
+      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("1:00")
+      expect(screen.getByTestId("routine-total-left")).toHaveTextContent("2:10 left")
+    })
+
+    it("counts down the current play stretch, rounding up", () => {
+      render(<Practice {...routineProps(17.4)} />)
+      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("0:43")
+      expect(screen.getByTestId("routine-countdown")).not.toHaveClass("is-rest")
+      expect(screen.getByTestId("routine-total-left")).toHaveTextContent("1:53 left")
+    })
+
+    it("shows rest time left in red with a moving progress bar", () => {
+      render(<Practice {...routineProps(65)} />)
+      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Rest")
+      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("0:05")
+      expect(screen.getByTestId("routine-countdown")).toHaveClass("is-rest")
+      const fill = document.querySelector(".routine-progress-bar-fill") as HTMLElement
+      expect(fill).toHaveClass("is-rest")
+      expect(fill.style.width).toBe("50%")
+    })
+
+    it("labels the count-in", () => {
+      const props = makeProps({ routineEnabled: true, countIn: true })
+      render(<Practice {...props} />)
+      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Count-in")
+    })
+
+    it("puts Play and Stop inside the routine card, once", () => {
+      render(<Practice {...routineProps(0, "stopped")} />)
+      const card = document.querySelector(".routine-card") as HTMLElement
+      expect(card).toContainElement(screen.getByRole("button", { name: "Play" }))
+      expect(card).toContainElement(screen.getByRole("button", { name: "Stop" }))
+      expect(screen.getAllByRole("button", { name: "Play" })).toHaveLength(1)
+    })
+
+    it("toggles and stops from the card", async () => {
+      const props = routineProps(0, "stopped")
+      const user = userEvent.setup()
+      render(<Practice {...props} />)
+      await user.click(screen.getByRole("button", { name: "Play" }))
+      expect(props.onToggle).toHaveBeenCalledOnce()
+      await user.click(screen.getByRole("button", { name: "Stop" }))
+      expect(props.onReset).toHaveBeenCalledOnce()
+    })
+
+    it("keeps Simple mode play controls outside any routine card", () => {
+      render(<Practice {...makeProps()} />)
+      expect(document.querySelector(".routine-card")).not.toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Play" }).closest(".play-controls")).not.toBeNull()
+    })
+  })
 })
