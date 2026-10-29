@@ -125,13 +125,12 @@ export function BpmSheet(props: {
                   </button>
                 ))}
               </div>
-              <div className={`increase-fields${increaseEvery === "off" ? " increase-fields--disabled" : ""}`}>
+              <div className="increase-fields">
                 <div className="increase-field target">
                   <label htmlFor="bpm-sheet-target">Target BPM</label>
                   <input
                     id="bpm-sheet-target"
                     inputMode="numeric"
-                    disabled={increaseEvery === "off"}
                     value={targetText ?? String(targetBpm)}
                     onFocus={() => { targetRef.current = String(targetBpm); setTargetText(String(targetBpm)) }}
                     onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
@@ -144,7 +143,6 @@ export function BpmSheet(props: {
                   <input
                     id="bpm-sheet-step"
                     inputMode="numeric"
-                    disabled={increaseEvery === "off"}
                     value={stepText ?? String(bpmIncrease)}
                     onFocus={() => { stepRef.current = String(bpmIncrease); setStepText(String(bpmIncrease)) }}
                     onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
