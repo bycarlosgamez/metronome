@@ -664,7 +664,11 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .increase-toggle-btn[aria-pressed="true"] {
   background: var(--surface-raised);
-  color: var(--ink);
+  color: var(--ink-muted);
+}
+.increase-toggle-btn[aria-pressed="true"]:last-child {
+  background: var(--stage-play);
+  color: #fff;
 }
 .increase-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
 .increase-field { display: flex; flex-direction: column; gap: 5px; }
