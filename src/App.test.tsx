@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { App } from "./App"
 import { clicksInSegment } from "./clock"
 import { expandSession } from "./expandSession"
-import { createDefaultSession, cyclesFromSimple, freshSimple, migrateLegacy } from "./session"
+import { createDefaultSession, migrateLegacy } from "./session"
 import { SESSION_KEY } from "./store"
 
 class FakeAudioContext {
@@ -308,56 +308,6 @@ describe("App", () => {
     await user.type(bpm, "150")
     await user.tab()
     expect(screen.getByRole("textbox", { name: "BPM" })).toHaveValue("150")
-  })
-
-  it("saves Complex and a fresh Simple pattern when Done is clicked", async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    await user.click(screen.getByRole("button", { name: "Complex" }))
-    await user.click(screen.getByRole("button", { name: "Done" }))
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    expect(screen.getByRole("button", { name: "Complex", pressed: true })).toBeInTheDocument()
-    const saved = JSON.parse(window.localStorage.getItem(SESSION_KEY) ?? "null")
-    expect(saved.type).toBe("complex")
-    expect(saved.simple).toEqual(freshSimple())
-  })
-
-  it("saves cycles built from the fresh Simple pattern when Done leaves Simple", async () => {
-    const session = createDefaultSession(() => "old-a")
-    session.type = "complex"
-    session.simple = {
-      ...freshSimple(),
-      practices: 4,
-      length: { unit: "bars", bars: 8 },
-      restAfterSec: 9,
-      stepTempo: true,
-      repeatRound: true,
-    }
-    session.cycles = [
-      { id: "old-a", length: { unit: "time", seconds: 45 }, restSec: 9 },
-      { id: "old-b", length: { unit: "bars", bars: 4 }, restSec: 0 },
-    ]
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    await user.click(screen.getByRole("button", { name: "Simple" }))
-    await user.click(screen.getByRole("button", { name: "Done" }))
-    await user.click(screen.getByRole("button", { name: "Edit" }))
-    expect(screen.getByRole("button", { name: "Simple", pressed: true })).toBeInTheDocument()
-    const saved = JSON.parse(window.localStorage.getItem(SESSION_KEY) ?? "null")
-    const built = cyclesFromSimple(createDefaultSession(() => "built"), () => "built")
-    expect(saved.type).toBe("simple")
-    expect(saved.simple).toEqual(freshSimple())
-    expect(saved.cycles.map((cycle: { length: unknown; restSec: number }) => ({
-      length: cycle.length,
-      restSec: cycle.restSec,
-    }))).toEqual(built.map((cycle) => ({
-      length: cycle.length,
-      restSec: cycle.restSec,
-    })))
-    expect(saved.cycles.map((cycle: { id: string }) => cycle.id)).not.toEqual(["old-a", "old-b"])
   })
 
   it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
