@@ -112,14 +112,31 @@ describe("Practice", () => {
     expect(subdivDialog).toHaveClass("open")
   })
 
-  it("opens BPM sheet when BPM block is clicked", async () => {
+  it("opens BPM sheet when More BPM settings is clicked", async () => {
     const props = makeProps()
     const user = userEvent.setup()
     render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Edit BPM settings" }))
+    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
     const dialogs = document.querySelectorAll(".sheet-overlay")
     const bpmDialog = Array.from(dialogs).find((el) => el.getAttribute("aria-label") === "BPM settings")
     expect(bpmDialog).toHaveClass("open")
+  })
+
+  it("shows elapsed time above play button when playing in simple mode", () => {
+    const props = { ...makeProps(), status: "playing" as const }
+    render(<Practice {...props} />)
+    expect(screen.getByTestId("play-elapsed")).toBeInTheDocument()
+  })
+
+  it("does not show elapsed time when stopped", () => {
+    render(<Practice {...makeProps()} />)
+    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
+  })
+
+  it("does not show elapsed time in routine mode when playing", () => {
+    const props = { ...makeProps({ routineEnabled: true }), status: "playing" as const }
+    render(<Practice {...props} />)
+    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
   })
 
   it("does not show strip for time sessions", () => {

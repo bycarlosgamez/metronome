@@ -2,7 +2,7 @@ import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
-import { clampSession, sessionTitle, SUBDIVISION_SLOTS } from "./session"
+import { clampBpm, clampSession, sessionTitle, SUBDIVISION_SLOTS } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { MeterSheet } from "./MeterSheet"
@@ -24,6 +24,17 @@ export function Practice(props: {
   onSeek(index: number): void
 }) {
   const [sheet, setSheet] = useState<"bpm" | "meter" | "subdiv" | null>(null)
+
+  // Inline BPM editing
+  const bpmRef = useRef<string | null>(null)
+  const [bpmText, setBpmText] = useState<string | null>(null)
+
+  function commitBpm() {
+    const v = bpmRef.current; setBpmText(null); bpmRef.current = null
+    if (v === null) return
+    const next = clampBpm(Number(v))
+    if (next !== props.session.bpm) props.onChange(clampSession({ ...props.session, bpm: next }))
+  }
 
   // Routine inline field state
   const barsRef = useRef<string | null>(null)
@@ -129,49 +140,67 @@ export function Practice(props: {
           })}
         </div>
 
-        {/* BPM block */}
-        <button
-          type="button"
-          className="bpm-block"
-          aria-label="Edit BPM settings"
-          onClick={() => setSheet("bpm")}
-        >
-          <div className="bpm-endless">
-            <div className="bpm-endless__left">
-              <div className="bpm-current" data-testid="bpm-current">{currentBpm}</div>
-              <div className="bpm-label">BPM</div>
+        {/* BPM + pick */}
+        <div className="bpm-pick-row">
+          <div className="bpm-block">
+            <div className="bpm-top">
+              <input
+                className="bpm-current"
+                data-testid="bpm-current"
+                inputMode="numeric"
+                aria-label="BPM"
+                value={bpmText ?? String(currentBpm)}
+                onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
+                onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
+                onBlur={commitBpm}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+              />
+              <span className="bpm-label">BPM</span>
             </div>
-            <div className="bpm-endless__right">
-              {!routineEnabled && (
-                <div className="bpm-elapsed" data-testid="bpm-elapsed">
-                  {isPlaying ? formatClock(elapsedSec) : "0:00"}
-                </div>
-              )}
-              <div className="bpm-hint">Tap to edit ›</div>
+            <div className="bpm-step-bar">
+              <button
+                type="button"
+                className="bpm-bar-btn"
+                aria-label="Decrease BPM"
+                onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
+              >−</button>
+              <button
+                type="button"
+                className="bpm-bar-btn"
+                aria-label="Increase BPM"
+                onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
+              >+</button>
+            </div>
+            <div className="bpm-more-bar">
+              <button
+                type="button"
+                className="bpm-more-link"
+                aria-label="More BPM settings"
+                onClick={() => setSheet("bpm")}
+              >More ›</button>
             </div>
           </div>
-        </button>
 
-        {/* Pick row */}
-        <div className="pick-row">
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Time signature: ${props.session.meter}`}
-            onClick={() => setSheet("meter")}
-          >
-            <strong>{props.session.meter}</strong>
-            <span>Time Signature</span>
-          </button>
-          <button
-            type="button"
-            className="pick-btn"
-            aria-label={`Subdivision: ${props.session.subdivision}`}
-            onClick={() => setSheet("subdiv")}
-          >
-            <SubdivIcon subdivision={props.session.subdivision} size="sm" />
-            <span>Subdivision</span>
-          </button>
+          <div className="pick-col">
+            <button
+              type="button"
+              className="pick-btn"
+              aria-label={`Time signature: ${props.session.meter}`}
+              onClick={() => setSheet("meter")}
+            >
+              <strong>{props.session.meter}</strong>
+              <span>Time Sig</span>
+            </button>
+            <button
+              type="button"
+              className="pick-btn"
+              aria-label={`Subdivision: ${props.session.subdivision}`}
+              onClick={() => setSheet("subdiv")}
+            >
+              <SubdivIcon subdivision={props.session.subdivision} size="sm" />
+              <span>Subdiv</span>
+            </button>
+          </div>
         </div>
 
         {/* Routine timer block */}
@@ -267,6 +296,9 @@ export function Practice(props: {
 
         {/* Play controls */}
         <div className="play-controls">
+          {isPlaying && !routineEnabled && (
+            <div className="play-elapsed" data-testid="play-elapsed">{formatClock(elapsedSec)}</div>
+          )}
           <button
             type="button"
             className={`play-btn${isPlaying ? " playing" : ""}`}
