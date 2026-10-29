@@ -57,16 +57,6 @@ export function Practice(props: {
     props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
   }
 
-  // Routine inline field state
-  const barsRef = useRef<string | null>(null)
-  const levelsRef = useRef<string | null>(null)
-  const repeatRef = useRef<string | null>(null)
-  const restRef = useRef<string | null>(null)
-  const [barsText, setBarsText] = useState<string | null>(null)
-  const [levelsText, setLevelsText] = useState<string | null>(null)
-  const [repeatText, setRepeatText] = useState<string | null>(null)
-  const [restText, setRestText] = useState<string | null>(null)
-
   const segment = props.segments[props.snapshot.segmentIndex]
   const isPlaying = props.status === "playing" || props.status === "no-audio"
   const beatCount = segment.kind === "count-in" ? 4 : Number(props.session.meter.split("/")[0])
@@ -86,10 +76,14 @@ export function Practice(props: {
 
   // Routine state
   const { routineEnabled, routine } = props.session
-  const { numLevels, repeatCount } = routine
-  const setIdx = segment.setIndex
-  const cycleN = Math.floor(setIdx / numLevels) + 1
-  const levelN = (setIdx % numLevels) + 1
+  const { round, set, block } = routine
+  const roundPasses = round.enabled ? round.count : 1
+  const setPasses   = set.enabled   ? set.count   : 1
+  const blockPasses = block.enabled ? block.count  : 1
+  const setIdx  = segment.setIndex
+  const roundN  = (setIdx % roundPasses) + 1
+  const setN    = (Math.floor(setIdx / roundPasses) % setPasses) + 1
+  const blockN  = Math.floor(setIdx / (roundPasses * setPasses)) + 1
   const levelProgress = segment.kind === "play" && Number.isFinite(segment.durationSec) && segment.durationSec > 0
     ? Math.min(1, intoSec / segment.durationSec)
     : 0
@@ -100,10 +94,6 @@ export function Practice(props: {
     if (enable === routineEnabled) return
     props.onChange(clampSession({ ...props.session, routineEnabled: enable }))
     if (isPlaying) props.onReset()
-  }
-
-  function commitRoutine(partial: Partial<Session["routine"]>) {
-    props.onChange(clampSession({ ...props.session, routine: { ...routine, ...partial } }))
   }
 
   return (
@@ -256,94 +246,173 @@ export function Practice(props: {
           </div>
         </div>
 
-        {/* Routine timer block */}
+        {/* Routine card */}
         {routineEnabled && (
-          <div className="routine-timer">
+          <div className="routine-card">
+            {/* Progress */}
             <div className="routine-progress-row">
               <div className="routine-elapsed" data-testid="routine-elapsed">
                 {isPlaying ? formatClock(elapsedSec) : "0:00"}
               </div>
               <div className="routine-cycle-info">
-                <div>Cycle {cycleN}/{repeatCount}</div>
-                <div>Level {levelN}/{numLevels}</div>
+                <div>Round {roundN}/{roundPasses}</div>
+                {round.enabled && <div>Set {setN}/{setPasses}</div>}
+                {set.enabled && <div>Block {blockN}/{blockPasses}</div>}
               </div>
             </div>
             <div className="routine-progress-bar-wrap">
-              <div
-                className="routine-progress-bar-fill"
-                style={{ width: `${Math.round(levelProgress * 100)}%` }}
-              />
+              <div className="routine-progress-bar-fill" style={{ width: `${Math.round(levelProgress * 100)}%` }} />
             </div>
-            <div className="routine-fields">
-              <div className="routine-field">
-                <label htmlFor="routine-bars">Bars / level</label>
-                <input
-                  id="routine-bars"
-                  type="number"
-                  aria-label="Bars / level"
-                  inputMode="numeric"
-                  value={barsText ?? String(routine.barsPerLevel)}
-                  onFocus={() => { barsRef.current = String(routine.barsPerLevel); setBarsText(String(routine.barsPerLevel)) }}
-                  onChange={(e) => { barsRef.current = e.target.value; setBarsText(e.target.value) }}
-                  onBlur={() => {
-                    const v = barsRef.current; setBarsText(null); barsRef.current = null
-                    if (v !== null) commitRoutine({ barsPerLevel: Math.max(1, Math.round(Number(v))) })
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-              </div>
-              <div className="routine-field">
-                <label htmlFor="routine-levels">Levels</label>
-                <input
-                  id="routine-levels"
-                  type="number"
-                  aria-label="Levels"
-                  inputMode="numeric"
-                  value={levelsText ?? String(routine.numLevels)}
-                  onFocus={() => { levelsRef.current = String(routine.numLevels); setLevelsText(String(routine.numLevels)) }}
-                  onChange={(e) => { levelsRef.current = e.target.value; setLevelsText(e.target.value) }}
-                  onBlur={() => {
-                    const v = levelsRef.current; setLevelsText(null); levelsRef.current = null
-                    if (v !== null) commitRoutine({ numLevels: Math.max(1, Math.round(Number(v))) })
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-              </div>
-              <div className="routine-field">
-                <label htmlFor="routine-repeat">Repeat ×</label>
-                <input
-                  id="routine-repeat"
-                  type="number"
-                  aria-label="Repeat ×"
-                  inputMode="numeric"
-                  value={repeatText ?? String(routine.repeatCount)}
-                  onFocus={() => { repeatRef.current = String(routine.repeatCount); setRepeatText(String(routine.repeatCount)) }}
-                  onChange={(e) => { repeatRef.current = e.target.value; setRepeatText(e.target.value) }}
-                  onBlur={() => {
-                    const v = repeatRef.current; setRepeatText(null); repeatRef.current = null
-                    if (v !== null) commitRoutine({ repeatCount: Math.max(1, Math.round(Number(v))) })
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-              </div>
-              <div className="routine-field">
-                <label htmlFor="routine-rest">Rest (sec)</label>
-                <input
-                  id="routine-rest"
-                  type="number"
-                  aria-label="Rest (sec)"
-                  inputMode="numeric"
-                  value={restText ?? String(routine.restAfterSec)}
-                  onFocus={() => { restRef.current = String(routine.restAfterSec); setRestText(String(routine.restAfterSec)) }}
-                  onChange={(e) => { restRef.current = e.target.value; setRestText(e.target.value) }}
-                  onBlur={() => {
-                    const v = restRef.current; setRestText(null); restRef.current = null
-                    if (v !== null) commitRoutine({ restAfterSec: Math.max(0, Math.round(Number(v))) })
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
+
+            {/* Unit toggle */}
+            <div className="routine-unit-row">
+              <span className="routine-unit-label">Duration in</span>
+              <div className="routine-seg">
+                {(["bars", "sec"] as const).map((u) => (
+                  <button key={u} type="button" className="routine-seg-btn" aria-pressed={routine.unit === u}
+                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, unit: u } }))}>
+                    {u}
+                  </button>
+                ))}
               </div>
             </div>
+
+            {/* Round section */}
+            <div className="routine-section">
+              <div className="routine-section-title">Round</div>
+              <div className="routine-row">
+                <span className="routine-row-label">Play</span>
+                <div className="routine-stepper">
+                  <button type="button" aria-label="Decrease play duration"
+                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, playDuration: Math.max(1, routine.playDuration - 1) } }))}>−</button>
+                  <span className="routine-stepper-val">{routine.playDuration}</span>
+                  <button type="button" aria-label="Increase play duration"
+                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, playDuration: routine.playDuration + 1 } }))}>+</button>
+                </div>
+              </div>
+              <div className="routine-row">
+                <span className="routine-row-label">Rest</span>
+                <div className="routine-stepper">
+                  <button type="button" aria-label="Decrease rest duration"
+                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, restDuration: Math.max(0, routine.restDuration - 1) } }))}>−</button>
+                  <span className="routine-stepper-val">{routine.restDuration}</span>
+                  <button type="button" aria-label="Increase rest duration"
+                    onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, restDuration: routine.restDuration + 1 } }))}>+</button>
+                </div>
+              </div>
+              <div className="routine-row">
+                <span className="routine-row-label">Repeat</span>
+                <div className="routine-row-controls">
+                  <button type="button" className="routine-toggle-btn" aria-label="Toggle round repeat" aria-pressed={round.enabled}
+                    onClick={() => {
+                      const nextRound = { ...round, enabled: !round.enabled }
+                      const nextSet   = round.enabled ? { ...set,   enabled: false } : set
+                      const nextBlock = round.enabled ? { ...block, enabled: false } : block
+                      props.onChange(clampSession({ ...props.session, routine: { ...routine, round: nextRound, set: nextSet, block: nextBlock } }))
+                    }}>
+                    {round.enabled ? "On" : "Off"}
+                  </button>
+                  {round.enabled && (
+                    <div className="routine-stepper">
+                      <button type="button" aria-label="Decrease round count"
+                        onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, round: { ...round, count: Math.max(2, round.count - 1) } } }))}>−</button>
+                      <span className="routine-stepper-val">{round.count}</span>
+                      <button type="button" aria-label="Increase round count"
+                        onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, round: { ...round, count: round.count + 1 } } }))}>+</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Set section — visible when round.enabled */}
+            {round.enabled && (
+              <div className="routine-section routine-section--set">
+                <div className="routine-section-title">Set</div>
+                <div className="routine-row">
+                  <span className="routine-row-label">Rest between</span>
+                  <div className="routine-stepper">
+                    <button type="button" aria-label="Decrease set rest"
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: Math.max(0, set.restDuration - 5) } } }))}>−</button>
+                    <span className="routine-stepper-val">{set.restDuration}s</span>
+                    <button type="button" aria-label="Increase set rest"
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: set.restDuration + 5 } } }))}>+</button>
+                  </div>
+                </div>
+                <div className="routine-row">
+                  <span className="routine-row-label">Repeat</span>
+                  <div className="routine-row-controls">
+                    <button type="button" className="routine-toggle-btn" aria-label="Toggle set repeat" aria-pressed={set.enabled}
+                      onClick={() => {
+                        const nextSet   = { ...set,   enabled: !set.enabled }
+                        const nextBlock = set.enabled ? { ...block, enabled: false } : block
+                        props.onChange(clampSession({ ...props.session, routine: { ...routine, set: nextSet, block: nextBlock } }))
+                      }}>
+                      {set.enabled ? "On" : "Off"}
+                    </button>
+                    {set.enabled && (
+                      <div className="routine-stepper">
+                        <button type="button" aria-label="Decrease set count"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, count: Math.max(2, set.count - 1) } } }))}>−</button>
+                        <span className="routine-stepper-val">{set.count}</span>
+                        <button type="button" aria-label="Increase set count"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, count: set.count + 1 } } }))}>+</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Block section — visible when set.enabled */}
+            {set.enabled && (
+              <div className="routine-section routine-section--block">
+                <div className="routine-section-title">Block</div>
+                <div className="routine-row">
+                  <span className="routine-row-label">Rest between</span>
+                  <div className="routine-stepper">
+                    <button type="button" aria-label="Decrease block rest"
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, restDuration: Math.max(0, block.restDuration - 5) } } }))}>−</button>
+                    <span className="routine-stepper-val">{block.restDuration}s</span>
+                    <button type="button" aria-label="Increase block rest"
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, restDuration: block.restDuration + 5 } } }))}>+</button>
+                  </div>
+                </div>
+                <div className="routine-row">
+                  <span className="routine-row-label">Repeat</span>
+                  <div className="routine-row-controls">
+                    <button type="button" className="routine-toggle-btn" aria-label="Toggle block repeat" aria-pressed={block.enabled}
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, enabled: !block.enabled } } }))}>
+                      {block.enabled ? "On" : "Off"}
+                    </button>
+                    {block.enabled && (
+                      <div className="routine-stepper">
+                        <button type="button" aria-label="Decrease block count"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, count: Math.max(2, block.count - 1) } } }))}>−</button>
+                        <span className="routine-stepper-val">{block.count}</span>
+                        <button type="button" aria-label="Increase block count"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, block: { ...block, count: block.count + 1 } } }))}>+</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* BPM increase row — only when bpmIncrease > 0 */}
+            {props.session.bpmIncrease > 0 && (
+              <div className="routine-bpm-row">
+                <span className="routine-bpm-label">BPM +{props.session.bpmIncrease} every</span>
+                <div className="routine-seg">
+                  {(["round", "set", "block", "off"] as const).map((opt) => (
+                    <button key={opt} type="button" className="routine-seg-btn" aria-pressed={routine.bpmIncreaseAt === opt}
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, bpmIncreaseAt: opt } }))}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

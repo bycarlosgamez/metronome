@@ -239,33 +239,107 @@ describe("Practice", () => {
     expect(props.onReset).toHaveBeenCalledOnce()
   })
 
-  it("routine timer block is hidden in Simple mode", () => {
+  it("routine card is hidden in Simple mode", () => {
     render(<Practice {...makeProps()} />)
-    expect(document.querySelector(".routine-timer")).not.toBeInTheDocument()
+    expect(document.querySelector(".routine-card")).not.toBeInTheDocument()
   })
 
-  it("routine timer block shows when routineEnabled is true", () => {
+  it("routine card shows when routineEnabled is true", () => {
+    render(<Practice {...makeProps({ routineEnabled: true })} />)
+    expect(document.querySelector(".routine-card")).toBeInTheDocument()
+  })
+
+  it("routine card shows Play and Rest steppers with default values", () => {
+    render(<Practice {...makeProps({ routineEnabled: true })} />)
+    expect(screen.getByRole("button", { name: "Increase play duration" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Decrease play duration" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Increase rest duration" })).toBeInTheDocument()
+  })
+
+  it("clicking Increase play duration calls onChange with incremented value", async () => {
     const props = makeProps({ routineEnabled: true })
+    const user = userEvent.setup()
     render(<Practice {...props} />)
-    expect(document.querySelector(".routine-timer")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Increase play duration" }))
+    expect(props.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ routine: expect.objectContaining({ playDuration: 5 }) })
+    )
   })
 
-  it("routine timer shows cycle/level/rep labels", () => {
-    const props = makeProps({ routineEnabled: true })
-    render(<Practice {...props} />)
-    expect(screen.getByText(/Cycle/)).toBeInTheDocument()
-    expect(screen.getAllByText(/Level/).length).toBeGreaterThan(0)
+  it("Set section is hidden when round.enabled is false", () => {
+    render(<Practice {...makeProps({ routineEnabled: true })} />)
+    expect(screen.queryByText("Set")).not.toBeInTheDocument()
   })
 
-  it("routine timer fields are rendered with correct values", () => {
+  it("Set section appears when round.enabled is true", () => {
     const props = makeProps({
       routineEnabled: true,
-      routine: { barsPerLevel: 8, numLevels: 4, repeatCount: 3, restAfterSec: 10, loop: false },
+      routine: { ...createDefaultSession().routine, round: { enabled: true, count: 4, restDuration: 0 } },
     })
     render(<Practice {...props} />)
-    expect(screen.getByRole("spinbutton", { name: "Bars / level" })).toHaveValue(8)
-    expect(screen.getByRole("spinbutton", { name: "Levels" })).toHaveValue(4)
-    expect(screen.getByRole("spinbutton", { name: "Repeat ×" })).toHaveValue(3)
-    expect(screen.getByRole("spinbutton", { name: "Rest (sec)" })).toHaveValue(10)
+    expect(screen.getByText("Set")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Increase set rest" })).toBeInTheDocument()
+  })
+
+  it("Block section is hidden when set.enabled is false", () => {
+    const props = makeProps({
+      routineEnabled: true,
+      routine: { ...createDefaultSession().routine, round: { enabled: true, count: 4, restDuration: 0 } },
+    })
+    render(<Practice {...props} />)
+    expect(screen.queryByText("Block")).not.toBeInTheDocument()
+  })
+
+  it("Block section appears when set.enabled is true", () => {
+    const props = makeProps({
+      routineEnabled: true,
+      routine: {
+        ...createDefaultSession().routine,
+        round: { enabled: true, count: 4, restDuration: 0 },
+        set:   { enabled: true, count: 3, restDuration: 30 },
+      },
+    })
+    render(<Practice {...props} />)
+    expect(screen.getByText("Block")).toBeInTheDocument()
+  })
+
+  it("toggling Round repeat off clears set and block enabled", async () => {
+    const props = makeProps({
+      routineEnabled: true,
+      routine: {
+        ...createDefaultSession().routine,
+        round: { enabled: true, count: 4, restDuration: 0 },
+        set:   { enabled: true, count: 3, restDuration: 30 },
+        block: { enabled: true, count: 2, restDuration: 60 },
+      },
+    })
+    const user = userEvent.setup()
+    render(<Practice {...props} />)
+    await user.click(screen.getByRole("button", { name: "Toggle round repeat" }))
+    expect(props.onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routine: expect.objectContaining({
+          round: expect.objectContaining({ enabled: false }),
+          set:   expect.objectContaining({ enabled: false }),
+          block: expect.objectContaining({ enabled: false }),
+        }),
+      })
+    )
+  })
+
+  it("BPM row is hidden when bpmIncrease is 0", () => {
+    render(<Practice {...makeProps({ routineEnabled: true, bpmIncrease: 0 })} />)
+    expect(screen.queryByText(/BPM \+/)).not.toBeInTheDocument()
+  })
+
+  it("BPM row shows when bpmIncrease > 0", () => {
+    render(<Practice {...makeProps({ routineEnabled: true, bpmIncrease: 5 })} />)
+    expect(screen.getByText(/BPM \+5 every/)).toBeInTheDocument()
+  })
+
+  it("progress shows Round label with count", () => {
+    const props = makeProps({ routineEnabled: true })
+    render(<Practice {...props} />)
+    expect(screen.getByText(/Round 1\//)).toBeInTheDocument()
   })
 })
