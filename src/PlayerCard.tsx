@@ -206,26 +206,26 @@ export function PlayerCard(props: {
 
       {practice === "routine" && (
         <>
-          <div className="routine-unit-row">
-            <span className="routine-unit-label">Duration</span>
-            <div className="routine-seg">
-              {(["bars", "sec"] as const).map((u) => (
-                <button key={u} type="button" className="routine-seg-btn" aria-pressed={routine.unit === u}
-                  onClick={() => {
-                    if (routine.unit === u) return
-                    setRoutine(u === "bars"
-                      ? { unit: u, playDuration: 4, restDuration: 0 }
-                      : { unit: u, playDuration: 60, restDuration: 0 })
-                  }}>
-                  {u === "bars" ? "Bars" : "Time"}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Each section is a bordered box; settings a Repeat switch controls open in a panel under it */}
           <div className="routine-box" data-testid="round-box">
             <div className="routine-section-title">Round</div>
+            {/* Duration sets the units Play and Rest are measured in */}
+            <div className="routine-row">
+              <span className="routine-row-label">Duration</span>
+              <div className="routine-seg">
+                {(["bars", "sec"] as const).map((u) => (
+                  <button key={u} type="button" className="routine-seg-btn" aria-pressed={routine.unit === u}
+                    onClick={() => {
+                      if (routine.unit === u) return
+                      setRoutine(u === "bars"
+                        ? { unit: u, playDuration: 4, restDuration: 0 }
+                        : { unit: u, playDuration: 60, restDuration: 0 })
+                    }}>
+                    {u === "bars" ? "Bars" : "Time"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {([
               { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
               { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },

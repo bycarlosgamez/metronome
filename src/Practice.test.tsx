@@ -624,7 +624,7 @@ describe("Practice", () => {
 
     it("orders the Round box Play, Rest, Repeat, with Times and Increase in Repeat's panel", () => {
       render(<Practice {...roundProps()} />)
-      expect(labelsIn("[data-testid='round-box']")).toEqual(["Play", "Rest", "Repeat", "Times", "Increase"])
+      expect(labelsIn("[data-testid='round-box']")).toEqual(["Duration", "Play", "Rest", "Repeat", "Times", "Increase"])
       expect(labelsIn("[data-testid='round-repeat-panel']")).toEqual(["Times", "Increase"])
     })
 
