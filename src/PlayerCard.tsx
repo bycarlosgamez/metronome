@@ -44,7 +44,7 @@ function NumberRow(props: { id: string; label: string; value: number; onCommit(n
   )
 }
 
-// Player for every way to practice: a darker panel (label + Count-in, big number, progress, Play/Stop),
+// Player for every way to practice: a darker panel (label, big number, progress, Play/Stop), the Count-in switch,
 // then the Steady | Climb | Routine switch and the chosen option's settings
 export function PlayerCard(props: {
   session: Session
@@ -131,20 +131,8 @@ export function PlayerCard(props: {
     <div className="player-card">
       <div className="player-panel">
         <div className="routine-progress-row">
-          {/* Shrinks to the big number's width so Count-in ends where the number ends */}
           <div className="routine-countdown-col">
-            <div className="routine-phase-row">
-              <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="player-phase">{phaseLabel}</div>
-              <button
-                type="button"
-                className="count-in-toggle"
-                aria-label="Count-in"
-                aria-pressed={session.countIn}
-                onClick={() => props.onChange(clampSession({ ...session, countIn: !session.countIn }))}
-              >
-                Count-in
-              </button>
-            </div>
+            <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="player-phase">{phaseLabel}</div>
             <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="player-number">{bigNumber}</div>
             {subLine && <div className="routine-total-left" data-testid="player-sub">{subLine}</div>}
           </div>
@@ -174,6 +162,13 @@ export function PlayerCard(props: {
             {label}
           </button>
         ))}
+      </div>
+
+      {/* Applies to every practice: one 4-beat bar before the first play */}
+      <div className="routine-row count-in-row">
+        <span className="routine-row-label">Count-in</span>
+        <button type="button" role="switch" className="switch" aria-label="Count-in" aria-checked={session.countIn}
+          onClick={() => props.onChange(clampSession({ ...session, countIn: !session.countIn }))} />
       </div>
 
       {practice === "climb" && (

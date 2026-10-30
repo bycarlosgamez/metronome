@@ -277,7 +277,6 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   align-items: flex-start;
 }
 .routine-countdown-col { display: inline-flex; flex-direction: column; }
-.routine-phase-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .routine-cycle-info {
   text-align: right;
   font-size: 12px;
@@ -549,17 +548,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   padding: 4px 8px;
 }
 .stop-link:hover { color: var(--ink); }
-.count-in-toggle {
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  color: var(--ink-muted);
-  font: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-.count-in-toggle[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+.count-in-row { margin: 0 14px 10px; }
 
 /* SubdivIcon */
 .subdiv-icon {

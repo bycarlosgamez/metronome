@@ -475,24 +475,24 @@ describe("Practice", () => {
   })
 
   describe("count-in toggle", () => {
-    it("toggles Count-in from the phase row in Steady", async () => {
-      const props = makeProps({ countIn: false })
-      const user = userEvent.setup()
+    it("is an on/off switch, off by default, under the practice switch in every practice", () => {
+      for (const practice of ["steady", "climb", "routine"] as const) {
+        const { unmount } = render(<Practice {...makeProps({ practice })} />)
+        const toggle = screen.getByRole("switch", { name: "Count-in" })
+        expect(toggle).toHaveAttribute("aria-checked", "false")
+        expect(document.querySelector(".player-panel")).not.toContainElement(toggle)
+        unmount()
+      }
+    })
+
+    it("turns the count-in on", async () => {
+      const props = makeProps({ practice: "routine" })
       render(<Practice {...props} />)
-      const toggle = screen.getByRole("button", { name: "Count-in" })
-      expect(toggle).toHaveAttribute("aria-pressed", "false")
-      expect(screen.getByTestId("player-phase").parentElement).toContainElement(toggle)
-      await user.click(toggle)
+      await userEvent.setup().click(screen.getByRole("switch", { name: "Count-in" }))
       expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ countIn: true }))
     })
 
-    it("shows Count-in on the phase row of the routine play panel, not under Play", () => {
-      render(<Practice {...makeProps({ practice: "routine", countIn: true })} />)
-      const toggle = screen.getByRole("button", { name: "Count-in" })
-      expect(toggle).toHaveAttribute("aria-pressed", "true")
-      expect(screen.getByTestId("player-phase").parentElement).toContainElement(toggle)
-      expect(toggle.closest(".play-controls")).toBeNull()
-    })
+
 
     it("puts the countdown, progress and Play inside a play panel above the settings", () => {
       render(<Practice {...makeProps({ practice: "routine" })} />)
