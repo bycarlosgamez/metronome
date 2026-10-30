@@ -65,6 +65,15 @@ export type RepeatLevel = {
   restDuration: number // rest before next repetition, always seconds
 }
 
+export type RoutineIncrease = {
+  mode: "off" | "round" | "target"
+  step: number                          // BPM added per round (round) or per window (target)
+  nextSet: "reset" | "keep" | "raise"   // where each new set starts in round mode
+  raiseBy: number                       // +N per set when nextSet is "raise"
+  targetBpm: number
+  every: number                         // target window: bars when unit is "bars", seconds when "sec"
+}
+
 export type RoutinePattern = {
   unit: "bars" | "sec"   // applies to playDuration and restDuration only; "sec" is shown as Time
   playDuration: number   // one round's play duration (bars, or seconds when unit is "sec")
@@ -73,6 +82,7 @@ export type RoutinePattern = {
   set: RepeatLevel       // repeat the full round sequence
   block: RepeatLevel     // repeat the full set
   bpmIncreaseAt: "off" | "round" | "set" | "block"
+  increase: RoutineIncrease
 }
 
 export type Session = {
