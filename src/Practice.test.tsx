@@ -576,10 +576,10 @@ describe("Practice", () => {
       expect(fill.style.width).toBe("50%")
     })
 
-    it("labels the count-in", () => {
+    it("labels the count-in bar Ready, so it doesn't repeat the Count-in button beside it", () => {
       const props = makeProps({ routineEnabled: true, countIn: true })
       render(<Practice {...props} />)
-      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Count-in")
+      expect(screen.getByTestId("routine-phase")).toHaveTextContent(/^Ready$/)
     })
 
     it("puts Play and Stop inside the routine card, once", () => {
@@ -619,11 +619,20 @@ describe("Practice", () => {
       expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ countIn: true }))
     })
 
-    it("shows Count-in on inside the routine card", () => {
+    it("shows Count-in on the phase row of the routine play panel, not under Play", () => {
       render(<Practice {...makeProps({ routineEnabled: true, countIn: true })} />)
       const toggle = screen.getByRole("button", { name: "Count-in" })
       expect(toggle).toHaveAttribute("aria-pressed", "true")
-      expect(document.querySelector(".routine-card")).toContainElement(toggle)
+      expect(screen.getByTestId("routine-phase").parentElement).toContainElement(toggle)
+      expect(toggle.closest(".play-controls")).toBeNull()
+    })
+
+    it("puts the countdown, progress and Play inside a play panel above the settings", () => {
+      render(<Practice {...makeProps({ routineEnabled: true })} />)
+      const panel = document.querySelector(".routine-play-panel")!
+      expect(panel).toContainElement(screen.getByTestId("routine-countdown"))
+      expect(panel).toContainElement(screen.getByRole("button", { name: "Play" }))
+      expect(panel).not.toContainElement(screen.getByRole("button", { name: "Toggle round repeat" }))
     })
   })
 

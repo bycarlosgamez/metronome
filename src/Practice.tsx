@@ -98,7 +98,19 @@ export function Practice(props: {
     ? Math.min(1, intoSec / segment.durationSec)
     : 0
   const isRest = segment.kind === "rest"
-  const phaseLabel = segment.kind === "count-in" ? "Count-in" : isRest ? "Rest" : "Play"
+  const phaseLabel = segment.kind === "count-in" ? "Ready" : isRest ? "Rest" : "Play"
+
+  const countInToggle = (
+    <button
+      type="button"
+      className="count-in-toggle"
+      aria-label="Count-in"
+      aria-pressed={props.session.countIn}
+      onClick={() => props.onChange(clampSession({ ...props.session, countIn: !props.session.countIn }))}
+    >
+      Count-in
+    </button>
+  )
 
   const transport = (
     <div className="play-controls">
@@ -121,15 +133,8 @@ export function Practice(props: {
       >
         ■ Stop
       </button>
-      <button
-        type="button"
-        className="count-in-toggle"
-        aria-label="Count-in"
-        aria-pressed={props.session.countIn}
-        onClick={() => props.onChange(clampSession({ ...props.session, countIn: !props.session.countIn }))}
-      >
-        Count-in
-      </button>
+      {/* Routine mode shows Count-in next to its countdown instead */}
+      {!routineEnabled && countInToggle}
     </div>
   )
 
@@ -308,26 +313,32 @@ export function Practice(props: {
         {/* Routine card */}
         {routineEnabled && (
           <div className="routine-card">
-            {/* Countdown */}
-            <div className="routine-progress-row">
-              <div>
-                <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="routine-phase">{phaseLabel}</div>
-                <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="routine-countdown">
-                  {formatClock(Math.ceil(props.snapshot.segmentRemainingSec))}
+            <div className="routine-play-panel">
+              {/* Countdown */}
+              <div className="routine-progress-row">
+                {/* Shrinks to the countdown's width so Count-in ends where the number ends */}
+                <div className="routine-countdown-col">
+                  <div className="routine-phase-row">
+                    <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="routine-phase">{phaseLabel}</div>
+                    {countInToggle}
+                  </div>
+                  <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="routine-countdown">
+                    {formatClock(Math.ceil(props.snapshot.segmentRemainingSec))}
+                  </div>
+                  <div className="routine-total-left" data-testid="routine-total-left">
+                    {formatClock(Math.ceil(props.snapshot.remainingSec))} left
+                  </div>
                 </div>
-                <div className="routine-total-left" data-testid="routine-total-left">
-                  {formatClock(Math.ceil(props.snapshot.remainingSec))} left
+                <div className="routine-cycle-info">
+                  <div>Round {roundN}/{roundPasses}</div>
+                  {round.enabled && <div>Set {setN}/{setPasses}</div>}
                 </div>
               </div>
-              <div className="routine-cycle-info">
-                <div>Round {roundN}/{roundPasses}</div>
-                {round.enabled && <div>Set {setN}/{setPasses}</div>}
+              <div className="routine-progress-bar-wrap">
+                <div className={`routine-progress-bar-fill${isRest ? " is-rest" : ""}`} style={{ width: `${Math.round(levelProgress * 100)}%` }} />
               </div>
+              {transport}
             </div>
-            <div className="routine-progress-bar-wrap">
-              <div className={`routine-progress-bar-fill${isRest ? " is-rest" : ""}`} style={{ width: `${Math.round(levelProgress * 100)}%` }} />
-            </div>
-            {transport}
 
             {/* Unit toggle */}
             <div className="routine-unit-row">

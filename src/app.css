@@ -333,12 +333,21 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 
 /* Progress row (reused) */
+/* Darker panel at the top of the routine card: countdown, progress and Play */
+.routine-play-panel {
+  background: var(--surface-sunk);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-card);
+  margin: 10px;
+  padding: 14px 16px 18px;
+}
 .routine-progress-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 14px 16px 0;
 }
+.routine-countdown-col { display: inline-flex; flex-direction: column; }
+.routine-phase-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .routine-cycle-info {
   text-align: right;
   font-size: 12px;
@@ -350,12 +359,12 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .routine-total-left { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .routine-phase.is-rest, .routine-countdown.is-rest { color: var(--stage-stop); }
 .routine-progress-bar-fill.is-rest { background: var(--stage-stop); }
-.routine-card .play-controls { margin: 4px 0 12px; }
+.routine-play-panel .play-controls { margin: 28px 0 0; }
 
 .routine-progress-bar-wrap {
   height: 3px;
   background: var(--surface-high);
-  margin: 8px 16px 0;
+  margin: 10px 0 0;
   border-radius: 2px;
   overflow: hidden;
 }
