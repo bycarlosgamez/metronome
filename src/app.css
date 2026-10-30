@@ -291,38 +291,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .bpm-step-info { font-size: 11px; color: var(--ink-muted); }
 
-/* ── Mode segmented control ── */
-.mode-seg {
-  display: flex;
-  gap: 2px;
-  background: var(--surface-raised);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-pill);
-  padding: 2px;
-  width: 100%;
-  max-width: 520px;
-}
-
-.mode-seg-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  border-radius: calc(var(--radius-pill) - 2px);
-  padding: 6px 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-muted);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.mode-seg-btn[aria-pressed="true"] {
-  background: var(--surface-high);
-  color: var(--ink);
-}
-
-/* Routine card */
-.routine-card {
+/* Player card: play panel, Steady | Climb | Routine switch, settings */
+.player-card {
   background: var(--surface-raised);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
@@ -333,8 +303,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 
 /* Progress row (reused) */
-/* Darker panel at the top of the routine card: countdown, progress and Play */
-.routine-play-panel {
+/* Darker panel at the top of the player card: big number, progress and Play */
+.player-panel {
   background: var(--surface-sunk);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
@@ -359,7 +329,9 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .routine-total-left { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .routine-phase.is-rest, .routine-countdown.is-rest { color: var(--stage-stop); }
 .routine-progress-bar-fill.is-rest { background: var(--stage-stop); }
-.routine-play-panel .play-controls { margin: 28px 0 0; }
+.player-panel .play-controls { margin: 28px 0 0; }
+.player-switch { margin: 0 10px 10px; }
+.player-switch .routine-seg-btn { flex: 1; padding: 8px 0; font-size: 12px; }
 
 .routine-progress-bar-wrap {
   height: 3px;
@@ -537,7 +509,6 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   gap: 12px;
   margin-top: 8px;
 }
-.play-elapsed { font-size: 13px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .play-btn {
   width: 72px;
   height: 72px;

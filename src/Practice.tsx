@@ -1,14 +1,13 @@
 import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
-import { formatClock } from "./format"
-import { choosePractice, clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
+import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
+import { PlayerCard } from "./PlayerCard"
 import { SubdivisionSheet } from "./SubdivisionSheet"
-import { TimeInput } from "./TimeInput"
 import { CLICKS, type Session } from "./types"
 
 export type PlaybackStatus = "stopped" | "playing" | "paused" | "no-audio"
@@ -77,74 +76,17 @@ export function Practice(props: {
   const posInBeat = elapsedSec % beatDur
   const activeSubSlot = isPlaying ? Math.floor(posInBeat / subDur) : -1
 
-  // Routine state
-  const { routine } = props.session
+  // Routine Now: stopped (including after the routine ends) shows where it will start; during a rest, the play coming up
+  const { increase } = props.session.routine
   const routineEnabled = props.session.practice === "routine"
-  const { round, set, increase } = routine
-  const roundPasses = round.enabled ? round.count : 1
-  const setPasses   = set.enabled   ? set.count   : 1
-  const setIdx  = segment.setIndex
-  const roundN  = (setIdx % roundPasses) + 1
-  const setN    = Math.floor(setIdx / roundPasses) + 1
   const showNow = routineEnabled && increase.mode !== "off"
-  // Stopped (including after the routine ends), Now shows where the routine will start;
-  // during a rest it shows the BPM of the play coming up
   const nowBpm = props.status === "stopped"
     ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? props.session.bpm
     : segment.kind === "rest"
     ? props.segments.slice(props.snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
     : currentBpm
-  const levelProgress = Number.isFinite(segment.durationSec) && segment.durationSec > 0
-    ? Math.min(1, intoSec / segment.durationSec)
-    : 0
-  const isRest = segment.kind === "rest"
-  const phaseLabel = segment.kind === "count-in" ? "Ready" : isRest ? "Rest" : "Play"
-
-  const countInToggle = (
-    <button
-      type="button"
-      className="count-in-toggle"
-      aria-label="Count-in"
-      aria-pressed={props.session.countIn}
-      onClick={() => props.onChange(clampSession({ ...props.session, countIn: !props.session.countIn }))}
-    >
-      Count-in
-    </button>
-  )
-
-  const transport = (
-    <div className="play-controls">
-      {isPlaying && !routineEnabled && (
-        <div className="play-elapsed" data-testid="play-elapsed">{formatClock(elapsedSec)}</div>
-      )}
-      <button
-        type="button"
-        className={`play-btn${isPlaying ? " playing" : ""}`}
-        aria-label={isPlaying ? "Pause" : "Play"}
-        onClick={props.onToggle}
-      >
-        {isPlaying ? "❚❚" : "▶"}
-      </button>
-      <button
-        type="button"
-        className="stop-link"
-        aria-label="Stop"
-        onClick={props.onReset}
-      >
-        ■ Stop
-      </button>
-      {/* Routine mode shows Count-in next to its countdown instead */}
-      {!routineEnabled && countInToggle}
-    </div>
-  )
 
   function closeSheet() { setSheet(null) }
-
-  function switchMode(enable: boolean) {
-    if (enable === routineEnabled) return
-    props.onChange(choosePractice(props.session, enable ? "routine" : "steady"))
-    if (isPlaying) props.onReset()
-  }
 
   return (
     <main className="practice">
@@ -153,25 +95,6 @@ export function Practice(props: {
       </header>
 
       <div className="practice-body">
-        {/* Simple | Routine segmented control */}
-        <div className="mode-seg" role="group" aria-label="Session mode">
-          {(["Simple", "Routine"] as const).map((label) => {
-            const isRoutine = label === "Routine"
-            const active = isRoutine === routineEnabled
-            return (
-              <button
-                key={label}
-                type="button"
-                className="mode-seg-btn"
-                aria-pressed={active}
-                onClick={() => switchMode(isRoutine)}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-
         {/* Beat grid */}
         <div className="beat-grid" role="region" aria-label="Beat display">
           {Array.from({ length: beatCount }, (_, i) => {
@@ -310,161 +233,15 @@ export function Practice(props: {
           </div>
         </div>
 
-        {/* Routine card */}
-        {routineEnabled && (
-          <div className="routine-card">
-            <div className="routine-play-panel">
-              {/* Countdown */}
-              <div className="routine-progress-row">
-                {/* Shrinks to the countdown's width so Count-in ends where the number ends */}
-                <div className="routine-countdown-col">
-                  <div className="routine-phase-row">
-                    <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="routine-phase">{phaseLabel}</div>
-                    {countInToggle}
-                  </div>
-                  <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="routine-countdown">
-                    {formatClock(Math.ceil(props.snapshot.segmentRemainingSec))}
-                  </div>
-                  <div className="routine-total-left" data-testid="routine-total-left">
-                    {formatClock(Math.ceil(props.snapshot.remainingSec))} left
-                  </div>
-                </div>
-                <div className="routine-cycle-info">
-                  <div>Round {roundN}/{roundPasses}</div>
-                  {round.enabled && <div>Set {setN}/{setPasses}</div>}
-                </div>
-              </div>
-              <div className="routine-progress-bar-wrap">
-                <div className={`routine-progress-bar-fill${isRest ? " is-rest" : ""}`} style={{ width: `${Math.round(levelProgress * 100)}%` }} />
-              </div>
-              {transport}
-            </div>
-
-            {/* Unit toggle */}
-            <div className="routine-unit-row">
-              <span className="routine-unit-label">Duration</span>
-              <div className="routine-seg">
-                {(["bars", "sec"] as const).map((u) => (
-                  <button key={u} type="button" className="routine-seg-btn" aria-pressed={routine.unit === u}
-                    onClick={() => {
-                      if (routine.unit === u) return
-                      const reset = u === "bars"
-                        ? { unit: u, playDuration: 4, restDuration: 0 }
-                        : { unit: u, playDuration: 60, restDuration: 0 }
-                      props.onChange(clampSession({ ...props.session, routine: { ...routine, ...reset } }))
-                    }}>
-                    {u === "bars" ? "Bars" : "Time"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Round section */}
-            <div className="routine-section">
-              <div className="routine-section-title">Round</div>
-              {([
-                { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
-                { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },
-              ] as const).map(({ key, label, durationKey, min }) => {
-                const value = routine[durationKey]
-                const update = (next: number) =>
-                  props.onChange(clampSession({ ...props.session, routine: { ...routine, [durationKey]: Math.max(min, next) } }))
-                return (
-                  <div className="routine-row" key={key}>
-                    <span className="routine-row-label">{label}</span>
-                    {routine.unit === "bars" ? (
-                      <div className="routine-stepper">
-                        <button type="button" aria-label={`Decrease ${key} duration`} onClick={() => update(value - 1)}>−</button>
-                        <span className="routine-stepper-val">{value} {value === 1 ? "bar" : "bars"}</span>
-                        <button type="button" aria-label={`Increase ${key} duration`} onClick={() => update(value + 1)}>+</button>
-                      </div>
-                    ) : (
-                      <TimeInput label={label} value={value} min={min} onCommit={update} />
-                    )}
-                  </div>
-                )
-              })}
-              <div className="routine-row">
-                <span className="routine-row-label">Repeat</span>
-                <div className="routine-row-controls">
-                  <button type="button" className="routine-toggle-btn" aria-label="Toggle round repeat" aria-pressed={round.enabled}
-                    onClick={() => {
-                      const nextRound = { ...round, enabled: !round.enabled }
-                      const nextSet   = round.enabled ? { ...set,   enabled: false } : set
-                      const nextIncrease = round.enabled && increase.mode === "round" ? { ...increase, mode: "off" as const } : increase
-                      props.onChange(clampSession({ ...props.session, routine: { ...routine, round: nextRound, set: nextSet, increase: nextIncrease } }))
-                    }}>
-                    {round.enabled ? "On" : "Off"}
-                  </button>
-                  {round.enabled && (
-                    <div className="routine-stepper">
-                      <button type="button" aria-label="Decrease round count"
-                        onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, round: { ...round, count: Math.max(2, round.count - 1) } } }))}>−</button>
-                      <span className="routine-stepper-val">{round.count}</span>
-                      <button type="button" aria-label="Increase round count"
-                        onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, round: { ...round, count: round.count + 1 } } }))}>+</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {round.enabled && (
-                <div className="routine-row">
-                  <span className="routine-row-label">Increase</span>
-                  <div className="routine-row-controls">
-                    {/* Per-round increase replaces the BPM sheet's Increase to target, and vice versa */}
-                    <button type="button" className="routine-toggle-btn" aria-label="Toggle round increase" aria-pressed={increase.mode === "round"}
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, mode: increase.mode === "round" ? "off" : "round" } } }))}>
-                      {increase.mode === "round" ? "On" : "Off"}
-                    </button>
-                    {increase.mode === "round" && (
-                      <div className="routine-stepper">
-                        <button type="button" aria-label="Decrease round increase"
-                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, roundStep: Math.max(1, increase.roundStep - 1) } } }))}>−</button>
-                        <span className="routine-stepper-val" data-testid="round-step">+{increase.roundStep}</span>
-                        <button type="button" aria-label="Increase round increase"
-                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, roundStep: increase.roundStep + 1 } } }))}>+</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Set section — visible when round.enabled */}
-            {round.enabled && (
-              <div className="routine-section routine-section--set">
-                <div className="routine-section-title">Set</div>
-                <div className="routine-row">
-                  <span className="routine-row-label">Rest between</span>
-                  <TimeInput label="Set rest" value={set.restDuration}
-                    onCommit={(seconds) => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, restDuration: seconds } } }))} />
-                </div>
-                <div className="routine-row">
-                  <span className="routine-row-label">Repeat</span>
-                  <div className="routine-row-controls">
-                    <button type="button" className="routine-toggle-btn" aria-label="Toggle set repeat" aria-pressed={set.enabled}
-                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, enabled: !set.enabled } } }))}>
-                      {set.enabled ? "On" : "Off"}
-                    </button>
-                    {set.enabled && (
-                      <div className="routine-stepper">
-                        <button type="button" aria-label="Decrease set count"
-                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, count: Math.max(2, set.count - 1) } } }))}>−</button>
-                        <span className="routine-stepper-val">{set.count}</span>
-                        <button type="button" aria-label="Increase set count"
-                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, set: { ...set, count: set.count + 1 } } }))}>+</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* Play controls (Routine mode shows them inside the card) */}
-        {!routineEnabled && transport}
+        <PlayerCard
+          session={props.session}
+          segments={props.segments}
+          snapshot={props.snapshot}
+          status={props.status}
+          onToggle={props.onToggle}
+          onReset={props.onReset}
+          onChange={props.onChange}
+        />
 
         {props.status === "no-audio" && (
           <p role="status">Sound is unavailable. The countdown is still running.</p>

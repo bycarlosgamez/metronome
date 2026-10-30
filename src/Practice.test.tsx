@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { snapshotAt } from "./clock"
@@ -190,60 +190,18 @@ describe("Practice", () => {
     expect(bpmDialog).toHaveClass("open")
   })
 
-  it("shows elapsed time above play button when playing in simple mode", () => {
-    const props = { ...makeProps(), status: "playing" as const }
-    render(<Practice {...props} />)
-    expect(screen.getByTestId("play-elapsed")).toBeInTheDocument()
-  })
 
-  it("does not show elapsed time when stopped", () => {
-    render(<Practice {...makeProps()} />)
-    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
-  })
 
-  it("does not show elapsed time in routine mode when playing", () => {
-    const props = { ...makeProps({ practice: "routine" }), status: "playing" as const }
-    render(<Practice {...props} />)
-    expect(screen.queryByTestId("play-elapsed")).not.toBeInTheDocument()
-  })
 
   it("does not show strip for time sessions", () => {
     render(<Practice {...makeProps()} />)
     expect(document.querySelector(".strip")).not.toBeInTheDocument()
   })
 
-  it("renders Simple and Routine mode buttons", () => {
-    render(<Practice {...makeProps()} />)
-    expect(screen.getByRole("button", { name: "Simple" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Routine" })).toBeInTheDocument()
-  })
 
-  it("Simple is pressed by default", () => {
-    render(<Practice {...makeProps()} />)
-    expect(screen.getByRole("button", { name: "Simple" })).toHaveAttribute("aria-pressed", "true")
-    expect(screen.getByRole("button", { name: "Routine" })).toHaveAttribute("aria-pressed", "false")
-  })
 
-  it("toggling to Routine calls onChange with routineEnabled true and stops play", async () => {
-    const props = { ...makeProps(), status: "playing" as const }
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Routine" }))
-    expect(props.onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ practice: "routine" })
-    )
-    expect(props.onReset).toHaveBeenCalledOnce()
-  })
 
-  it("routine card is hidden in Simple mode", () => {
-    render(<Practice {...makeProps()} />)
-    expect(document.querySelector(".routine-card")).not.toBeInTheDocument()
-  })
 
-  it("routine card shows when routineEnabled is true", () => {
-    render(<Practice {...makeProps({ practice: "routine" })} />)
-    expect(document.querySelector(".routine-card")).toBeInTheDocument()
-  })
 
   it("routine card shows Play and Rest steppers with default values", () => {
     render(<Practice {...makeProps({ practice: "routine" })} />)
@@ -310,7 +268,7 @@ describe("Practice", () => {
       },
     })
     render(<Practice {...props} />)
-    expect(document.querySelector(".routine-card")).not.toHaveTextContent(/Block/)
+    expect(document.querySelector(".player-card")).not.toHaveTextContent(/Block/)
     expect(screen.queryByText(/BPM \+/)).not.toBeInTheDocument()
     expect(screen.getByText("Round 1/2")).toBeInTheDocument()
     expect(screen.getByText("Set 1/2")).toBeInTheDocument()
@@ -531,23 +489,23 @@ describe("Practice", () => {
 
     it("shows the first stretch and the full routine length when stopped", () => {
       render(<Practice {...routineProps(0, "stopped")} />)
-      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Play")
-      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("1:00")
-      expect(screen.getByTestId("routine-total-left")).toHaveTextContent("2:10 left")
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Play")
+      expect(screen.getByTestId("player-number")).toHaveTextContent("1:00")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("2:10 left")
     })
 
     it("counts down the current play stretch, rounding up", () => {
       render(<Practice {...routineProps(17.4)} />)
-      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("0:43")
-      expect(screen.getByTestId("routine-countdown")).not.toHaveClass("is-rest")
-      expect(screen.getByTestId("routine-total-left")).toHaveTextContent("1:53 left")
+      expect(screen.getByTestId("player-number")).toHaveTextContent("0:43")
+      expect(screen.getByTestId("player-number")).not.toHaveClass("is-rest")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("1:53 left")
     })
 
     it("shows rest time left in red with a moving progress bar", () => {
       render(<Practice {...routineProps(65)} />)
-      expect(screen.getByTestId("routine-phase")).toHaveTextContent("Rest")
-      expect(screen.getByTestId("routine-countdown")).toHaveTextContent("0:05")
-      expect(screen.getByTestId("routine-countdown")).toHaveClass("is-rest")
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Rest")
+      expect(screen.getByTestId("player-number")).toHaveTextContent("0:05")
+      expect(screen.getByTestId("player-number")).toHaveClass("is-rest")
       const fill = document.querySelector(".routine-progress-bar-fill") as HTMLElement
       expect(fill).toHaveClass("is-rest")
       expect(fill.style.width).toBe("50%")
@@ -556,12 +514,12 @@ describe("Practice", () => {
     it("labels the count-in bar Ready, so it doesn't repeat the Count-in button beside it", () => {
       const props = makeProps({ practice: "routine", countIn: true })
       render(<Practice {...props} />)
-      expect(screen.getByTestId("routine-phase")).toHaveTextContent(/^Ready$/)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent(/^Ready$/)
     })
 
-    it("puts Play and Stop inside the routine card, once", () => {
+    it("puts Play and Stop inside the player card, once", () => {
       render(<Practice {...routineProps(0, "stopped")} />)
-      const card = document.querySelector(".routine-card") as HTMLElement
+      const card = document.querySelector(".player-card") as HTMLElement
       expect(card).toContainElement(screen.getByRole("button", { name: "Play" }))
       expect(card).toContainElement(screen.getByRole("button", { name: "Stop" }))
       expect(screen.getAllByRole("button", { name: "Play" })).toHaveLength(1)
@@ -577,21 +535,16 @@ describe("Practice", () => {
       expect(props.onReset).toHaveBeenCalledOnce()
     })
 
-    it("keeps Simple mode play controls outside any routine card", () => {
-      render(<Practice {...makeProps()} />)
-      expect(document.querySelector(".routine-card")).not.toBeInTheDocument()
-      expect(screen.getByRole("button", { name: "Play" }).closest(".play-controls")).not.toBeNull()
-    })
   })
 
   describe("count-in toggle", () => {
-    it("toggles Count-in from the play controls in Simple mode", async () => {
+    it("toggles Count-in from the phase row in Steady", async () => {
       const props = makeProps({ countIn: false })
       const user = userEvent.setup()
       render(<Practice {...props} />)
       const toggle = screen.getByRole("button", { name: "Count-in" })
       expect(toggle).toHaveAttribute("aria-pressed", "false")
-      expect(toggle.closest(".play-controls")).not.toBeNull()
+      expect(screen.getByTestId("player-phase").parentElement).toContainElement(toggle)
       await user.click(toggle)
       expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ countIn: true }))
     })
@@ -600,14 +553,14 @@ describe("Practice", () => {
       render(<Practice {...makeProps({ practice: "routine", countIn: true })} />)
       const toggle = screen.getByRole("button", { name: "Count-in" })
       expect(toggle).toHaveAttribute("aria-pressed", "true")
-      expect(screen.getByTestId("routine-phase").parentElement).toContainElement(toggle)
+      expect(screen.getByTestId("player-phase").parentElement).toContainElement(toggle)
       expect(toggle.closest(".play-controls")).toBeNull()
     })
 
     it("puts the countdown, progress and Play inside a play panel above the settings", () => {
       render(<Practice {...makeProps({ practice: "routine" })} />)
-      const panel = document.querySelector(".routine-play-panel")!
-      expect(panel).toContainElement(screen.getByTestId("routine-countdown"))
+      const panel = document.querySelector(".player-panel")!
+      expect(panel).toContainElement(screen.getByTestId("player-number"))
       expect(panel).toContainElement(screen.getByRole("button", { name: "Play" }))
       expect(panel).not.toContainElement(screen.getByRole("button", { name: "Toggle round repeat" }))
     })
@@ -733,6 +686,71 @@ describe("Practice", () => {
       const props = roundProps({}, { mode: "round", roundStep: 5 })
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 10)} status="playing" />)
       expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    })
+  })
+
+  describe("player card", () => {
+    function climbProps(over: Partial<Session> = {}, elapsed = 0, status: "playing" | "stopped" = "stopped") {
+      const base = createDefaultSession(() => "s1")
+      const props = makeProps({
+        practice: "climb", bpm: 110, bpmIncrease: 5,
+        time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120 },
+        ...over,
+      })
+      return { ...props, snapshot: snapshotAt(props.segments, elapsed), status }
+    }
+
+    it("replaces the Simple | Routine switch with Steady, Climb and Routine, Steady pressed", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.queryByRole("button", { name: "Simple" })).not.toBeInTheDocument()
+      const group = screen.getByRole("group", { name: "How to practice" })
+      expect(within(group).getByRole("button", { name: "Steady" })).toHaveAttribute("aria-pressed", "true")
+      expect(within(group).getByRole("button", { name: "Climb" })).toHaveAttribute("aria-pressed", "false")
+      expect(within(group).getByRole("button", { name: "Routine" })).toHaveAttribute("aria-pressed", "false")
+    })
+
+    it("choosing Climb fills its defaults and stops playback", async () => {
+      const props = { ...makeProps(), status: "playing" as const }
+      render(<Practice {...props} />)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Climb" }))
+      expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ practice: "climb", bpmIncrease: 5 }))
+      expect(props.onReset).toHaveBeenCalledOnce()
+    })
+
+    it("Steady shows elapsed time, no progress bar and no settings", () => {
+      const props = makeProps()
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, 65)} status="playing" />)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Playing")
+      expect(screen.getByTestId("player-number")).toHaveTextContent("1:05")
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+      expect(screen.queryByRole("button", { name: "Toggle round repeat" })).not.toBeInTheDocument()
+    })
+
+    it("Climb when stopped shows 0:00 and the first step to come", () => {
+      render(<Practice {...climbProps()} />)
+      expect(screen.getByTestId("player-number")).toHaveTextContent("0:00")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 2:00")
+      expect(screen.getByTestId("player-info")).toHaveTextContent("110 → 130")
+    })
+
+    it("Climb while climbing shows the next step and current → target", () => {
+      render(<Practice {...climbProps({}, 150, "playing")} />)
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 1:30")
+      expect(screen.getByTestId("player-info")).toHaveTextContent("115 → 130")
+    })
+
+    it("Climb at the target says so and shows the target", () => {
+      render(<Practice {...climbProps({}, 600, "playing")} />)
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("At target")
+      expect(screen.getByTestId("player-info")).toHaveTextContent(/^130$/)
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+    })
+
+    it("Climb in bars counts the next step in bars, rounding up", () => {
+      const base = createDefaultSession(() => "s1")
+      // 4 bars at 120 in 4/4 is 8s; 2s in leaves 6s, which is 3 bars
+      render(<Practice {...climbProps({ bpm: 120, time: { ...base.time, targetBpm: 130, everyUnit: "bars", everyBars: 4 } }, 2, "playing")} />)
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 3 bars")
     })
   })
 })
