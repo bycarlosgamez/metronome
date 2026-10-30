@@ -360,6 +360,16 @@ describe("Practice", () => {
       expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
     })
 
+    it("shows Start as Now after the routine has finished", () => {
+      const props = routineProps({
+        round: { enabled: true, count: 2, restDuration: 0 },
+        increase: increase({ mode: "round", step: 5 }),
+      })
+      const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+    })
+
     it("keeps the BPM label and no Now in Simple mode", () => {
       render(<Practice {...makeProps()} />)
       expect(screen.queryByText("Start BPM")).not.toBeInTheDocument()

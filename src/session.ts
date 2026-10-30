@@ -349,6 +349,7 @@ export function clampSession(session: Session): Session {
     routine = clampRoutine({
       ...fresh,
       unit: "bars",
+      playDuration: everyBars,
       increase: {
         ...fresh.increase,
         mode: step > 0 && targetBpm > startBpm ? "target" : "off",

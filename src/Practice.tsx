@@ -86,8 +86,11 @@ export function Practice(props: {
   const roundN  = (setIdx % roundPasses) + 1
   const setN    = Math.floor(setIdx / roundPasses) + 1
   const showNow = routineEnabled && increase.mode !== "off"
-  // During a rest, Now shows the BPM of the play coming up
-  const nowBpm = segment.kind === "rest"
+  // Stopped (including after the routine ends), Now shows where the routine will start;
+  // during a rest it shows the BPM of the play coming up
+  const nowBpm = props.status === "stopped"
+    ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? props.session.bpm
+    : segment.kind === "rest"
     ? props.segments.slice(props.snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
     : currentBpm
   const climb = routineEnabled && increase.mode === "target" ? routineClimb(props.session) : null

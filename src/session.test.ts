@@ -89,6 +89,14 @@ describe("session", () => {
     expect(clampSession(session).routine.increase.mode).toBe("off")
   })
 
+  it("keeps a migrated time session's length of everyBars", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.type = "time" as Session["type"]
+    session.bpmIncrease = 0
+    session.time = { seconds: 120, targetBpm: 100, increaseEvery: "off", everySec: 30, everyBars: 8 }
+    expect(clampSession(session).routine.playDuration).toBe(8)
+  })
+
   it("clampSession falls back to freshRoutine defaults when routine has old shape", () => {
     const session = createDefaultSession(() => "s1")
     session.routineEnabled = true
