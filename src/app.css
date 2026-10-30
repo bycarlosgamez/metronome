@@ -191,6 +191,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border-radius: var(--radius-card);
   overflow: hidden;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 .bpm-block:focus-within { border-color: var(--blue); }
 .bpm-top { display: flex; justify-content: space-between; align-items: stretch; padding: 14px 16px 12px; }
@@ -209,7 +211,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .bpm-bar-btn:last-child { border-right: none; }
 .bpm-bar-btn:hover { background: var(--surface-raised); }
-.bpm-more-bar { border-top: 1px solid var(--line); padding: 8px 16px; display: flex; justify-content: center; }
+/* Grows to fill the card when the pick column is taller, keeping More centered in the leftover space */
+.bpm-more-bar { flex: 1; border-top: 1px solid var(--line); padding: 8px 16px; display: flex; justify-content: center; align-items: center; }
 .bpm-more-link {
   background: none;
   border: none;
@@ -220,7 +223,13 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
 }
+/* › sits at x-height; lift it to the middle of the uppercase label */
+.bpm-more-chevron { font-size: 14px; line-height: 1; transform: translateY(-1px); }
 .bpm-more-link:hover { color: var(--ink); }
 .bpm-current {
   font-size: 52px;

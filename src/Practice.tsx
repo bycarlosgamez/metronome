@@ -257,7 +257,7 @@ export function Practice(props: {
                 className="bpm-more-link"
                 aria-label="More BPM settings"
                 onClick={() => setSheet("bpm")}
-              >More ›</button>
+              >More <span className="bpm-more-chevron" aria-hidden="true">›</span></button>
             </div>
           </div>
 
