@@ -682,6 +682,12 @@ describe("Practice", () => {
       expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
     })
 
+    it("Climb that can't climb (Step 0) shows no target line, like Steady", () => {
+      render(<Practice {...climbProps({ bpmIncrease: 0 }, 30, "playing")} />)
+      expect(screen.queryByTestId("player-sub")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("player-info")).not.toBeInTheDocument()
+    })
+
     it("Climb in bars counts the next step in bars, rounding up", () => {
       const base = createDefaultSession(() => "s1")
       // 4 bars at 120 in 4/4 is 8s; 2s in leaves 6s, which is 3 bars

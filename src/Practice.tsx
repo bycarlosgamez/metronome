@@ -16,6 +16,7 @@ export function Practice(props: {
   segments: Segment[]
   snapshot: ClockSnapshot
   status: PlaybackStatus
+  clockShiftSec?: number // how far the shown practice clock is ahead of the playhead after Climb edits moved it
   onToggle(): void
   onJump(direction: -1 | 1): void
   onReset(): void
@@ -178,6 +179,7 @@ export function Practice(props: {
           segments={props.segments}
           snapshot={props.snapshot}
           status={props.status}
+          clockShiftSec={props.clockShiftSec ?? 0}
           onToggle={props.onToggle}
           onReset={props.onReset}
           onChange={props.onChange}

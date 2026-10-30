@@ -327,5 +327,7 @@ describe("App", () => {
     await user.tab()
     // With 1:00 windows, 150s would be the third step (120) without carrying the step
     expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    // The practice clock keeps counting from where it was; only the climb position moves
+    expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
   })
 })

@@ -51,6 +51,7 @@ export function PlayerCard(props: {
   segments: Segment[]
   snapshot: ClockSnapshot
   status: PlaybackStatus
+  clockShiftSec: number
   onToggle(): void
   onReset(): void
   onChange(session: Session): void
@@ -69,9 +70,10 @@ export function PlayerCard(props: {
   const roundN = (segment.setIndex % roundPasses) + 1
   const setN = Math.floor(segment.setIndex / roundPasses) + 1
 
-  // Climb: where you are in the steps; during the count-in you're at the start of the first step
+  // Climb: where you are in the steps; during the count-in you're at the start of the first step.
+  // A Climb with one step (Step 0, or Start at or above Target) plays like Steady and shows no climb line.
   const play = segment.kind === "play" ? segment : props.segments.find((s) => s.kind === "play")
-  const climb = practice === "climb" && play?.steps
+  const climb = practice === "climb" && play?.steps && play.steps.length > 1
     ? climbProgress(play.steps, segment.kind === "play" ? intoSec : 0)
     : null
   const atTarget = climb !== null && !Number.isFinite(climb.nextInSec)
@@ -92,7 +94,7 @@ export function PlayerCard(props: {
     info = (<><div>Round {roundN}/{roundPasses}</div>{round.enabled && <div>Set {setN}/{setPasses}</div>}</>)
     progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
-    bigNumber = formatClock(snapshot.elapsedSec)
+    bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
     if (climb) {
       const target = session.time.targetBpm
       if (atTarget) {

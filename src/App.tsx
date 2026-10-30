@@ -12,6 +12,8 @@ export function App() {
   const segments = useMemo(() => expandSession(session), [session])
   const { elapsed, status, setStatus, elapsedRef, setElapsed } = usePlayback(segments)
   const snapshot = snapshotAt(segments, elapsed)
+  // Climb edits move the playhead to keep your step; this keeps the shown practice clock counting on regardless
+  const [clockShiftSec, setClockShiftSec] = useState(0)
   const audioRef = useRef<AudioContext | null>(null)
   const buffersRef = useRef<ClickSounds | null>(null)
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
@@ -163,6 +165,7 @@ export function App() {
     playGen.current += 1
     stopNodes()
     writeElapsed(0)
+    setClockShiftSec(0)
     setStatus("stopped")
   }
 
@@ -187,8 +190,11 @@ export function App() {
         nextElapsed = (current.segmentElapsedSec / currentSegment.durationSec) * (nextCountIn?.durationSec ?? 0)
       }
       stopNodes()
-      writeElapsed(Math.max(0, nextElapsed))
+      const carried = Math.max(0, nextElapsed)
+      setClockShiftSec((shift) => shift + elapsedRef.current - carried)
+      writeElapsed(carried)
     }
+    if (next.practice !== session.practice) setClockShiftSec(0)
     setSession(next)
     saveSession(next, window.localStorage)
   }
@@ -198,6 +204,7 @@ export function App() {
       session={session}
       segments={segments}
       snapshot={snapshot}
+      clockShiftSec={clockShiftSec}
       status={status}
       onToggle={() => {
         void onToggle()
