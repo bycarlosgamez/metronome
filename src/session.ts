@@ -57,24 +57,16 @@ export function freshRoutine(): RoutinePattern {
 function clampIncrease(increase: unknown): RoutineIncrease {
   const fresh = freshRoutine().increase
   const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
-  const MODES = ["off", "round", "target"] as const
   const NEXT = ["reset", "keep", "raise"] as const
   return {
-    mode: MODES.includes(base.mode as RoutineIncrease["mode"]) ? base.mode as RoutineIncrease["mode"] : fresh.mode,
+    // Per round has no control any more, so saved Per round increases load as Off (no increase)
+    mode: base.mode === "target" ? "target" : "off",
     step: Math.max(0, integer(base.step ?? fresh.step)),
     nextSet: NEXT.includes(base.nextSet as RoutineIncrease["nextSet"]) ? base.nextSet as RoutineIncrease["nextSet"] : fresh.nextSet,
     raiseBy: Math.max(0, integer(base.raiseBy ?? fresh.raiseBy)),
     targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
     every: Math.max(1, integer(base.every ?? fresh.every)),
   }
-}
-
-// Saved routines from before routine.increase existed used bpmIncreaseAt + session.bpmIncrease.
-function legacyIncrease(bpmIncreaseAt: unknown, legacyStep: number): RoutineIncrease {
-  const fresh = freshRoutine().increase
-  if (bpmIncreaseAt === "round") return { ...fresh, mode: "round", step: legacyStep, nextSet: "keep" }
-  if (bpmIncreaseAt === "set") return { ...fresh, mode: "round", step: 0, nextSet: "raise", raiseBy: legacyStep }
-  return fresh
 }
 
 function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
@@ -86,19 +78,17 @@ function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
   }
 }
 
-function clampRoutine(pattern: unknown, legacyStep: number): RoutinePattern {
+function clampRoutine(pattern: unknown): RoutinePattern {
   const fresh = freshRoutine()
-  // Older saves may still carry block / bpmIncreaseAt; block is dropped, bpmIncreaseAt seeds the increase.
-  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern> & { bpmIncreaseAt?: unknown }
+  // Older saves may still carry block / bpmIncreaseAt; both are dropped and the increase starts Off.
+  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern>
   return {
     unit: base.unit === "sec" ? "sec" : "bars",
     playDuration: Math.max(1, integer(base.playDuration ?? fresh.playDuration)),
     restDuration: Math.max(0, integer(base.restDuration ?? fresh.restDuration)),
     round:  clampRepeatLevel(base.round,  fresh.round),
     set:    clampRepeatLevel(base.set,    fresh.set),
-    increase: base.increase && typeof base.increase === "object"
-      ? clampIncrease(base.increase)
-      : legacyIncrease(base.bpmIncreaseAt, Math.max(0, integer(legacyStep))),
+    increase: clampIncrease(base.increase),
   }
 }
 
@@ -336,7 +326,7 @@ export function clampSession(session: Session): Session {
   // Migrate legacy time sessions → simple + routineEnabled
   let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
   let routineEnabled = Boolean(session.routineEnabled)
-  let routine = clampRoutine(session.routine as unknown, session.bpmIncrease)
+  let routine = clampRoutine(session.routine as unknown)
 
   if (session.type === "time") {
     type = "simple"
@@ -357,7 +347,7 @@ export function clampSession(session: Session): Session {
         targetBpm,
         every: everyBars,
       },
-    }, step)
+    })
   }
 
   return {

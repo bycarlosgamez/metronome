@@ -495,20 +495,18 @@ describe("routine increase", () => {
     })
   })
 
-  it("migrates legacy bpmIncreaseAt round to Per round with Keep", () => {
+  it("converts legacy bpmIncreaseAt round and set to no increase", () => {
     const { increase, ...legacy } = freshRoutine()
     void increase
-    const session = withRoutine({ ...legacy, bpmIncreaseAt: "round" }, 5)
-    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "round", step: 5, nextSet: "keep" })
+    const round = withRoutine({ ...legacy, bpmIncreaseAt: "round" }, 5)
+    expect(clampSession(round).routine.increase).toEqual(defaults)
+    const set = withRoutine({ ...legacy, bpmIncreaseAt: "set" }, 10)
+    expect(clampSession(set).routine.increase).toEqual(defaults)
   })
 
-  it("migrates legacy bpmIncreaseAt set to Per round with +N", () => {
-    const { increase, ...legacy } = freshRoutine()
-    void increase
-    const session = withRoutine({ ...legacy, bpmIncreaseAt: "set" }, 10)
-    expect(clampSession(session).routine.increase).toEqual({
-      ...defaults, mode: "round", step: 0, nextSet: "raise", raiseBy: 10,
-    })
+  it("converts a saved Per round increase to no increase, keeping its other values", () => {
+    const session = withRoutine({ ...freshRoutine(), increase: { ...defaults, mode: "round", step: 7 } })
+    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "off", step: 7 })
   })
 
   it("migrates legacy block and off to Off without throwing", () => {
