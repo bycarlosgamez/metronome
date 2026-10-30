@@ -1,9 +1,10 @@
+import { useRef, useState } from "react"
 import { climbProgress } from "./climb"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
 import type { PlaybackStatus } from "./Practice"
-import { beatsInMeter, choosePractice, clampSession } from "./session"
+import { beatsInMeter, choosePractice, clampBpm, clampSession } from "./session"
 import { TimeInput } from "./TimeInput"
 import type { Practice, Session } from "./types"
 
@@ -12,6 +13,36 @@ const PRACTICES: { value: Practice; label: string }[] = [
   { value: "climb", label: "Climb" },
   { value: "routine", label: "Routine" },
 ]
+
+// A settings row whose number commits on blur or Enter; an empty or non-numeric entry is dropped
+function NumberRow(props: { id: string; label: string; value: number; onCommit(n: number): void }) {
+  const [text, setText] = useState<string | null>(null)
+  const ref = useRef<string | null>(null)
+  function commit() {
+    const typed = ref.current
+    setText(null)
+    ref.current = null
+    if (typed === null || typed.trim() === "") return
+    const n = Number(typed)
+    if (!Number.isFinite(n) || n === props.value) return
+    props.onCommit(n)
+  }
+  return (
+    <div className="routine-row">
+      <label className="routine-row-label" htmlFor={props.id}>{props.label}</label>
+      <input
+        id={props.id}
+        className="climb-input"
+        inputMode="numeric"
+        value={text ?? String(props.value)}
+        onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
+        onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+      />
+    </div>
+  )
+}
 
 // Player for every way to practice: a darker panel (label + Count-in, big number, progress, Play/Stop),
 // then the Steady | Climb | Routine switch and the chosen option's settings
@@ -85,6 +116,10 @@ export function PlayerCard(props: {
     if (isPlaying) props.onReset()
   }
 
+  function setTime(next: Partial<Session["time"]>) {
+    props.onChange(clampSession({ ...session, time: { ...session.time, ...next } }))
+  }
+
   function setRoutine(next: Partial<Session["routine"]>) {
     props.onChange(clampSession({ ...session, routine: { ...routine, ...next } }))
   }
@@ -137,6 +172,39 @@ export function PlayerCard(props: {
           </button>
         ))}
       </div>
+
+      {practice === "climb" && (
+        <div className="routine-section climb-settings">
+          <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
+          <NumberRow id="climb-step" label="Step" value={session.bpmIncrease}
+            onCommit={(n) => props.onChange(clampSession({ ...session, bpmIncrease: Math.max(0, Math.round(n)) }))} />
+          <div className="routine-row">
+            <span className="routine-row-label">Every</span>
+            <div className="routine-row-controls">
+              {session.time.everyUnit === "bars" ? (
+                <div className="routine-stepper">
+                  <button type="button" aria-label="Decrease every" onClick={() => setTime({ everyBars: Math.max(1, session.time.everyBars - 1) })}>−</button>
+                  <span className="routine-stepper-val" data-testid="climb-every-bars">{session.time.everyBars} {session.time.everyBars === 1 ? "bar" : "bars"}</span>
+                  <button type="button" aria-label="Increase every" onClick={() => setTime({ everyBars: session.time.everyBars + 1 })}>+</button>
+                </div>
+              ) : (
+                <TimeInput label="Every" value={session.time.everySec} min={1} onCommit={(everySec) => setTime({ everySec })} />
+              )}
+              <div className="routine-seg" role="group" aria-label="Every unit">
+                {(["bars", "sec"] as const).map((unit) => (
+                  <button key={unit} type="button" className="routine-seg-btn" aria-pressed={session.time.everyUnit === unit}
+                    onClick={() => {
+                      if (session.time.everyUnit === unit) return
+                      setTime(unit === "bars" ? { everyUnit: unit, everyBars: 4 } : { everyUnit: unit, everySec: 120 })
+                    }}>
+                    {unit === "bars" ? "Bars" : "Min"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {practice === "routine" && (
         <>

@@ -3,7 +3,6 @@ import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
-import { BpmSheet } from "./BpmSheet"
 import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
 import { PlayerCard } from "./PlayerCard"
@@ -23,38 +22,17 @@ export function Practice(props: {
   onChange(session: Session): void
   onSeek(index: number): void
 }) {
-  const [sheet, setSheet] = useState<"bpm" | "meter" | "subdiv" | "click" | null>(null)
+  const [sheet, setSheet] = useState<"meter" | "subdiv" | "click" | null>(null)
 
   // Inline BPM editing
   const bpmRef = useRef<string | null>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
-
-  // Inline target / step editing
-  const targetRef = useRef<string | null>(null)
-  const stepRef = useRef<string | null>(null)
-  const [targetText, setTargetText] = useState<string | null>(null)
-  const [stepText, setStepText] = useState<string | null>(null)
 
   function commitBpm() {
     const v = bpmRef.current; setBpmText(null); bpmRef.current = null
     if (v === null || v.trim() === "") return
     const next = clampBpm(Number(v))
     if (next !== props.session.bpm) props.onChange(clampSession({ ...props.session, bpm: next }))
-  }
-
-  function commitTarget() {
-    const v = targetRef.current; setTargetText(null); targetRef.current = null
-    if (v === null || v.trim() === "") return
-    const next = clampBpm(Number(v))
-    if (next !== props.session.time.targetBpm) props.onChange(clampSession({ ...props.session, time: { ...props.session.time, targetBpm: next } }))
-  }
-
-  function commitStep() {
-    const v = stepRef.current; setStepText(null); stepRef.current = null
-    if (v === null || v.trim() === "") return
-    const n = Math.max(0, Math.round(Number(v)))
-    if (!Number.isFinite(n) || n === props.session.bpmIncrease) return
-    props.onChange(clampSession({ ...props.session, bpmIncrease: n }))
   }
 
   const segment = props.segments[props.snapshot.segmentIndex]
@@ -79,7 +57,7 @@ export function Practice(props: {
   // Routine Now: stopped (including after the routine ends) shows where it will start; during a rest, the play coming up
   const { increase } = props.session.routine
   const routineEnabled = props.session.practice === "routine"
-  const showNow = routineEnabled && increase.mode !== "off"
+  const showNow = props.session.practice === "climb" || (routineEnabled && increase.mode !== "off")
   const nowBpm = props.status === "stopped"
     ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? props.session.bpm
     : segment.kind === "rest"
@@ -133,48 +111,18 @@ export function Practice(props: {
                   data-testid="bpm-current"
                   inputMode="numeric"
                   aria-label="BPM"
-                  value={bpmText ?? String(routineEnabled ? props.session.bpm : currentBpm)}
+                  value={bpmText ?? String(props.session.bpm)}
                   onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
                   onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
                   onBlur={commitBpm}
                   onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
                 />
-                <span className="bpm-label">{routineEnabled ? "Start BPM" : "BPM"}</span>
+                <span className="bpm-label">{props.session.practice === "steady" ? "BPM" : "Start BPM"}</span>
               </div>
               {showNow && (
                 <div className="bpm-right bpm-now">
                   <span className="bpm-now-value" data-testid="bpm-now">{nowBpm}</span>
                   <span className="bpm-field-label">Now</span>
-                </div>
-              )}
-              {props.session.practice === "climb" && (
-                <div className="bpm-right">
-                  <div className="bpm-target-group">
-                    <span className="bpm-field-label">Target</span>
-                    <input
-                      className="bpm-field-value"
-                      inputMode="numeric"
-                      aria-label="Target BPM"
-                      value={targetText ?? String(props.session.time.targetBpm)}
-                      onFocus={() => { targetRef.current = String(props.session.time.targetBpm); setTargetText(String(props.session.time.targetBpm)) }}
-                      onChange={(e) => { targetRef.current = e.target.value; setTargetText(e.target.value) }}
-                      onBlur={commitTarget}
-                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                    />
-                  </div>
-                  <div className="bpm-target-group">
-                    <span className="bpm-field-label">Step</span>
-                    <input
-                      className="bpm-field-value"
-                      inputMode="numeric"
-                      aria-label="BPM step"
-                      value={stepText ?? String(props.session.bpmIncrease)}
-                      onFocus={() => { stepRef.current = String(props.session.bpmIncrease); setStepText(String(props.session.bpmIncrease)) }}
-                      onChange={(e) => { stepRef.current = e.target.value; setStepText(e.target.value) }}
-                      onBlur={commitStep}
-                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                    />
-                  </div>
                 </div>
               )}
             </div>
@@ -191,14 +139,6 @@ export function Practice(props: {
                 aria-label="Increase BPM"
                 onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
               >+</button>
-            </div>
-            <div className="bpm-more-bar">
-              <button
-                type="button"
-                className="bpm-more-link"
-                aria-label="More BPM settings"
-                onClick={() => setSheet("bpm")}
-              >More <span className="bpm-more-chevron" aria-hidden="true">›</span></button>
             </div>
           </div>
 
@@ -268,12 +208,6 @@ export function Practice(props: {
         open={sheet === "click"}
         onClose={closeSheet}
         onChange={(next) => props.onChange(clampSession(next))}
-      />
-      <BpmSheet
-        session={props.session}
-        open={sheet === "bpm"}
-        onClose={closeSheet}
-        onChange={(next) => props.onChange(next)}
       />
     </main>
   )

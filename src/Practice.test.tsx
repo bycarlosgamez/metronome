@@ -58,67 +58,12 @@ describe("Practice", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
-  it("shows Target and Step inputs when target is on in simple mode", () => {
-    render(<Practice {...makeProps({ practice: "climb", bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })} />)
-    expect(screen.getByRole("textbox", { name: "Target BPM" })).toBeInTheDocument()
-    expect(screen.getByRole("textbox", { name: "BPM step" })).toBeInTheDocument()
-  })
 
-  it("hides Target and Step when target is off", () => {
-    render(<Practice {...makeProps()} />)
-    expect(screen.queryByRole("textbox", { name: "Target BPM" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("textbox", { name: "BPM step" })).not.toBeInTheDocument()
-  })
 
-  it("hides Target and Step in routine mode", () => {
-    render(<Practice {...makeProps({ practice: "routine", time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })} />)
-    expect(screen.queryByRole("textbox", { name: "Target BPM" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("textbox", { name: "BPM step" })).not.toBeInTheDocument()
-  })
 
-  it("commits target BPM on blur", async () => {
-    const props = makeProps({ practice: "climb", bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    const input = screen.getByRole("textbox", { name: "Target BPM" })
-    await user.clear(input)
-    await user.type(input, "140")
-    await user.tab()
-    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({
-      time: expect.objectContaining({ targetBpm: 140 })
-    }))
-  })
 
-  it("commits step on blur", async () => {
-    const props = makeProps({ practice: "climb", bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    const input = screen.getByRole("textbox", { name: "BPM step" })
-    await user.clear(input)
-    await user.type(input, "10")
-    await user.tab()
-    expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ bpmIncrease: 10 }))
-  })
 
-  it("does not commit target when cleared", async () => {
-    const props = makeProps({ practice: "climb", bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    const input = screen.getByRole("textbox", { name: "Target BPM" })
-    await user.clear(input)
-    await user.tab()
-    expect(props.onChange).not.toHaveBeenCalled()
-  })
 
-  it("does not commit step when cleared", async () => {
-    const props = makeProps({ practice: "climb", bpmIncrease: 5, time: { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 } })
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    const input = screen.getByRole("textbox", { name: "BPM step" })
-    await user.clear(input)
-    await user.tab()
-    expect(props.onChange).not.toHaveBeenCalled()
-  })
 
   it("shows Play button when stopped", () => {
     render(<Practice {...makeProps()} />)
@@ -180,15 +125,6 @@ describe("Practice", () => {
     expect(subdivDialog).toHaveClass("open")
   })
 
-  it("opens BPM sheet when More BPM settings is clicked", async () => {
-    const props = makeProps()
-    const user = userEvent.setup()
-    render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
-    const dialogs = document.querySelectorAll(".sheet-overlay")
-    const bpmDialog = Array.from(dialogs).find((el) => el.getAttribute("aria-label") === "BPM settings")
-    expect(bpmDialog).toHaveClass("open")
-  })
 
 
 
@@ -751,6 +687,81 @@ describe("Practice", () => {
       // 4 bars at 120 in 4/4 is 8s; 2s in leaves 6s, which is 3 bars
       render(<Practice {...climbProps({ bpm: 120, time: { ...base.time, targetBpm: 130, everyUnit: "bars", everyBars: 4 } }, 2, "playing")} />)
       expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 3 bars")
+    })
+  })
+
+  describe("climb settings", () => {
+    function climb(time: Partial<Session["time"]> = {}) {
+      const base = createDefaultSession(() => "s1")
+      return makeProps({ practice: "climb", bpm: 110, bpmIncrease: 5, time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120, ...time } })
+    }
+    const last = (props: ReturnType<typeof makeProps>): Session => props.onChange.mock.calls.at(-1)![0]
+
+    it("shows Target BPM, Step and Every in minutes", () => {
+      render(<Practice {...climb()} />)
+      expect(screen.getByRole("textbox", { name: "Target BPM" })).toHaveValue("130")
+      expect(screen.getByRole("textbox", { name: "Step" })).toHaveValue("5")
+      const unit = screen.getByRole("group", { name: "Every unit" })
+      expect(within(unit).getByRole("button", { name: "Min" })).toHaveAttribute("aria-pressed", "true")
+      expect(screen.getByRole("textbox", { name: "Every minutes" })).toHaveValue("2")
+      expect(screen.getByRole("textbox", { name: "Every seconds" })).toHaveValue("00")
+    })
+
+    it("shows Every as a bar count in Bars", () => {
+      render(<Practice {...climb({ everyUnit: "bars", everyBars: 4 })} />)
+      expect(screen.getByTestId("climb-every-bars")).toHaveTextContent("4 bars")
+    })
+
+    it("commits a typed target on blur and ignores a cleared step", async () => {
+      const user = userEvent.setup()
+      const props = climb()
+      render(<Practice {...props} />)
+      const target = screen.getByRole("textbox", { name: "Target BPM" })
+      await user.clear(target)
+      await user.type(target, "140")
+      await user.tab()
+      expect(last(props).time.targetBpm).toBe(140)
+      props.onChange.mockClear()
+      await user.clear(screen.getByRole("textbox", { name: "Step" }))
+      await user.tab()
+      expect(props.onChange).not.toHaveBeenCalled()
+    })
+
+    it("switching to Min sets 2:00 and to Bars sets 4 bars", async () => {
+      const user = userEvent.setup()
+      const bars = climb({ everyUnit: "bars", everyBars: 8 })
+      const { unmount } = render(<Practice {...bars} />)
+      await user.click(screen.getByRole("button", { name: "Min" }))
+      expect(last(bars).time).toMatchObject({ everyUnit: "sec", everySec: 120 })
+      unmount()
+      const min = climb({ everySec: 30 })
+      render(<Practice {...min} />)
+      await user.click(screen.getByRole("button", { name: "Bars" }))
+      expect(last(min).time).toMatchObject({ everyUnit: "bars", everyBars: 4 })
+    })
+
+    it("shows no Climb settings in Steady or Routine", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.queryByRole("textbox", { name: "Target BPM" })).not.toBeInTheDocument()
+    })
+
+    it("has no More button, no BPM popup and no Target/Step in the BPM card", () => {
+      render(<Practice {...climb()} />)
+      expect(screen.queryByRole("button", { name: "More BPM settings" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("dialog", { name: "BPM settings", hidden: true })).not.toBeInTheDocument()
+      expect(document.querySelector(".bpm-block")).not.toContainElement(screen.getByRole("textbox", { name: "Target BPM" }))
+    })
+
+    it("labels the BPM card BPM in Steady and Start BPM in Climb, with Now in Climb", () => {
+      const { unmount } = render(<Practice {...makeProps()} />)
+      expect(screen.getByText("BPM", { selector: ".bpm-label" })).toBeInTheDocument()
+      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      unmount()
+      const props = climb()
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, 150)} status="playing" />)
+      expect(screen.getByText("Start BPM")).toBeInTheDocument()
+      expect(screen.getByTestId("bpm-current")).toHaveValue("110")
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
     })
   })
 })
