@@ -189,56 +189,51 @@ export function BpmSheet(props: {
           )}
 
 
-          {/* Routine mode: Off / Per round / To target */}
+          {/* Routine mode: same Off/On card as Simple, plus Every. Off steps per round; On climbs to target inside each play */}
           {routineEnabled && (
             <div className="bpm-sheet-card bpm-sheet-target-card">
-              <p className="sheet-title">Increase</p>
-              <div className="increase-toggle" role="group" aria-label="Routine BPM increase">
-                {([["off", "Off"], ["round", "Per round"], ["target", "To target"]] as const).map(([mode, label]) => (
+              <p className="sheet-title">Increase to target</p>
+              <div className="increase-toggle" role="group" aria-label="BPM increase">
+                {([["round", "Off"], ["target", "On"]] as const).map(([mode, label]) => (
                   <button
                     key={mode}
                     type="button"
                     className="increase-toggle-btn"
-                    aria-pressed={increase.mode === mode}
+                    aria-pressed={mode === "target" ? increase.mode === "target" : increase.mode !== "target"}
                     onClick={() => setIncrease({ mode })}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              {increase.mode === "round" && (
+              <div className={`increase-fields${increase.mode === "target" ? " increase-fields--active" : ""}`}>
+                <NumberField id="routine-target" label="Target BPM" value={increase.targetBpm} onCommit={(targetBpm) => setIncrease({ targetBpm })} />
+                <NumberField id="routine-step" label="Step" value={increase.step} onCommit={(step) => setIncrease({ step })} />
+                <NumberField
+                  id="routine-every"
+                  label={routine.unit === "sec" ? "Every (sec)" : "Every (bars)"}
+                  value={increase.every}
+                  onCommit={(every) => setIncrease({ every })}
+                />
+              </div>
+              {increase.mode !== "target" && routine.set.enabled && (
                 <div className="increase-fields increase-fields--active">
-                  <NumberField id="routine-step" label="Step" value={increase.step} onCommit={(step) => setIncrease({ step })} />
-                  {routine.set.enabled && (
-                    <div className="increase-toggle" role="group" aria-label="Next set BPM">
-                      {([["reset", "Reset"], ["keep", "Keep"], ["raise", "+N"]] as const).map(([nextSet, label]) => (
-                        <button
-                          key={nextSet}
-                          type="button"
-                          className="increase-toggle-btn"
-                          aria-pressed={increase.nextSet === nextSet}
-                          onClick={() => setIncrease({ nextSet })}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {routine.set.enabled && increase.nextSet === "raise" && (
+                  <div className="increase-toggle" role="group" aria-label="Next set BPM">
+                    {([["reset", "Reset"], ["keep", "Keep"], ["raise", "+N"]] as const).map(([nextSet, label]) => (
+                      <button
+                        key={nextSet}
+                        type="button"
+                        className="increase-toggle-btn"
+                        aria-pressed={increase.nextSet === nextSet}
+                        onClick={() => setIncrease({ nextSet })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {increase.nextSet === "raise" && (
                     <NumberField id="routine-raise" label="Raise each set by" value={increase.raiseBy} onCommit={(raiseBy) => setIncrease({ raiseBy })} />
                   )}
-                </div>
-              )}
-              {increase.mode === "target" && (
-                <div className="increase-fields increase-fields--active">
-                  <NumberField id="routine-target" label="Target BPM" value={increase.targetBpm} onCommit={(targetBpm) => setIncrease({ targetBpm })} />
-                  <NumberField id="routine-step" label="Step" value={increase.step} onCommit={(step) => setIncrease({ step })} />
-                  <NumberField
-                    id="routine-every"
-                    label={routine.unit === "sec" ? "Every (sec)" : "Every (bars)"}
-                    value={increase.every}
-                    onCommit={(every) => setIncrease({ every })}
-                  />
                 </div>
               )}
             </div>
