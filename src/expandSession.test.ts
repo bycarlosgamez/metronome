@@ -157,27 +157,6 @@ describe("routine", () => {
     expect(segments.at(-1)?.kind).toBe("play")
   })
 
-  it("per round with Reset: every set starts back at Start", () => {
-    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "reset" })))
-      .toEqual([110, 115, 120, 125, 110, 115, 120, 125])
-  })
-
-  it("per round with Keep: the next set continues the climb", () => {
-    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "keep" })))
-      .toEqual([110, 115, 120, 125, 130, 135, 140, 145])
-  })
-
-  it("per round with +N: each set starts N above the previous set's start", () => {
-    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "raise", raiseBy: 2 })))
-      .toEqual([110, 115, 120, 125, 112, 117, 122, 127])
-  })
-
-  it("per round caps at 300", () => {
-    const session = practiceSets({ mode: "round", step: 5, nextSet: "keep" }, 2, 290)
-    session.routine.round.count = 2
-    expect(playBpms(session)).toEqual([290, 295, 300, 300])
-  })
-
   it("Off plays every round at Start, ignoring the step", () => {
     expect(playBpms(practiceSets({ mode: "off", step: 5 }))).toEqual(Array(8).fill(110))
   })

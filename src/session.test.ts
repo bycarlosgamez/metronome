@@ -68,7 +68,7 @@ describe("session", () => {
       restDuration: 0,
       round:  { enabled: false, count: 4, restDuration: 0 },
       set:    { enabled: false, count: 3, restDuration: 30 },
-      increase: { mode: "off", step: 5, nextSet: "reset", raiseBy: 2, targetBpm: 120, every: 4 },
+      increase: { mode: "off", step: 5, targetBpm: 120, every: 4 },
     })
   })
 
@@ -479,19 +479,19 @@ describe("routine increase", () => {
     ;(session as { routine: unknown }).routine = routine
     return session
   }
-  const defaults = { mode: "off", step: 5, nextSet: "reset", raiseBy: 2, targetBpm: 120, every: 4 }
+  const defaults = { mode: "off", step: 5, targetBpm: 120, every: 4 }
 
-  it("defaults to Off with step 5, Reset, +2, target 120, every 4", () => {
+  it("defaults to Off with step 5, target 120, every 4", () => {
     expect(freshRoutine().increase).toEqual(defaults)
   })
 
   it("clamps out-of-range and unknown values", () => {
     const session = withRoutine({
       ...freshRoutine(),
-      increase: { mode: "bogus", step: -3, nextSet: "x", raiseBy: -1, targetBpm: 999, every: 0 },
+      increase: { mode: "bogus", step: -3, targetBpm: 999, every: 0 },
     })
     expect(clampSession(session).routine.increase).toEqual({
-      mode: "off", step: 0, nextSet: "reset", raiseBy: 0, targetBpm: 300, every: 1,
+      mode: "off", step: 0, targetBpm: 300, every: 1,
     })
   })
 
@@ -505,7 +505,7 @@ describe("routine increase", () => {
   })
 
   it("converts a saved Per round increase to no increase, keeping its other values", () => {
-    const session = withRoutine({ ...freshRoutine(), increase: { ...defaults, mode: "round", step: 7 } })
+    const session = withRoutine({ ...freshRoutine(), increase: { ...defaults, mode: "round", step: 7, nextSet: "keep", raiseBy: 3 } })
     expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "off", step: 7 })
   })
 

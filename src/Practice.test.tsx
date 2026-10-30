@@ -331,9 +331,9 @@ describe("Practice", () => {
     })
 
     it("keeps Start in the input and shows the playing BPM as Now", () => {
+      // 4 bars at 80 is 12s, so 13s is in the second window
       const props = routineProps({
-        round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "round", step: 5 }),
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
       }, 13, "playing")
       render(<Practice {...props} />)
       expect(screen.getByTestId("bpm-current")).toHaveValue("80")
@@ -342,19 +342,20 @@ describe("Practice", () => {
     })
 
     it("shows the next play's BPM as Now during a rest", () => {
+      // Each play climbs 80 → 85 → 90 over 15s, then rests 5s; the next play restarts at 80
       const props = routineProps({
-        unit: "sec", playDuration: 10, restDuration: 5,
+        unit: "sec", restDuration: 5,
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "round", step: 5 }),
-      }, 12, "playing")
+        increase: increase({ mode: "target", step: 5, targetBpm: 90, every: 5 }),
+      }, 17, "playing")
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
     })
 
     it("shows Start as Now when stopped", () => {
       const props = routineProps({
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "round", step: 5 }),
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
       })
       render(<Practice {...props} />)
       expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
@@ -363,7 +364,7 @@ describe("Practice", () => {
     it("shows Start as Now after the routine has finished", () => {
       const props = routineProps({
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "round", step: 5 }),
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
       })
       const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
       render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)

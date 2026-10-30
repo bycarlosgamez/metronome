@@ -38,18 +38,12 @@ function resolved(session: Session): Resolved[] {
     const roundPasses = round.enabled ? round.count : 1
     const climb = increase.mode === "target" ? routineClimb(session) : null
     const barSec = (bars: number, bpm: number) => bars * beatsInMeter(session.meter) * 60 / bpm
-    const setStart = (s: number) =>
-      increase.nextSet === "keep" ? session.bpm + s * roundPasses * increase.step
-      : increase.nextSet === "raise" ? session.bpm + s * increase.raiseBy
-      : session.bpm
 
     for (let s = 0; s < setPasses; s++) {
       const isLastSet = s === setPasses - 1
       for (let r = 0; r < roundPasses; r++) {
         const isLastRound = r === roundPasses - 1
-        const bpm = increase.mode === "round"
-          ? clampBpm(setStart(s) + r * increase.step)
-          : clampBpm(session.bpm)
+        const bpm = clampBpm(session.bpm)
         const steps = climb ? climb.steps : [{ atSec: 0, bpm }]
         const durationSec = climb ? climb.durationSec : unit === "bars" ? barSec(playDuration, bpm) : playDuration
         // A bars rest is measured at the BPM the play ended on

@@ -50,20 +50,17 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    increase: { mode: "off", step: 5, nextSet: "reset", raiseBy: 2, targetBpm: 120, every: 4 },
+    increase: { mode: "off", step: 5, targetBpm: 120, every: 4 },
   }
 }
 
 function clampIncrease(increase: unknown): RoutineIncrease {
   const fresh = freshRoutine().increase
   const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
-  const NEXT = ["reset", "keep", "raise"] as const
   return {
     // Per round has no control any more, so saved Per round increases load as Off (no increase)
     mode: base.mode === "target" ? "target" : "off",
     step: Math.max(0, integer(base.step ?? fresh.step)),
-    nextSet: NEXT.includes(base.nextSet as RoutineIncrease["nextSet"]) ? base.nextSet as RoutineIncrease["nextSet"] : fresh.nextSet,
-    raiseBy: Math.max(0, integer(base.raiseBy ?? fresh.raiseBy)),
     targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
     every: Math.max(1, integer(base.every ?? fresh.every)),
   }
