@@ -619,10 +619,21 @@ describe("Practice", () => {
       expect(screen.getByRole("switch", { name: "Set repeat" })).toHaveAttribute("aria-checked", "true")
     })
 
-    it("orders the Round section Repeat, Increase, Play, Rest", () => {
+    it("orders the Round section Repeat, Times, Increase, Play, Rest", () => {
       render(<Practice {...roundProps()} />)
       const labels = Array.from(document.querySelectorAll(".routine-section:not(.routine-section--set) .routine-row-label")).map((el) => el.textContent)
-      expect(labels).toEqual(["Repeat", "Increase", "Play", "Rest"])
+      expect(labels).toEqual(["Repeat", "Times", "Increase", "Play", "Rest"])
+    })
+
+    it("puts the Set count on its own Times row below the Set repeat switch", () => {
+      render(<Practice {...roundProps({ set: { enabled: true, count: 3, restDuration: 30 } })} />)
+      const labels = Array.from(document.querySelectorAll(".routine-section--set .routine-row-label")).map((el) => el.textContent)
+      expect(labels).toEqual(["Rest between", "Repeat", "Times"])
+    })
+
+    it("hides the Times row while Repeat is off", () => {
+      render(<Practice {...roundProps({ round: { enabled: false, count: 4, restDuration: 0 } })} />)
+      expect(screen.queryByText("Times")).not.toBeInTheDocument()
     })
 
     it("turning Round repeat off also turns the per-round increase off", async () => {

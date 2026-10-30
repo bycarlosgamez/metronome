@@ -239,17 +239,20 @@ export function PlayerCard(props: {
                     set: round.enabled ? { ...set, enabled: false } : set,
                     increase: round.enabled && increase.mode === "round" ? { ...increase, mode: "off" } : increase,
                   })} />
-                {round.enabled && (
-                  <div className="routine-stepper">
-                    <button type="button" aria-label="Decrease round count"
-                      onClick={() => setRoutine({ round: { ...round, count: Math.max(2, round.count - 1) } })}>−</button>
-                    <span className="routine-stepper-val">{round.count}</span>
-                    <button type="button" aria-label="Increase round count"
-                      onClick={() => setRoutine({ round: { ...round, count: round.count + 1 } })}>+</button>
-                  </div>
-                )}
               </div>
             </div>
+            {round.enabled && (
+              <div className="routine-row">
+                <span className="routine-row-label">Times</span>
+                <div className="routine-stepper">
+                  <button type="button" aria-label="Decrease round count"
+                    onClick={() => setRoutine({ round: { ...round, count: Math.max(2, round.count - 1) } })}>−</button>
+                  <span className="routine-stepper-val">{round.count}</span>
+                  <button type="button" aria-label="Increase round count"
+                    onClick={() => setRoutine({ round: { ...round, count: round.count + 1 } })}>+</button>
+                </div>
+              </div>
+            )}
             {round.enabled && (
               <div className="routine-row">
                 <span className="routine-row-label">Increase</span>
@@ -302,17 +305,20 @@ export function PlayerCard(props: {
                 <div className="routine-row-controls">
                   <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
                     onClick={() => setRoutine({ set: { ...set, enabled: !set.enabled } })} />
-                  {set.enabled && (
-                    <div className="routine-stepper">
-                      <button type="button" aria-label="Decrease set count"
-                        onClick={() => setRoutine({ set: { ...set, count: Math.max(2, set.count - 1) } })}>−</button>
-                      <span className="routine-stepper-val">{set.count}</span>
-                      <button type="button" aria-label="Increase set count"
-                        onClick={() => setRoutine({ set: { ...set, count: set.count + 1 } })}>+</button>
-                    </div>
-                  )}
                 </div>
               </div>
+              {set.enabled && (
+                <div className="routine-row">
+                  <span className="routine-row-label">Times</span>
+                  <div className="routine-stepper">
+                    <button type="button" aria-label="Decrease set count"
+                      onClick={() => setRoutine({ set: { ...set, count: Math.max(2, set.count - 1) } })}>−</button>
+                    <span className="routine-stepper-val">{set.count}</span>
+                    <button type="button" aria-label="Increase set count"
+                      onClick={() => setRoutine({ set: { ...set, count: set.count + 1 } })}>+</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
