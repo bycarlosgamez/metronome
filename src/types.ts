@@ -80,8 +80,6 @@ export type RoutinePattern = {
   restDuration: number   // one round's rest duration (bars, or seconds when unit is "sec")
   round: RepeatLevel     // repeat the round (play + rest)
   set: RepeatLevel       // repeat the full round sequence
-  block: RepeatLevel     // repeat the full set
-  bpmIncreaseAt: "off" | "round" | "set" | "block"
   increase: RoutineIncrease
 }
 

@@ -240,6 +240,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
 .bpm-left { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 0; }
 .bpm-right { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
+.bpm-now { justify-content: flex-end; }
+.bpm-now-value { font-size: 15px; font-weight: 600; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .bpm-target-group { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
 .bpm-field-label { font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
 .bpm-field-value {
@@ -377,7 +379,6 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 .routine-section:last-child { border-bottom: none; }
 .routine-section--set  { background: var(--surface); }
-.routine-section--block { background: color-mix(in srgb, var(--surface) 50%, transparent); }
 .routine-section-title {
   font-size: 10px;
   font-weight: 700;
@@ -491,14 +492,6 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .time-input-colon { font-size: 16px; font-weight: 600; color: var(--ink-muted); padding-top: 6px; }
 
 /* BPM row */
-.routine-bpm-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  border-top: 1px solid var(--line);
-}
-.routine-bpm-label { font-size: 11px; color: var(--ink-muted); }
 
 /* Pick buttons (Meter + Subdivision) */
 .pick-btn {

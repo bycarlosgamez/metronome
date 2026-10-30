@@ -61,15 +61,13 @@ describe("session", () => {
     })
   })
 
-  it("freshRoutine returns the new 3-level shape", () => {
+  it("freshRoutine returns the Round/Set shape with an Off increase", () => {
     expect(freshRoutine()).toEqual({
       unit: "bars",
       playDuration: 4,
       restDuration: 0,
       round:  { enabled: false, count: 4, restDuration: 0 },
       set:    { enabled: false, count: 3, restDuration: 30 },
-      block:  { enabled: false, count: 2, restDuration: 60 },
-      bpmIncreaseAt: "off",
       increase: { mode: "off", step: 5, nextSet: "reset", raiseBy: 2, targetBpm: 120, every: 4 },
     })
   })
@@ -111,8 +109,6 @@ describe("session", () => {
       restDuration: -1,
       round:  { enabled: true,  count: 1,  restDuration: -5 },
       set:    { enabled: true,  count: 0,  restDuration: 0  },
-      block:  { enabled: false, count: 2,  restDuration: 60 },
-      bpmIncreaseAt: "round",
       increase: freshRoutine().increase,
     }
     const r = clampSession(session).routine

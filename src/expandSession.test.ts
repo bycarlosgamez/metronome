@@ -71,8 +71,6 @@ describe("routine", () => {
       restDuration: 0,
       round:  { enabled: false, count: 4, restDuration: 0 },
       set:    { enabled: false, count: 3, restDuration: 30 },
-      block:  { enabled: false, count: 2, restDuration: 60 },
-      bpmIncreaseAt: "off",
       increase: freshRoutine().increase,
     }
     return session
@@ -186,7 +184,7 @@ describe("routine", () => {
 
   it("ignores the legacy bpmIncreaseAt and session.bpmIncrease", () => {
     const session = practiceSets({ mode: "off" })
-    session.routine.bpmIncreaseAt = "round"
+    ;(session.routine as unknown as { bpmIncreaseAt: string }).bpmIncreaseAt = "round"
     session.bpmIncrease = 10
     expect(playBpms(session)).toEqual(Array(8).fill(110))
   })
@@ -263,7 +261,6 @@ describe("routine", () => {
       restDuration: 5,  // 5s round rest
       round: { enabled: true, count: 2, restDuration: 0 },
       set:   { enabled: true, count: 2, restDuration: 30 },  // 30s set rest
-      block: { enabled: true, count: 3, restDuration: 60 },  // ignored
     }
     const segments = expandSession(session)
     expect(segments.map((s) => s.kind === "rest" ? `rest${s.durationSec}` : s.kind))

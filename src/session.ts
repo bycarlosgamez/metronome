@@ -50,8 +50,6 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    block:  { enabled: false, count: 2, restDuration: 60 },
-    bpmIncreaseAt: "off",
     increase: { mode: "off", step: 5, nextSet: "reset", raiseBy: 2, targetBpm: 120, every: 4 },
   }
 }
@@ -90,18 +88,14 @@ function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
 
 function clampRoutine(pattern: unknown, legacyStep: number): RoutinePattern {
   const fresh = freshRoutine()
-  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern>
-  const BPM_AT = ["off", "round", "set", "block"] as const
+  // Older saves may still carry block / bpmIncreaseAt; block is dropped, bpmIncreaseAt seeds the increase.
+  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern> & { bpmIncreaseAt?: unknown }
   return {
     unit: base.unit === "sec" ? "sec" : "bars",
     playDuration: Math.max(1, integer(base.playDuration ?? fresh.playDuration)),
     restDuration: Math.max(0, integer(base.restDuration ?? fresh.restDuration)),
     round:  clampRepeatLevel(base.round,  fresh.round),
     set:    clampRepeatLevel(base.set,    fresh.set),
-    block:  clampRepeatLevel(base.block,  fresh.block),
-    bpmIncreaseAt: BPM_AT.includes(base.bpmIncreaseAt as typeof BPM_AT[number])
-      ? base.bpmIncreaseAt as RoutinePattern["bpmIncreaseAt"]
-      : "off",
     increase: base.increase && typeof base.increase === "object"
       ? clampIncrease(base.increase)
       : legacyIncrease(base.bpmIncreaseAt, Math.max(0, integer(legacyStep))),
