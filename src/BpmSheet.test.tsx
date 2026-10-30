@@ -37,11 +37,12 @@ describe("BpmSheet routine increase", () => {
     expect(last().time).toEqual(session.time)
   })
 
-  it("turning it Off returns to the per-round step", async () => {
-    const { user, last } = setup({ mode: "target" })
+  it("turning it Off means no increase", async () => {
+    const { user, last } = setup({ mode: "target" }, { set: { enabled: true, count: 3, restDuration: 30 } })
     expect(screen.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true")
     await user.click(screen.getByRole("button", { name: "Off" }))
-    expect(last().routine.increase.mode).toBe("round")
+    expect(last().routine.increase.mode).toBe("off")
+    expect(screen.queryByRole("group", { name: "Next set BPM" })).not.toBeInTheDocument()
   })
 
   it("shows Every in seconds when the routine uses Time", () => {

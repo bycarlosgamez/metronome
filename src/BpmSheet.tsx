@@ -189,12 +189,12 @@ export function BpmSheet(props: {
           )}
 
 
-          {/* Routine mode: same Off/On card as Simple, plus Every. Off steps per round; On climbs to target inside each play */}
+          {/* Routine mode: same Off/On card as Simple, plus Every. On climbs to target inside each play */}
           {routineEnabled && (
             <div className="bpm-sheet-card bpm-sheet-target-card">
               <p className="sheet-title">Increase to target</p>
               <div className="increase-toggle" role="group" aria-label="BPM increase">
-                {([["round", "Off"], ["target", "On"]] as const).map(([mode, label]) => (
+                {([["off", "Off"], ["target", "On"]] as const).map(([mode, label]) => (
                   <button
                     key={mode}
                     type="button"
@@ -216,26 +216,6 @@ export function BpmSheet(props: {
                   onCommit={(every) => setIncrease({ every })}
                 />
               </div>
-              {increase.mode !== "target" && routine.set.enabled && (
-                <div className="increase-fields increase-fields--active">
-                  <div className="increase-toggle" role="group" aria-label="Next set BPM">
-                    {([["reset", "Reset"], ["keep", "Keep"], ["raise", "+N"]] as const).map(([nextSet, label]) => (
-                      <button
-                        key={nextSet}
-                        type="button"
-                        className="increase-toggle-btn"
-                        aria-pressed={increase.nextSet === nextSet}
-                        onClick={() => setIncrease({ nextSet })}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {increase.nextSet === "raise" && (
-                    <NumberField id="routine-raise" label="Raise each set by" value={increase.raiseBy} onCommit={(raiseBy) => setIncrease({ raiseBy })} />
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
