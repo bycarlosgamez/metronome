@@ -233,14 +233,12 @@ export function PlayerCard(props: {
             <div className="routine-row">
               <span className="routine-row-label">Repeat</span>
               <div className="routine-row-controls">
-                <button type="button" className="routine-toggle-btn" aria-label="Toggle round repeat" aria-pressed={round.enabled}
+                <button type="button" role="switch" className="switch" aria-label="Round repeat" aria-checked={round.enabled}
                   onClick={() => setRoutine({
                     round: { ...round, enabled: !round.enabled },
                     set: round.enabled ? { ...set, enabled: false } : set,
                     increase: round.enabled && increase.mode === "round" ? { ...increase, mode: "off" } : increase,
-                  })}>
-                  {round.enabled ? "On" : "Off"}
-                </button>
+                  })} />
                 {round.enabled && (
                   <div className="routine-stepper">
                     <button type="button" aria-label="Decrease round count"
@@ -302,10 +300,8 @@ export function PlayerCard(props: {
               <div className="routine-row">
                 <span className="routine-row-label">Repeat</span>
                 <div className="routine-row-controls">
-                  <button type="button" className="routine-toggle-btn" aria-label="Toggle set repeat" aria-pressed={set.enabled}
-                    onClick={() => setRoutine({ set: { ...set, enabled: !set.enabled } })}>
-                    {set.enabled ? "On" : "Off"}
-                  </button>
+                  <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
+                    onClick={() => setRoutine({ set: { ...set, enabled: !set.enabled } })} />
                   {set.enabled && (
                     <div className="routine-stepper">
                       <button type="button" aria-label="Decrease set count"

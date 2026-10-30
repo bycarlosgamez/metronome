@@ -416,6 +416,34 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: var(--blue);
 }
 
+/* On/off switch: a track with a knob that slides right and turns blue when on */
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-high);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  transition: transform 0.15s, background 0.15s;
+}
+.switch[aria-checked="true"] { background: var(--blue); border-color: var(--blue); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); background: var(--ink); }
+.switch:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
 /* Segment control (Bars/Time and BPM row) */
 .routine-seg {
   display: flex;

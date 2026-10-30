@@ -182,7 +182,7 @@ describe("Practice", () => {
     })
     const user = userEvent.setup()
     render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Toggle round repeat" }))
+    await user.click(screen.getByRole("switch", { name: "Round repeat" }))
     expect(props.onChange).toHaveBeenCalledWith(
       expect.objectContaining({
         routine: expect.objectContaining({
@@ -498,7 +498,7 @@ describe("Practice", () => {
       const panel = document.querySelector(".player-panel")!
       expect(panel).toContainElement(screen.getByTestId("player-number"))
       expect(panel).toContainElement(screen.getByRole("button", { name: "Play" }))
-      expect(panel).not.toContainElement(screen.getByRole("button", { name: "Toggle round repeat" }))
+      expect(panel).not.toContainElement(screen.getByRole("switch", { name: "Round repeat" }))
     })
   })
 
@@ -604,6 +604,21 @@ describe("Practice", () => {
       expect(zero.onChange).not.toHaveBeenCalled()
     })
 
+    it("makes Round and Set repeat on/off switches, off by default", async () => {
+      const props = makeProps({ practice: "routine" })
+      render(<Practice {...props} />)
+      const round = screen.getByRole("switch", { name: "Round repeat" })
+      expect(round).toHaveAttribute("aria-checked", "false")
+      expect(round).not.toHaveTextContent(/On|Off/)
+      await userEvent.setup().click(round)
+      expect(last(props).routine.round.enabled).toBe(true)
+    })
+
+    it("shows the Set repeat switch on when Set repeat is on", () => {
+      render(<Practice {...roundProps({ set: { enabled: true, count: 3, restDuration: 30 } })} />)
+      expect(screen.getByRole("switch", { name: "Set repeat" })).toHaveAttribute("aria-checked", "true")
+    })
+
     it("orders the Round section Repeat, Increase, Play, Rest", () => {
       render(<Practice {...roundProps()} />)
       const labels = Array.from(document.querySelectorAll(".routine-section:not(.routine-section--set) .routine-row-label")).map((el) => el.textContent)
@@ -613,7 +628,7 @@ describe("Practice", () => {
     it("turning Round repeat off also turns the per-round increase off", async () => {
       const props = roundProps({}, { mode: "round" })
       render(<Practice {...props} />)
-      await userEvent.setup().click(screen.getByRole("button", { name: "Toggle round repeat" }))
+      await userEvent.setup().click(screen.getByRole("switch", { name: "Round repeat" }))
       expect(last(props).routine.round.enabled).toBe(false)
       expect(last(props).routine.increase.mode).toBe("off")
     })
@@ -660,7 +675,7 @@ describe("Practice", () => {
       expect(screen.getByTestId("player-phase")).toHaveTextContent("Playing")
       expect(screen.getByTestId("player-number")).toHaveTextContent("1:05")
       expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
-      expect(screen.queryByRole("button", { name: "Toggle round repeat" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("switch", { name: "Round repeat" })).not.toBeInTheDocument()
     })
 
     it("Climb when stopped shows 0:00 and the first step to come", () => {
