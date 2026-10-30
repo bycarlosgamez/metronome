@@ -386,7 +386,8 @@ export function Practice(props: {
                     onClick={() => {
                       const nextRound = { ...round, enabled: !round.enabled }
                       const nextSet   = round.enabled ? { ...set,   enabled: false } : set
-                      props.onChange(clampSession({ ...props.session, routine: { ...routine, round: nextRound, set: nextSet } }))
+                      const nextIncrease = round.enabled && increase.mode === "round" ? { ...increase, mode: "off" as const } : increase
+                      props.onChange(clampSession({ ...props.session, routine: { ...routine, round: nextRound, set: nextSet, increase: nextIncrease } }))
                     }}>
                     {round.enabled ? "On" : "Off"}
                   </button>
@@ -401,6 +402,27 @@ export function Practice(props: {
                   )}
                 </div>
               </div>
+              {round.enabled && (
+                <div className="routine-row">
+                  <span className="routine-row-label">Increase</span>
+                  <div className="routine-row-controls">
+                    {/* Per-round increase replaces the BPM sheet's Increase to target, and vice versa */}
+                    <button type="button" className="routine-toggle-btn" aria-label="Toggle round increase" aria-pressed={increase.mode === "round"}
+                      onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, mode: increase.mode === "round" ? "off" : "round" } } }))}>
+                      {increase.mode === "round" ? "On" : "Off"}
+                    </button>
+                    {increase.mode === "round" && (
+                      <div className="routine-stepper">
+                        <button type="button" aria-label="Decrease round increase"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, roundStep: Math.max(1, increase.roundStep - 1) } } }))}>−</button>
+                        <span className="routine-stepper-val" data-testid="round-step">+{increase.roundStep}</span>
+                        <button type="button" aria-label="Increase round increase"
+                          onClick={() => props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, roundStep: increase.roundStep + 1 } } }))}>+</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Set section — visible when round.enabled */}

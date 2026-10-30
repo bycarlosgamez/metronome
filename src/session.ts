@@ -50,7 +50,7 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    increase: { mode: "off", step: 5, targetBpm: 120, every: 4 },
+    increase: { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 },
   }
 }
 
@@ -58,11 +58,12 @@ function clampIncrease(increase: unknown): RoutineIncrease {
   const fresh = freshRoutine().increase
   const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
   return {
-    // Per round has no control any more, so saved Per round increases load as Off (no increase)
-    mode: base.mode === "target" ? "target" : "off",
+    mode: base.mode === "round" || base.mode === "target" ? base.mode : "off",
     step: Math.max(0, integer(base.step ?? fresh.step)),
     targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
     every: Math.max(1, integer(base.every ?? fresh.every)),
+    // Per round saves from before roundStep existed kept their step in step
+    roundStep: Math.max(1, integer(base.roundStep ?? (base.mode === "round" ? base.step : undefined) ?? fresh.roundStep)),
   }
 }
 
@@ -75,17 +76,20 @@ function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
   }
 }
 
-function clampRoutine(pattern: unknown): RoutinePattern {
+function clampRoutine(pattern: unknown, legacyStep: number): RoutinePattern {
   const fresh = freshRoutine()
-  // Older saves may still carry block / bpmIncreaseAt; both are dropped and the increase starts Off.
-  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern>
+  // Older saves may still carry block / bpmIncreaseAt; block is dropped, and bpmIncreaseAt "round" becomes a per-round increase.
+  const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern> & { bpmIncreaseAt?: unknown }
+  const legacyRound = base.bpmIncreaseAt === "round" && integer(legacyStep) > 0
+    ? { mode: "round", roundStep: legacyStep }
+    : undefined
   return {
     unit: base.unit === "sec" ? "sec" : "bars",
     playDuration: Math.max(1, integer(base.playDuration ?? fresh.playDuration)),
     restDuration: Math.max(0, integer(base.restDuration ?? fresh.restDuration)),
     round:  clampRepeatLevel(base.round,  fresh.round),
     set:    clampRepeatLevel(base.set,    fresh.set),
-    increase: clampIncrease(base.increase),
+    increase: clampIncrease(base.increase && typeof base.increase === "object" ? base.increase : legacyRound),
   }
 }
 
@@ -323,7 +327,7 @@ export function clampSession(session: Session): Session {
   // Migrate legacy time sessions → simple + routineEnabled
   let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
   let routineEnabled = Boolean(session.routineEnabled)
-  let routine = clampRoutine(session.routine as unknown)
+  let routine = clampRoutine(session.routine as unknown, session.bpmIncrease)
 
   if (session.type === "time") {
     type = "simple"
@@ -344,7 +348,7 @@ export function clampSession(session: Session): Session {
         targetBpm,
         every: everyBars,
       },
-    })
+    }, step)
   }
 
   return {

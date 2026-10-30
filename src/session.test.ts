@@ -68,7 +68,7 @@ describe("session", () => {
       restDuration: 0,
       round:  { enabled: false, count: 4, restDuration: 0 },
       set:    { enabled: false, count: 3, restDuration: 30 },
-      increase: { mode: "off", step: 5, targetBpm: 120, every: 4 },
+      increase: { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 },
     })
   })
 
@@ -479,34 +479,39 @@ describe("routine increase", () => {
     ;(session as { routine: unknown }).routine = routine
     return session
   }
-  const defaults = { mode: "off", step: 5, targetBpm: 120, every: 4 }
+  const defaults = { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 }
 
-  it("defaults to Off with step 5, target 120, every 4", () => {
+  it("defaults to Off with step 5, target 120, every 4, round step 5", () => {
     expect(freshRoutine().increase).toEqual(defaults)
   })
 
   it("clamps out-of-range and unknown values", () => {
     const session = withRoutine({
       ...freshRoutine(),
-      increase: { mode: "bogus", step: -3, targetBpm: 999, every: 0 },
+      increase: { mode: "bogus", step: -3, targetBpm: 999, every: 0, roundStep: 0 },
     })
     expect(clampSession(session).routine.increase).toEqual({
-      mode: "off", step: 0, targetBpm: 300, every: 1,
+      mode: "off", step: 0, targetBpm: 300, every: 1, roundStep: 1,
     })
   })
 
-  it("converts legacy bpmIncreaseAt round and set to no increase", () => {
+  it("keeps a per-round increase and its round step", () => {
+    const session = withRoutine({ ...freshRoutine(), increase: { ...defaults, mode: "round", roundStep: 3 } })
+    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "round", roundStep: 3 })
+  })
+
+  it("loads an older Per round save as a per-round increase using its step", () => {
+    const session = withRoutine({ ...freshRoutine(), increase: { mode: "round", step: 7, nextSet: "keep", raiseBy: 3, targetBpm: 120, every: 4 } })
+    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "round", step: 7, roundStep: 7 })
+  })
+
+  it("loads legacy bpmIncreaseAt round as a per-round increase and set as no increase", () => {
     const { increase, ...legacy } = freshRoutine()
     void increase
     const round = withRoutine({ ...legacy, bpmIncreaseAt: "round" }, 5)
-    expect(clampSession(round).routine.increase).toEqual(defaults)
+    expect(clampSession(round).routine.increase).toEqual({ ...defaults, mode: "round", roundStep: 5 })
     const set = withRoutine({ ...legacy, bpmIncreaseAt: "set" }, 10)
     expect(clampSession(set).routine.increase).toEqual(defaults)
-  })
-
-  it("converts a saved Per round increase to no increase, keeping its other values", () => {
-    const session = withRoutine({ ...freshRoutine(), increase: { ...defaults, mode: "round", step: 7, nextSet: "keep", raiseBy: 3 } })
-    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "off", step: 7 })
   })
 
   it("migrates legacy block and off to Off without throwing", () => {

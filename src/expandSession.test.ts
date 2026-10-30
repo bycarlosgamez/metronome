@@ -157,6 +157,15 @@ describe("routine", () => {
     expect(segments.at(-1)?.kind).toBe("play")
   })
 
+  it("per round: each round is roundStep faster and every set starts back at Start", () => {
+    expect(playBpms(practiceSets({ mode: "round", roundStep: 5 }, 3)))
+      .toEqual([110, 115, 120, 125, 110, 115, 120, 125, 110, 115, 120, 125])
+  })
+
+  it("per round caps at 300", () => {
+    expect(playBpms(practiceSets({ mode: "round", roundStep: 5 }, 1, 290))).toEqual([290, 295, 300, 300])
+  })
+
   it("Off plays every round at Start, ignoring the step", () => {
     expect(playBpms(practiceSets({ mode: "off", step: 5 }))).toEqual(Array(8).fill(110))
   })

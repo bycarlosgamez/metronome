@@ -36,7 +36,7 @@ Session (localStorage) → expandSession() → Segment[] → clock.ts → audio.
 
 Practice has two modes, chosen with the Simple | Routine control (`session.routineEnabled`):
 - **Simple** — one endless stretch at the session BPM; an optional increase (every N bars by a step) ramps up to the target BPM and holds there until stopped
-- **Routine** — Round/Set structure with play/rest durations (bars or MIN:SEC) and its own BPM increase (`routine.increase`, separate from Simple's): Off (no increase) or On, which climbs to a target inside each play. Saved Per round increases load as Off
+- **Routine** — Round/Set structure with play/rest durations (bars or MIN:SEC) and its own BPM increase (`routine.increase`, separate from Simple's): one of Off, per round (set on the routine card: each round +N BPM, every set restarts at Start) or Increase to target (set in the BPM sheet: climbs inside each play)
 
 Legacy fields (`type`, `simple`, `complex`, `cycles`, `name`, `color`) are still loaded and clamped for old saved sessions but no longer drive playback or UI.
 

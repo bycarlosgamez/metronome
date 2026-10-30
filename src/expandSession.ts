@@ -43,7 +43,7 @@ function resolved(session: Session): Resolved[] {
       const isLastSet = s === setPasses - 1
       for (let r = 0; r < roundPasses; r++) {
         const isLastRound = r === roundPasses - 1
-        const bpm = clampBpm(session.bpm)
+        const bpm = clampBpm(increase.mode === "round" ? session.bpm + r * increase.roundStep : session.bpm)
         const steps = climb ? climb.steps : [{ atSec: 0, bpm }]
         const durationSec = climb ? climb.durationSec : unit === "bars" ? barSec(playDuration, bpm) : playDuration
         // A bars rest is measured at the BPM the play ended on

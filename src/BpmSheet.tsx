@@ -200,7 +200,8 @@ export function BpmSheet(props: {
                     type="button"
                     className="increase-toggle-btn"
                     aria-pressed={mode === "target" ? increase.mode === "target" : increase.mode !== "target"}
-                    onClick={() => setIncrease({ mode })}
+                    // Off leaves a per-round increase (set on the routine card) alone
+                    onClick={() => { if (mode === "off" && increase.mode !== "target") return; setIncrease({ mode }) }}
                   >
                     {label}
                   </button>

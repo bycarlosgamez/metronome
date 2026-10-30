@@ -45,6 +45,19 @@ describe("BpmSheet routine increase", () => {
     expect(screen.queryByRole("group", { name: "Next set BPM" })).not.toBeInTheDocument()
   })
 
+  it("shows a per-round increase as Off and leaves it alone when Off is pressed", async () => {
+    const { user, onChange } = setup({ mode: "round" })
+    expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true")
+    await user.click(screen.getByRole("button", { name: "Off" }))
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it("turning it On replaces a per-round increase", async () => {
+    const { user, last } = setup({ mode: "round" })
+    await user.click(screen.getByRole("button", { name: "On" }))
+    expect(last().routine.increase.mode).toBe("target")
+  })
+
   it("shows Every in seconds when the routine uses Time", () => {
     setup({ mode: "target", every: 30 }, { unit: "sec" })
     expect(screen.getByLabelText("Every (sec)")).toHaveValue("30")
