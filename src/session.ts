@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutineIncrease, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -50,8 +50,19 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    block:  { enabled: false, count: 2, restDuration: 60 },
-    bpmIncreaseAt: "off",
+    increase: { mode: "off", step: 5, targetBpm: 120, every: 4 },
+  }
+}
+
+function clampIncrease(increase: unknown): RoutineIncrease {
+  const fresh = freshRoutine().increase
+  const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
+  return {
+    // Per round has no control any more, so saved Per round increases load as Off (no increase)
+    mode: base.mode === "target" ? "target" : "off",
+    step: Math.max(0, integer(base.step ?? fresh.step)),
+    targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
+    every: Math.max(1, integer(base.every ?? fresh.every)),
   }
 }
 
@@ -66,18 +77,15 @@ function clampRepeatLevel(level: unknown, defaults: RepeatLevel): RepeatLevel {
 
 function clampRoutine(pattern: unknown): RoutinePattern {
   const fresh = freshRoutine()
+  // Older saves may still carry block / bpmIncreaseAt; both are dropped and the increase starts Off.
   const base = (pattern && typeof pattern === "object" ? pattern : {}) as Partial<RoutinePattern>
-  const BPM_AT = ["off", "round", "set", "block"] as const
   return {
     unit: base.unit === "sec" ? "sec" : "bars",
     playDuration: Math.max(1, integer(base.playDuration ?? fresh.playDuration)),
     restDuration: Math.max(0, integer(base.restDuration ?? fresh.restDuration)),
     round:  clampRepeatLevel(base.round,  fresh.round),
     set:    clampRepeatLevel(base.set,    fresh.set),
-    block:  clampRepeatLevel(base.block,  fresh.block),
-    bpmIncreaseAt: BPM_AT.includes(base.bpmIncreaseAt as typeof BPM_AT[number])
-      ? base.bpmIncreaseAt as RoutinePattern["bpmIncreaseAt"]
-      : "off",
+    increase: clampIncrease(base.increase),
   }
 }
 
@@ -113,6 +121,26 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
     index += 1
   }
   return steps
+}
+
+// One To target play: Start, Start+step, … capped at the target; each BPM lasts one window, the target included.
+export function routineClimb(session: Session): { steps: { atSec: number; bpm: number }[]; durationSec: number } {
+  const { unit, increase } = session.routine
+  const start = clampBpm(session.bpm)
+  const target = clampBpm(increase.targetBpm)
+  const step = Math.max(0, integer(increase.step))
+  const every = Math.max(1, integer(increase.every))
+  const windowSec = (bpm: number) => unit === "sec" ? every : every * beatsInMeter(session.meter) * 60 / bpm
+  const steps: { atSec: number; bpm: number }[] = []
+  let at = 0
+  let bpm = start
+  while (true) {
+    steps.push({ atSec: at, bpm })
+    at += windowSec(bpm)
+    if (step === 0 || bpm >= target) break
+    bpm = Math.min(target, bpm + step)
+  }
+  return { steps, durationSec: at }
 }
 
 export function timeDurationSec(session: Session): number {
@@ -304,18 +332,18 @@ export function clampSession(session: Session): Session {
     const startBpm = clampBpm(session.bpm)
     const targetBpm = clampBpm(session.time?.targetBpm ?? 120)
     const step = Math.max(0, integer(session.bpmIncrease))
-    const numLevels = step > 0 && targetBpm > startBpm
-      ? Math.max(1, Math.ceil((targetBpm - startBpm) / step) + 1)
-      : 1
     const fresh = freshRoutine()
     routine = clampRoutine({
+      ...fresh,
       unit: "bars",
       playDuration: everyBars,
-      restDuration: 0,
-      round: { enabled: numLevels > 1, count: Math.max(2, numLevels), restDuration: 0 },
-      set:   fresh.set,
-      block: fresh.block,
-      bpmIncreaseAt: numLevels > 1 ? "round" : "off",
+      increase: {
+        ...fresh.increase,
+        mode: step > 0 && targetBpm > startBpm ? "target" : "off",
+        step,
+        targetBpm,
+        every: everyBars,
+      },
     })
   }
 

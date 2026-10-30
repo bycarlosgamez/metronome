@@ -1,6 +1,35 @@
 import { useEffect, useRef, useState } from "react"
 import { clampBpm, clampSession } from "./session"
-import type { Session } from "./types"
+import type { RoutineIncrease, Session } from "./types"
+
+// Commits on blur or Enter; an empty or non-numeric entry is dropped.
+function NumberField(props: { id: string; label: string; value: number; onCommit(n: number): void }) {
+  const [text, setText] = useState<string | null>(null)
+  const ref = useRef<string | null>(null)
+  function commit() {
+    const typed = ref.current
+    setText(null)
+    ref.current = null
+    if (typed === null || typed.trim() === "") return
+    const n = Number(typed)
+    if (!Number.isFinite(n) || n === props.value) return
+    props.onCommit(n)
+  }
+  return (
+    <div className="increase-field">
+      <label htmlFor={props.id}>{props.label}</label>
+      <input
+        id={props.id}
+        inputMode="numeric"
+        value={text ?? String(props.value)}
+        onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
+        onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+      />
+    </div>
+  )
+}
 
 export function BpmSheet(props: {
   session: Session
@@ -59,7 +88,12 @@ export function BpmSheet(props: {
     props.onChange(clampSession({ ...props.session, time: { ...props.session.time, increaseEvery: mode } }))
   }
 
-  const { routineEnabled, bpm, bpmIncrease } = props.session
+  const { routineEnabled, bpm, bpmIncrease, routine } = props.session
+  const { increase } = routine
+
+  function setIncrease(patch: Partial<RoutineIncrease>) {
+    props.onChange(clampSession({ ...props.session, routine: { ...routine, increase: { ...increase, ...patch } } }))
+  }
   const { increaseEvery, targetBpm } = props.session.time
 
   return (
@@ -155,6 +189,35 @@ export function BpmSheet(props: {
           )}
 
 
+          {/* Routine mode: same Off/On card as Simple, plus Every. On climbs to target inside each play */}
+          {routineEnabled && (
+            <div className="bpm-sheet-card bpm-sheet-target-card">
+              <p className="sheet-title">Increase to target</p>
+              <div className="increase-toggle" role="group" aria-label="BPM increase">
+                {([["off", "Off"], ["target", "On"]] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className="increase-toggle-btn"
+                    aria-pressed={mode === "target" ? increase.mode === "target" : increase.mode !== "target"}
+                    onClick={() => setIncrease({ mode })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className={`increase-fields${increase.mode === "target" ? " increase-fields--active" : ""}`}>
+                <NumberField id="routine-target" label="Target BPM" value={increase.targetBpm} onCommit={(targetBpm) => setIncrease({ targetBpm })} />
+                <NumberField id="routine-step" label="Step" value={increase.step} onCommit={(step) => setIncrease({ step })} />
+                <NumberField
+                  id="routine-every"
+                  label={routine.unit === "sec" ? "Every (sec)" : "Every (bars)"}
+                  value={increase.every}
+                  onCommit={(every) => setIncrease({ every })}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

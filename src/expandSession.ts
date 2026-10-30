@@ -1,4 +1,4 @@
-import { beatsInMeter, clampBpm, sessionTitle, timeSteps } from "./session"
+import { beatsInMeter, clampBpm, routineClimb, sessionTitle, timeSteps } from "./session"
 import type { BeatPattern, ClickId, Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -32,57 +32,35 @@ type Resolved = {
 
 function resolved(session: Session): Resolved[] {
   if (session.routineEnabled) {
-    const { unit, playDuration, restDuration, round, set, block, bpmIncreaseAt } = session.routine
+    const { unit, playDuration, restDuration, round, set, increase } = session.routine
     const items: Resolved[] = []
-    const blockPasses = block.enabled ? block.count : 1
     const setPasses   = set.enabled   ? set.count   : 1
-    const roundPasses = round.enabled ? round.count  : 1
-    let crossings = 0
+    const roundPasses = round.enabled ? round.count : 1
+    const climb = increase.mode === "target" ? routineClimb(session) : null
+    const barSec = (bars: number, bpm: number) => bars * beatsInMeter(session.meter) * 60 / bpm
 
-    for (let b = 0; b < blockPasses; b++) {
-      const isLastBlock = b === blockPasses - 1
-      for (let s = 0; s < setPasses; s++) {
-        const isLastSet = s === setPasses - 1
-        for (let r = 0; r < roundPasses; r++) {
-          const isLastRound = r === roundPasses - 1
-          const isLast = isLastRound && isLastSet && isLastBlock
-          const bpm = clampBpm(session.bpm + crossings * session.bpmIncrease)
-          const durationSec = unit === "bars"
-            ? playDuration * beatsInMeter(session.meter) * 60 / bpm
-            : playDuration
-          const roundRestSec = unit === "bars"
-            ? restDuration * beatsInMeter(session.meter) * 60 / bpm
-            : restDuration
+    for (let s = 0; s < setPasses; s++) {
+      const isLastSet = s === setPasses - 1
+      for (let r = 0; r < roundPasses; r++) {
+        const isLastRound = r === roundPasses - 1
+        const bpm = clampBpm(session.bpm)
+        const steps = climb ? climb.steps : [{ atSec: 0, bpm }]
+        const durationSec = climb ? climb.durationSec : unit === "bars" ? barSec(playDuration, bpm) : playDuration
+        // A bars rest is measured at the BPM the play ended on
+        const roundRestSec = unit === "bars" ? barSec(restDuration, steps[steps.length - 1].bpm) : restDuration
 
-          let restSec = 0
-          let restRole: "after" | "between" | undefined
-          if (!isLast) {
-            if (!isLastRound) {
-              restSec = roundRestSec
-              restRole = "after"
-            } else if (!isLastSet) {
-              restSec = roundRestSec + set.restDuration
-              restRole = "between"
-            } else {
-              restSec = roundRestSec + block.restDuration
-              restRole = "between"
-            }
-          }
-
-          items.push({
-            id: `routine-${b}-${s}-${r}`,
-            bpm,
-            durationSec,
-            restSec,
-            restRole,
-            steps: [{ atSec: 0, bpm }],
-          })
-
-          if (bpmIncreaseAt === "round") crossings++
+        let restSec = 0
+        let restRole: "after" | "between" | undefined
+        if (!isLastRound) {
+          restSec = roundRestSec
+          restRole = "after"
+        } else if (!isLastSet) {
+          restSec = roundRestSec + set.restDuration
+          restRole = "between"
         }
-        if (bpmIncreaseAt === "set") crossings++
+
+        items.push({ id: `routine-${s}-${r}`, bpm: steps[0].bpm, durationSec, restSec, restRole, steps })
       }
-      if (bpmIncreaseAt === "block") crossings++
     }
     return items
   }

@@ -277,36 +277,13 @@ describe("Practice", () => {
     expect(screen.getByRole("textbox", { name: "Set rest minutes" })).toBeInTheDocument()
   })
 
-  it("Block section is hidden when set.enabled is false", () => {
-    const props = makeProps({
-      routineEnabled: true,
-      routine: { ...createDefaultSession().routine, round: { enabled: true, count: 4, restDuration: 0 } },
-    })
-    render(<Practice {...props} />)
-    expect(screen.queryByText("Block")).not.toBeInTheDocument()
-  })
-
-  it("Block section appears when set.enabled is true", () => {
+  it("toggling Round repeat off clears set enabled", async () => {
     const props = makeProps({
       routineEnabled: true,
       routine: {
         ...createDefaultSession().routine,
         round: { enabled: true, count: 4, restDuration: 0 },
         set:   { enabled: true, count: 3, restDuration: 30 },
-      },
-    })
-    render(<Practice {...props} />)
-    expect(screen.getByText("Block")).toBeInTheDocument()
-  })
-
-  it("toggling Round repeat off clears set and block enabled", async () => {
-    const props = makeProps({
-      routineEnabled: true,
-      routine: {
-        ...createDefaultSession().routine,
-        round: { enabled: true, count: 4, restDuration: 0 },
-        set:   { enabled: true, count: 3, restDuration: 30 },
-        block: { enabled: true, count: 2, restDuration: 60 },
       },
     })
     const user = userEvent.setup()
@@ -317,56 +294,119 @@ describe("Practice", () => {
         routine: expect.objectContaining({
           round: expect.objectContaining({ enabled: false }),
           set:   expect.objectContaining({ enabled: false }),
-          block: expect.objectContaining({ enabled: false }),
         }),
       })
     )
   })
 
-  it("toggling Set repeat off clears block enabled", async () => {
+  it("has no Block section and no BPM increase row", () => {
     const props = makeProps({
       routineEnabled: true,
+      bpmIncrease: 5,
       routine: {
         ...createDefaultSession().routine,
-        round: { enabled: true, count: 4, restDuration: 0 },
-        set:   { enabled: true, count: 3, restDuration: 30 },
-        block: { enabled: true, count: 2, restDuration: 60 },
+        round: { enabled: true, count: 2, restDuration: 0 },
+        set:   { enabled: true, count: 2, restDuration: 30 },
       },
     })
-    const user = userEvent.setup()
     render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Toggle set repeat" }))
-    expect(props.onChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        routine: expect.objectContaining({
-          set:   expect.objectContaining({ enabled: false }),
-          block: expect.objectContaining({ enabled: false }),
-        }),
-      })
-    )
-  })
-
-  it("BPM row is hidden when bpmIncrease is 0", () => {
-    render(<Practice {...makeProps({ routineEnabled: true, bpmIncrease: 0 })} />)
+    expect(document.querySelector(".routine-card")).not.toHaveTextContent(/Block/)
     expect(screen.queryByText(/BPM \+/)).not.toBeInTheDocument()
+    expect(screen.getByText("Round 1/2")).toBeInTheDocument()
+    expect(screen.getByText("Set 1/2")).toBeInTheDocument()
   })
 
-  it("BPM row shows when bpmIncrease > 0", () => {
-    render(<Practice {...makeProps({ routineEnabled: true, bpmIncrease: 5 })} />)
-    expect(screen.getByText(/BPM \+5 every/)).toBeInTheDocument()
+  describe("routine Start and Now BPM", () => {
+    const increase = (over: Partial<Session["routine"]["increase"]>) => ({ ...createDefaultSession().routine.increase, ...over })
+    function routineProps(routine: Partial<Session["routine"]>, elapsed = 0, status: "playing" | "stopped" = "stopped") {
+      const props = makeProps({ routineEnabled: true, bpm: 80, routine: { ...createDefaultSession().routine, ...routine } })
+      return { ...props, snapshot: snapshotAt(props.segments, elapsed), status }
+    }
+
+    it("shows Start BPM and no Now when the increase is Off", () => {
+      render(<Practice {...routineProps({})} />)
+      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
+      expect(screen.getByText("Start BPM")).toBeInTheDocument()
+      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+    })
+
+    it("keeps Start in the input and shows the playing BPM as Now", () => {
+      // 4 bars at 80 is 12s, so 13s is in the second window
+      const props = routineProps({
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+      }, 13, "playing")
+      render(<Practice {...props} />)
+      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
+      expect(screen.getByText("Now")).toBeInTheDocument()
+    })
+
+    it("shows the next play's BPM as Now during a rest", () => {
+      // Each play climbs 80 → 85 → 90 over 15s, then rests 5s; the next play restarts at 80
+      const props = routineProps({
+        unit: "sec", restDuration: 5,
+        round: { enabled: true, count: 2, restDuration: 0 },
+        increase: increase({ mode: "target", step: 5, targetBpm: 90, every: 5 }),
+      }, 17, "playing")
+      render(<Practice {...props} />)
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+    })
+
+    it("shows Start as Now when stopped", () => {
+      const props = routineProps({
+        round: { enabled: true, count: 2, restDuration: 0 },
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+      })
+      render(<Practice {...props} />)
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+    })
+
+    it("shows Start as Now after the routine has finished", () => {
+      const props = routineProps({
+        round: { enabled: true, count: 2, restDuration: 0 },
+        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+      })
+      const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+    })
+
+    it("keeps the BPM label and no Now in Simple mode", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.queryByText("Start BPM")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+    })
+
+    it("To target shows the computed play length instead of a stepper", () => {
+      render(<Practice {...routineProps({ unit: "sec", playDuration: 60, increase: increase({ mode: "target", step: 4, targetBpm: 125, every: 30 }) })} />)
+      expect(screen.getByTestId("routine-play-computed")).toHaveTextContent("6:30")
+      expect(screen.queryByRole("textbox", { name: "Play minutes" })).not.toBeInTheDocument()
+    })
+
+    it("To target in Bars shows the computed length in bars", () => {
+      render(<Practice {...routineProps({ increase: increase({ mode: "target", step: 10, targetBpm: 90, every: 4 }) })} />)
+      expect(screen.getByTestId("routine-play-computed")).toHaveTextContent("8 bars")
+      expect(screen.queryByRole("button", { name: "Increase play duration" })).not.toBeInTheDocument()
+    })
+
+    it("switching Bars and Time resets Every to 30 sec or 4 bars", async () => {
+      const user = userEvent.setup()
+      const bars = routineProps({ increase: increase({ mode: "target", every: 4 }) })
+      const { unmount } = render(<Practice {...bars} />)
+      await user.click(screen.getByRole("button", { name: "Time" }))
+      expect(bars.onChange.mock.calls.at(-1)![0].routine.increase.every).toBe(30)
+      unmount()
+      const sec = routineProps({ unit: "sec", playDuration: 60, increase: increase({ mode: "target", every: 30 }) })
+      render(<Practice {...sec} />)
+      await user.click(screen.getByRole("button", { name: "Bars" }))
+      expect(sec.onChange.mock.calls.at(-1)![0].routine.increase.every).toBe(4)
+    })
   })
 
   it("progress shows Round label with count", () => {
     const props = makeProps({ routineEnabled: true })
     render(<Practice {...props} />)
     expect(screen.getByText(/Round 1\//)).toBeInTheDocument()
-  })
-
-  it("BpmSheet does not show BPM step card in routine mode", () => {
-    const props = makeProps({ routineEnabled: true, bpmIncrease: 5 })
-    render(<Practice {...props} />)
-    // BpmSheet starts closed; verify Step label is not in DOM
-    expect(screen.queryByLabelText("Step")).not.toBeInTheDocument()
   })
 
   describe("routine duration units", () => {
@@ -484,22 +524,16 @@ describe("Practice", () => {
       }))
     })
 
-    it("uses MIN and SEC inputs for Set and Block rest", async () => {
+    it("uses MIN and SEC inputs for Set rest", () => {
       const base = createDefaultSession().routine
       const props = makeProps({
         routineEnabled: true,
         routine: { ...base, round: { enabled: true, count: 4, restDuration: 0 }, set: { enabled: true, count: 3, restDuration: 90 } },
       })
-      const user = userEvent.setup()
       render(<Practice {...props} />)
       expect(screen.getByRole("textbox", { name: "Set rest minutes" })).toHaveValue("1")
       expect(screen.getByRole("textbox", { name: "Set rest seconds" })).toHaveValue("30")
-      expect(screen.getByRole("textbox", { name: "Block rest minutes" })).toHaveValue("1")
-      await user.click(screen.getByRole("textbox", { name: "Block rest minutes" }))
-      await user.keyboard("2{Enter}")
-      expect(props.onChange).toHaveBeenLastCalledWith(expect.objectContaining({
-        routine: expect.objectContaining({ block: expect.objectContaining({ restDuration: 120 }) }),
-      }))
+      expect(screen.queryByRole("textbox", { name: "Block rest minutes" })).not.toBeInTheDocument()
     })
   })
 
