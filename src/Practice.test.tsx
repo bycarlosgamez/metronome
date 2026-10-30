@@ -575,38 +575,39 @@ describe("Practice", () => {
 
     it("hides Increase when Round repeat is off", () => {
       render(<Practice {...roundProps({ round: { enabled: false, count: 4, restDuration: 0 } })} />)
-      expect(screen.queryByRole("button", { name: "Toggle round increase" })).not.toBeInTheDocument()
-    })
-
-    it("shows Increase off with no step until turned on", () => {
-      render(<Practice {...roundProps()} />)
-      expect(screen.getByRole("button", { name: "Toggle round increase" })).toHaveAttribute("aria-pressed", "false")
       expect(screen.queryByTestId("round-step")).not.toBeInTheDocument()
     })
 
-    it("turning it on switches to the per-round increase", async () => {
+    it("shows Increase as a +0 stepper with no On/Off button", () => {
+      render(<Practice {...roundProps({}, { mode: "off", roundStep: 5 })} />)
+      expect(screen.queryByRole("button", { name: "Toggle round increase" })).not.toBeInTheDocument()
+      expect(screen.getByTestId("round-step")).toHaveTextContent("+0")
+    })
+
+    it("raising it from 0 starts the per-round increase", async () => {
       const props = roundProps()
       render(<Practice {...props} />)
-      await userEvent.setup().click(screen.getByRole("button", { name: "Toggle round increase" }))
-      expect(last(props).routine.increase.mode).toBe("round")
+      await userEvent.setup().click(screen.getByRole("button", { name: "Increase round increase" }))
+      expect(last(props).routine.increase).toEqual({ mode: "round", roundStep: 1 })
     })
 
-    it("turning it off means no increase", async () => {
-      const props = roundProps({}, { mode: "round" })
-      render(<Practice {...props} />)
-      await userEvent.setup().click(screen.getByRole("button", { name: "Toggle round increase" }))
-      expect(last(props).routine.increase.mode).toBe("off")
-    })
-
-    it("steps the round increase by 1 and not below 1", async () => {
+    it("lowering it to 0 means no increase, and it doesn't go below 0", async () => {
       const user = userEvent.setup()
       const props = roundProps({}, { mode: "round", roundStep: 1 })
-      render(<Practice {...props} />)
-      expect(screen.getByTestId("round-step")).toHaveTextContent("+1")
+      const { unmount } = render(<Practice {...props} />)
       await user.click(screen.getByRole("button", { name: "Decrease round increase" }))
-      expect(last(props).routine.increase.roundStep).toBe(1)
-      await user.click(screen.getByRole("button", { name: "Increase round increase" }))
-      expect(last(props).routine.increase.roundStep).toBe(2)
+      expect(last(props).routine.increase.mode).toBe("off")
+      unmount()
+      const zero = roundProps()
+      render(<Practice {...zero} />)
+      await user.click(screen.getByRole("button", { name: "Decrease round increase" }))
+      expect(zero.onChange).not.toHaveBeenCalled()
+    })
+
+    it("orders the Round section Repeat, Increase, Play, Rest", () => {
+      render(<Practice {...roundProps()} />)
+      const labels = Array.from(document.querySelectorAll(".routine-section:not(.routine-section--set) .routine-row-label")).map((el) => el.textContent)
+      expect(labels).toEqual(["Repeat", "Increase", "Play", "Rest"])
     })
 
     it("turning Round repeat off also turns the per-round increase off", async () => {

@@ -65,6 +65,7 @@ export function PlayerCard(props: {
   const currentBpm = bpmAt(segment, intoSec)
   const isRest = segment.kind === "rest"
 
+  const roundStep = increase.mode === "round" ? increase.roundStep : 0
   const roundPasses = round.enabled ? round.count : 1
   const setPasses = set.enabled ? set.count : 1
   const roundN = (segment.setIndex % roundPasses) + 1
@@ -229,27 +230,6 @@ export function PlayerCard(props: {
 
           <div className="routine-section">
             <div className="routine-section-title">Round</div>
-            {([
-              { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
-              { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },
-            ] as const).map(({ key, label, durationKey, min }) => {
-              const value = routine[durationKey]
-              const update = (next: number) => setRoutine({ [durationKey]: Math.max(min, next) })
-              return (
-                <div className="routine-row" key={key}>
-                  <span className="routine-row-label">{label}</span>
-                  {routine.unit === "bars" ? (
-                    <div className="routine-stepper">
-                      <button type="button" aria-label={`Decrease ${key} duration`} onClick={() => update(value - 1)}>−</button>
-                      <span className="routine-stepper-val">{value} {value === 1 ? "bar" : "bars"}</span>
-                      <button type="button" aria-label={`Increase ${key} duration`} onClick={() => update(value + 1)}>+</button>
-                    </div>
-                  ) : (
-                    <TimeInput label={label} value={value} min={min} onCommit={update} />
-                  )}
-                </div>
-              )
-            })}
             <div className="routine-row">
               <span className="routine-row-label">Repeat</span>
               <div className="routine-row-controls">
@@ -275,23 +255,40 @@ export function PlayerCard(props: {
             {round.enabled && (
               <div className="routine-row">
                 <span className="routine-row-label">Increase</span>
-                <div className="routine-row-controls">
-                  <button type="button" className="routine-toggle-btn" aria-label="Toggle round increase" aria-pressed={increase.mode === "round"}
-                    onClick={() => setRoutine({ increase: { ...increase, mode: increase.mode === "round" ? "off" : "round" } })}>
-                    {increase.mode === "round" ? "On" : "Off"}
-                  </button>
-                  {increase.mode === "round" && (
-                    <div className="routine-stepper">
-                      <button type="button" aria-label="Decrease round increase"
-                        onClick={() => setRoutine({ increase: { ...increase, roundStep: Math.max(1, increase.roundStep - 1) } })}>−</button>
-                      <span className="routine-stepper-val" data-testid="round-step">+{increase.roundStep}</span>
-                      <button type="button" aria-label="Increase round increase"
-                        onClick={() => setRoutine({ increase: { ...increase, roundStep: increase.roundStep + 1 } })}>+</button>
-                    </div>
-                  )}
+                {/* +0 means no increase; each round plays this many BPM faster than the one before */}
+                <div className="routine-stepper">
+                  <button type="button" aria-label="Decrease round increase"
+                    onClick={() => {
+                      if (roundStep === 0) return
+                      setRoutine({ increase: roundStep === 1 ? { ...increase, mode: "off" } : { mode: "round", roundStep: roundStep - 1 } })
+                    }}>−</button>
+                  <span className="routine-stepper-val" data-testid="round-step">+{roundStep}</span>
+                  <button type="button" aria-label="Increase round increase"
+                    onClick={() => setRoutine({ increase: { mode: "round", roundStep: roundStep + 1 } })}>+</button>
                 </div>
               </div>
             )}
+            {([
+              { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
+              { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },
+            ] as const).map(({ key, label, durationKey, min }) => {
+              const value = routine[durationKey]
+              const update = (next: number) => setRoutine({ [durationKey]: Math.max(min, next) })
+              return (
+                <div className="routine-row" key={key}>
+                  <span className="routine-row-label">{label}</span>
+                  {routine.unit === "bars" ? (
+                    <div className="routine-stepper">
+                      <button type="button" aria-label={`Decrease ${key} duration`} onClick={() => update(value - 1)}>−</button>
+                      <span className="routine-stepper-val">{value} {value === 1 ? "bar" : "bars"}</span>
+                      <button type="button" aria-label={`Increase ${key} duration`} onClick={() => update(value + 1)}>+</button>
+                    </div>
+                  ) : (
+                    <TimeInput label={label} value={value} min={min} onCommit={update} />
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {round.enabled && (
