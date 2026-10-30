@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { expandSession } from "./expandSession"
-import { createDefaultSession } from "./session"
+import { createDefaultSession, freshRoutine } from "./session"
+import type { RoutineIncrease, Session } from "./types"
 
 describe("expandSession (Simple mode)", () => {
   it("produces no count-in by default (countIn defaults to false)", () => {
@@ -72,9 +73,27 @@ describe("routine", () => {
       set:    { enabled: false, count: 3, restDuration: 30 },
       block:  { enabled: false, count: 2, restDuration: 60 },
       bpmIncreaseAt: "off",
+      increase: freshRoutine().increase,
     }
     return session
   }
+
+  // 110 BPM, 2:00 play, 0:15 rest, 4 rounds × N sets
+  function practiceSets(increase: Partial<RoutineIncrease>, sets = 2, bpm = 110): Session {
+    const session = makeRoutineSession()
+    session.bpm = bpm
+    session.routine = {
+      ...session.routine,
+      unit: "sec",
+      playDuration: 120,
+      restDuration: 15,
+      round: { enabled: true, count: 4, restDuration: 0 },
+      set:   { enabled: true, count: sets, restDuration: 60 },
+      increase: { ...session.routine.increase, ...increase },
+    }
+    return session
+  }
+  const playBpms = (session: Session) => expandSession(session).filter((s) => s.kind === "play").map((s) => s.bpm)
 
   it("produces a single play segment when no repeats are enabled", () => {
     const session = makeRoutineSession()
@@ -140,62 +159,88 @@ describe("routine", () => {
     expect(segments.at(-1)?.kind).toBe("play")
   })
 
-  it("block repeat: rest between blocks uses block.restDuration (seconds)", () => {
+  it("per round with Reset: every set starts back at Start", () => {
+    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "reset" })))
+      .toEqual([110, 115, 120, 125, 110, 115, 120, 125])
+  })
+
+  it("per round with Keep: the next set continues the climb", () => {
+    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "keep" })))
+      .toEqual([110, 115, 120, 125, 130, 135, 140, 145])
+  })
+
+  it("per round with +N: each set starts N above the previous set's start", () => {
+    expect(playBpms(practiceSets({ mode: "round", step: 5, nextSet: "raise", raiseBy: 2 })))
+      .toEqual([110, 115, 120, 125, 112, 117, 122, 127])
+  })
+
+  it("per round caps at 300", () => {
+    const session = practiceSets({ mode: "round", step: 5, nextSet: "keep" }, 2, 290)
+    session.routine.round.count = 2
+    expect(playBpms(session)).toEqual([290, 295, 300, 300])
+  })
+
+  it("Off plays every round at Start, ignoring the step", () => {
+    expect(playBpms(practiceSets({ mode: "off", step: 5 }))).toEqual(Array(8).fill(110))
+  })
+
+  it("ignores the legacy bpmIncreaseAt and session.bpmIncrease", () => {
+    const session = practiceSets({ mode: "off" })
+    session.routine.bpmIncreaseAt = "round"
+    session.bpmIncrease = 10
+    expect(playBpms(session)).toEqual(Array(8).fill(110))
+  })
+
+  it("to target in seconds: climbs inside each play, holds target one window, restarts each round", () => {
     const session = makeRoutineSession()
     session.routine = {
       ...session.routine,
-      restDuration: 0,
+      unit: "sec",
       round: { enabled: true, count: 2, restDuration: 0 },
-      set:   { enabled: true, count: 2, restDuration: 10 },
-      block: { enabled: true, count: 2, restDuration: 60 },
+      increase: { ...session.routine.increase, mode: "target", step: 4, targetBpm: 125, every: 30 },
+    }
+    const plays = expandSession(session).filter((s) => s.kind === "play")
+    expect(plays).toHaveLength(2)
+    for (const play of plays) {
+      expect(play.bpm).toBe(80)
+      expect(play.steps?.map((step) => step.bpm)).toEqual([80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 125])
+      expect(play.steps?.[12].atSec).toBe(360)
+      expect(play.durationSec).toBe(390)
+    }
+  })
+
+  it("to target in bars: windows follow each step's BPM and the rest uses the BPM the play ended at", () => {
+    const session = makeRoutineSession()
+    session.routine = {
+      ...session.routine,
+      restDuration: 2,
+      round: { enabled: true, count: 2, restDuration: 0 },
+      increase: { ...session.routine.increase, mode: "target", step: 10, targetBpm: 90, every: 4 },
     }
     const segments = expandSession(session)
-    const plays = segments.filter((s) => s.kind === "play")
-    expect(plays).toHaveLength(8)  // 2 rounds × 2 sets × 2 blocks
-    // There should be a rest of 60s (block rest)
-    expect(segments.some((s) => s.kind === "rest" && s.durationSec === 60)).toBe(true)
-    expect(segments.at(-1)?.kind).toBe("play")
+    expect(segments.map((s) => s.kind)).toEqual(["play", "rest", "play"])
+    expect(segments[0].steps).toEqual([{ atSec: 0, bpm: 80 }, { atSec: 12, bpm: 90 }])
+    expect(segments[0].durationSec).toBeCloseTo(12 + 640 / 60)
+    expect(segments[1].durationSec).toBeCloseTo((2 * 4 * 60) / 90)
   })
 
-  it("BPM increases at round boundary", () => {
+  it("to target with Start at or above Target, or step 0, is a single window at Start", () => {
     const session = makeRoutineSession()
+    session.bpm = 130
+    session.routine = {
+      ...session.routine,
+      unit: "sec",
+      increase: { ...session.routine.increase, mode: "target", step: 4, targetBpm: 120, every: 30 },
+    }
+    let play = expandSession(session)[0]
+    expect(play.steps).toEqual([{ atSec: 0, bpm: 130 }])
+    expect(play.durationSec).toBe(30)
+
     session.bpm = 80
-    session.bpmIncrease = 5
-    session.routine = {
-      ...session.routine,
-      round: { enabled: true, count: 3, restDuration: 0 },
-      bpmIncreaseAt: "round",
-    }
-    const plays = expandSession(session).filter((s) => s.kind === "play")
-    expect(plays.map((s) => s.bpm)).toEqual([80, 85, 90])
-  })
-
-  it("BPM increases at set boundary", () => {
-    const session = makeRoutineSession()
-    session.bpm = 80
-    session.bpmIncrease = 10
-    session.routine = {
-      ...session.routine,
-      round: { enabled: true, count: 2, restDuration: 0 },
-      set:   { enabled: true, count: 3, restDuration: 0 },
-      bpmIncreaseAt: "set",
-    }
-    const plays = expandSession(session).filter((s) => s.kind === "play")
-    // Set 1: [80, 80], Set 2: [90, 90], Set 3: [100, 100]
-    expect(plays.map((s) => s.bpm)).toEqual([80, 80, 90, 90, 100, 100])
-  })
-
-  it("caps BPM at 300", () => {
-    const session = makeRoutineSession()
-    session.bpm = 290
-    session.bpmIncrease = 20
-    session.routine = {
-      ...session.routine,
-      round: { enabled: true, count: 3, restDuration: 0 },
-      bpmIncreaseAt: "round",
-    }
-    const plays = expandSession(session).filter((s) => s.kind === "play")
-    expect(plays.map((s) => s.bpm)).toEqual([290, 300, 300])
+    session.routine.increase.step = 0
+    play = expandSession(session)[0]
+    expect(play.steps).toEqual([{ atSec: 0, bpm: 80 }])
+    expect(play.durationSec).toBe(30)
   })
 
   it("setIndex increments across all segments for progress tracking", () => {
@@ -209,25 +254,8 @@ describe("routine", () => {
     expect(plays[1].setIndex).toBe(1)
   })
 
-  it("BPM increases at block boundary", () => {
+  it("set-boundary rest stacks round rest on top of set rest, with no block level", () => {
     const session = makeRoutineSession()
-    session.bpm = 80
-    session.bpmIncrease = 10
-    session.routine = {
-      ...session.routine,
-      round: { enabled: true, count: 2, restDuration: 0 },
-      set:   { enabled: true, count: 2, restDuration: 0 },
-      block: { enabled: true, count: 3, restDuration: 0 },
-      bpmIncreaseAt: "block",
-    }
-    const plays = expandSession(session).filter((s) => s.kind === "play")
-    // Block 1: [80,80,80,80], Block 2: [90,90,90,90], Block 3: [100,100,100,100]
-    expect(plays.map((s) => s.bpm)).toEqual([80,80,80,80,90,90,90,90,100,100,100,100])
-  })
-
-  it("set-boundary rest stacks round rest on top of set rest", () => {
-    const session = makeRoutineSession()
-    // restDuration: 2 bars @ 80bpm 4/4 = 6s per bar * 2 = ... let's use sec unit for simplicity
     session.routine = {
       ...session.routine,
       unit: "sec",
@@ -235,12 +263,10 @@ describe("routine", () => {
       restDuration: 5,  // 5s round rest
       round: { enabled: true, count: 2, restDuration: 0 },
       set:   { enabled: true, count: 2, restDuration: 30 },  // 30s set rest
+      block: { enabled: true, count: 3, restDuration: 60 },  // ignored
     }
     const segments = expandSession(session)
-    const rests = segments.filter((s) => s.kind === "rest")
-    // Between set 1 and set 2: the last round's rest (5s) + set rest (30s) = 35s
-    expect(rests.some((r) => r.durationSec === 35)).toBe(true)
-    // Within each set, round-to-round rest is 5s
-    expect(rests.filter((r) => r.durationSec === 5).length).toBeGreaterThan(0)
+    expect(segments.map((s) => s.kind === "rest" ? `rest${s.durationSec}` : s.kind))
+      .toEqual(["play", "rest5", "play", "rest35", "play", "rest5", "play"])
   })
 })

@@ -142,6 +142,26 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
   return steps
 }
 
+// One To target play: Start, Start+step, … capped at the target; each BPM lasts one window, the target included.
+export function routineClimb(session: Session): { steps: { atSec: number; bpm: number }[]; durationSec: number } {
+  const { unit, increase } = session.routine
+  const start = clampBpm(session.bpm)
+  const target = clampBpm(increase.targetBpm)
+  const step = Math.max(0, integer(increase.step))
+  const every = Math.max(1, integer(increase.every))
+  const windowSec = (bpm: number) => unit === "sec" ? every : every * beatsInMeter(session.meter) * 60 / bpm
+  const steps: { atSec: number; bpm: number }[] = []
+  let at = 0
+  let bpm = start
+  while (true) {
+    steps.push({ atSec: at, bpm })
+    at += windowSec(bpm)
+    if (step === 0 || bpm >= target) break
+    bpm = Math.min(target, bpm + step)
+  }
+  return { steps, durationSec: at }
+}
+
 export function timeDurationSec(session: Session): number {
   const pattern = clampTime(session.time)
   if (pattern.increaseEvery === "off") return Number.POSITIVE_INFINITY
