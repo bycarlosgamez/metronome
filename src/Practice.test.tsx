@@ -168,7 +168,8 @@ describe("Practice", () => {
     })
     render(<Practice {...props} />)
     expect(screen.getByText("Set")).toBeInTheDocument()
-    expect(screen.getByRole("textbox", { name: "Set rest minutes" })).toBeInTheDocument()
+    // Rest between only matters when sets repeat, so it waits inside Set repeat's panel
+    expect(screen.queryByRole("textbox", { name: "Set rest minutes" })).not.toBeInTheDocument()
   })
 
   it("toggling Round repeat off clears set enabled", async () => {
@@ -619,16 +620,24 @@ describe("Practice", () => {
       expect(screen.getByRole("switch", { name: "Set repeat" })).toHaveAttribute("aria-checked", "true")
     })
 
-    it("orders the Round section Repeat, Times, Increase, Play, Rest", () => {
+    const labelsIn = (selector: string) => Array.from(document.querySelectorAll(`${selector} .routine-row-label`)).map((el) => el.textContent)
+
+    it("orders the Round box Play, Rest, Repeat, with Times and Increase in Repeat's panel", () => {
       render(<Practice {...roundProps()} />)
-      const labels = Array.from(document.querySelectorAll(".routine-section:not(.routine-section--set) .routine-row-label")).map((el) => el.textContent)
-      expect(labels).toEqual(["Repeat", "Times", "Increase", "Play", "Rest"])
+      expect(labelsIn("[data-testid='round-box']")).toEqual(["Play", "Rest", "Repeat", "Times", "Increase"])
+      expect(labelsIn("[data-testid='round-repeat-panel']")).toEqual(["Times", "Increase"])
     })
 
-    it("puts the Set count on its own Times row below the Set repeat switch", () => {
+    it("puts Set's Times and Rest between in Set repeat's panel", () => {
       render(<Practice {...roundProps({ set: { enabled: true, count: 3, restDuration: 30 } })} />)
-      const labels = Array.from(document.querySelectorAll(".routine-section--set .routine-row-label")).map((el) => el.textContent)
-      expect(labels).toEqual(["Rest between", "Repeat", "Times"])
+      expect(labelsIn("[data-testid='set-box']")).toEqual(["Repeat", "Times", "Rest between"])
+      expect(labelsIn("[data-testid='set-repeat-panel']")).toEqual(["Times", "Rest between"])
+    })
+
+    it("closes each panel while its Repeat is off", () => {
+      render(<Practice {...roundProps({ round: { enabled: false, count: 4, restDuration: 0 } })} />)
+      expect(screen.queryByTestId("round-repeat-panel")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("set-box")).not.toBeInTheDocument()
     })
 
     it("hides the Times row while Repeat is off", () => {

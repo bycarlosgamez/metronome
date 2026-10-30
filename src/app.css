@@ -343,7 +343,22 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border-bottom: 1px solid var(--line);
 }
 .routine-section:last-child { border-bottom: none; }
-.routine-section--set  { background: var(--surface); }
+/* Round and Set: each a bordered box; a Repeat switch opens a darker panel with the settings it controls */
+.routine-box {
+  margin: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--surface-high);
+  border-radius: var(--radius-field);
+  background: var(--surface);
+}
+.routine-box .routine-row:last-child { margin-bottom: 0; }
+.routine-repeat-row { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.repeat-panel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-sunk);
+}
 .routine-section-title {
   font-size: 10px;
   font-weight: 700;

@@ -228,47 +228,9 @@ export function PlayerCard(props: {
             </div>
           </div>
 
-          <div className="routine-section">
+          {/* Each section is a bordered box; settings a Repeat switch controls open in a panel under it */}
+          <div className="routine-box" data-testid="round-box">
             <div className="routine-section-title">Round</div>
-            <div className="routine-row">
-              <span className="routine-row-label">Repeat</span>
-              <div className="routine-row-controls">
-                <button type="button" role="switch" className="switch" aria-label="Round repeat" aria-checked={round.enabled}
-                  onClick={() => setRoutine({
-                    round: { ...round, enabled: !round.enabled },
-                    set: round.enabled ? { ...set, enabled: false } : set,
-                    increase: round.enabled && increase.mode === "round" ? { ...increase, mode: "off" } : increase,
-                  })} />
-              </div>
-            </div>
-            {round.enabled && (
-              <div className="routine-row">
-                <span className="routine-row-label">Times</span>
-                <div className="routine-stepper">
-                  <button type="button" aria-label="Decrease round count"
-                    onClick={() => setRoutine({ round: { ...round, count: Math.max(2, round.count - 1) } })}>−</button>
-                  <span className="routine-stepper-val">{round.count}</span>
-                  <button type="button" aria-label="Increase round count"
-                    onClick={() => setRoutine({ round: { ...round, count: round.count + 1 } })}>+</button>
-                </div>
-              </div>
-            )}
-            {round.enabled && (
-              <div className="routine-row">
-                <span className="routine-row-label">Increase</span>
-                {/* +0 means no increase; each round plays this many BPM faster than the one before */}
-                <div className="routine-stepper">
-                  <button type="button" aria-label="Decrease round increase"
-                    onClick={() => {
-                      if (roundStep === 0) return
-                      setRoutine({ increase: roundStep === 1 ? { ...increase, mode: "off" } : { mode: "round", roundStep: roundStep - 1 } })
-                    }}>−</button>
-                  <span className="routine-stepper-val" data-testid="round-step">+{roundStep}</span>
-                  <button type="button" aria-label="Increase round increase"
-                    onClick={() => setRoutine({ increase: { mode: "round", roundStep: roundStep + 1 } })}>+</button>
-                </div>
-              </div>
-            )}
             {([
               { key: "play", label: "Play", durationKey: "playDuration", min: 1 },
               { key: "rest", label: "Rest", durationKey: "restDuration", min: 0 },
@@ -290,32 +252,69 @@ export function PlayerCard(props: {
                 </div>
               )
             })}
-          </div>
-
-          {round.enabled && (
-            <div className="routine-section routine-section--set">
-              <div className="routine-section-title">Set</div>
-              <div className="routine-row">
-                <span className="routine-row-label">Rest between</span>
-                <TimeInput label="Set rest" value={set.restDuration}
-                  onCommit={(seconds) => setRoutine({ set: { ...set, restDuration: seconds } })} />
-              </div>
-              <div className="routine-row">
-                <span className="routine-row-label">Repeat</span>
-                <div className="routine-row-controls">
-                  <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
-                    onClick={() => setRoutine({ set: { ...set, enabled: !set.enabled } })} />
-                </div>
-              </div>
-              {set.enabled && (
+            <div className="routine-row routine-repeat-row">
+              <span className="routine-row-label">Repeat</span>
+              <button type="button" role="switch" className="switch" aria-label="Round repeat" aria-checked={round.enabled}
+                onClick={() => setRoutine({
+                  round: { ...round, enabled: !round.enabled },
+                  set: round.enabled ? { ...set, enabled: false } : set,
+                  increase: round.enabled && increase.mode === "round" ? { ...increase, mode: "off" } : increase,
+                })} />
+            </div>
+            {round.enabled && (
+              <div className="repeat-panel" data-testid="round-repeat-panel">
                 <div className="routine-row">
                   <span className="routine-row-label">Times</span>
                   <div className="routine-stepper">
-                    <button type="button" aria-label="Decrease set count"
-                      onClick={() => setRoutine({ set: { ...set, count: Math.max(2, set.count - 1) } })}>−</button>
-                    <span className="routine-stepper-val">{set.count}</span>
-                    <button type="button" aria-label="Increase set count"
-                      onClick={() => setRoutine({ set: { ...set, count: set.count + 1 } })}>+</button>
+                    <button type="button" aria-label="Decrease round count"
+                      onClick={() => setRoutine({ round: { ...round, count: Math.max(2, round.count - 1) } })}>−</button>
+                    <span className="routine-stepper-val">{round.count}</span>
+                    <button type="button" aria-label="Increase round count"
+                      onClick={() => setRoutine({ round: { ...round, count: round.count + 1 } })}>+</button>
+                  </div>
+                </div>
+                <div className="routine-row">
+                  <span className="routine-row-label">Increase</span>
+                  {/* +0 means no increase; each round plays this many BPM faster than the one before */}
+                  <div className="routine-stepper">
+                    <button type="button" aria-label="Decrease round increase"
+                      onClick={() => {
+                        if (roundStep === 0) return
+                        setRoutine({ increase: roundStep === 1 ? { ...increase, mode: "off" } : { mode: "round", roundStep: roundStep - 1 } })
+                      }}>−</button>
+                    <span className="routine-stepper-val" data-testid="round-step">+{roundStep}</span>
+                    <button type="button" aria-label="Increase round increase"
+                      onClick={() => setRoutine({ increase: { mode: "round", roundStep: roundStep + 1 } })}>+</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {round.enabled && (
+            <div className="routine-box" data-testid="set-box">
+              <div className="routine-section-title">Set</div>
+              <div className="routine-row routine-repeat-row">
+                <span className="routine-row-label">Repeat</span>
+                <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
+                  onClick={() => setRoutine({ set: { ...set, enabled: !set.enabled } })} />
+              </div>
+              {set.enabled && (
+                <div className="repeat-panel" data-testid="set-repeat-panel">
+                  <div className="routine-row">
+                    <span className="routine-row-label">Times</span>
+                    <div className="routine-stepper">
+                      <button type="button" aria-label="Decrease set count"
+                        onClick={() => setRoutine({ set: { ...set, count: Math.max(2, set.count - 1) } })}>−</button>
+                      <span className="routine-stepper-val">{set.count}</span>
+                      <button type="button" aria-label="Increase set count"
+                        onClick={() => setRoutine({ set: { ...set, count: set.count + 1 } })}>+</button>
+                    </div>
+                  </div>
+                  <div className="routine-row">
+                    <span className="routine-row-label">Rest between</span>
+                    <TimeInput label="Set rest" value={set.restDuration}
+                      onCommit={(seconds) => setRoutine({ set: { ...set, restDuration: seconds } })} />
                   </div>
                 </div>
               )}
