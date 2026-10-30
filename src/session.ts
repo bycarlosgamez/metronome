@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutineIncrease, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Practice, type RepeatLevel, type RoutineIncrease, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -37,8 +37,8 @@ export function freshTime(): TimePattern {
   return {
     seconds: 120,
     targetBpm: 120,
-    increaseEvery: "off",
-    everySec: 30,
+    everyUnit: "bars",
+    everySec: 120,
     everyBars: 4,
   }
 }
@@ -96,10 +96,22 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
   return {
     seconds: Math.max(1, integer(base.seconds)),
     targetBpm: clampBpm(base.targetBpm ?? 120),
-    increaseEvery: base.increaseEvery === "bars" ? "bars" : base.increaseEvery === ("time" as string) ? "bars" : "off",
+    everyUnit: base.everyUnit === "sec" ? "sec" : "bars",
     everySec: Math.max(1, integer(base.everySec)),
     everyBars: Math.max(1, integer(base.everyBars)),
   }
+}
+
+const PRACTICES: readonly Practice[] = ["steady", "climb", "routine"]
+
+// Switch how to practice. Entering Climb with no step fills Climb's defaults so it never plays like Steady by surprise.
+export function choosePractice(session: Session, practice: Practice): Session {
+  const next = { ...session, practice }
+  if (practice === "climb" && session.bpmIncrease === 0) {
+    next.bpmIncrease = 5
+    next.time = { ...session.time, targetBpm: 120, everyUnit: "bars", everyBars: 4 }
+  }
+  return clampSession(next)
 }
 
 export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
@@ -117,21 +129,12 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
     const bpm = Math.min(targetBpm, startBpm + increase * index)
     steps.push({ atSec: at, bpm })
     if (bpm >= targetBpm) break
-    const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
+    const window = pattern.everyUnit === "sec" ? pattern.everySec : pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
     if (!(window > 0)) break
     at += window
     index += 1
   }
   return steps
-}
-
-export function timeDurationSec(session: Session): number {
-  const pattern = clampTime(session.time)
-  if (pattern.increaseEvery === "off") return Number.POSITIVE_INFINITY
-  const steps = timeSteps(session)
-  const lastStep = steps[steps.length - 1]
-  const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / lastStep.bpm
-  return Math.max(1, Math.round(lastStep.atSec + window))
 }
 
 function clampComplex(pattern: ComplexPattern | undefined): ComplexPattern {
@@ -186,7 +189,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     complex: freshComplex(),
     time: freshTime(),
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
-    routineEnabled: false,
+    practice: "steady",
     routine: freshRoutine(),
     countIn: false,
     accent: true,
@@ -302,17 +305,17 @@ export function clampSession(session: Session): Session {
   const click = CLICKS.includes(session.click) ? session.click : "click-1"
   const meter = clampMeter(session.meter)
 
-  // Migrate legacy time sessions → simple + routineEnabled
-  let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
-  let routineEnabled = Boolean(session.routineEnabled)
-  let routine = clampRoutine(session.routine as unknown, session.bpmIncrease)
-
-  if (session.type === "time") {
-    type = "simple"
-    routineEnabled = true
-    const everyBars = Math.max(1, integer(session.time?.everyBars ?? 4))
-    routine = clampRoutine({ ...freshRoutine(), unit: "bars", playDuration: everyBars }, 0)
-  }
+  const type: Session["type"] = session.type === "complex" ? "complex" : "simple"
+  const time = clampTime(session.time)
+  // Saves from before practice existed: legacy time sessions were climbs, routineEnabled meant Routine,
+  // and Simple's time.increaseEvery "bars" (or older "time") meant Climb
+  const legacy = session as Session & { routineEnabled?: unknown; time?: { increaseEvery?: string } }
+  const practice: Practice = session.type === "time" ? "climb"
+    : PRACTICES.includes(session.practice) ? session.practice
+    : legacy.routineEnabled ? "routine"
+    : legacy.time?.increaseEvery === "bars" || legacy.time?.increaseEvery === "time" ? "climb"
+    : "steady"
+  if (session.type === "time") time.everyUnit = "bars"
 
   return {
     name: session.name ?? "",
@@ -326,10 +329,10 @@ export function clampSession(session: Session): Session {
     type,
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
-    time: clampTime(session.time),
+    time,
     cycles,
-    routineEnabled,
-    routine,
+    practice,
+    routine: clampRoutine(session.routine as unknown, session.bpmIncrease),
     countIn: Boolean(session.countIn ?? false),
     accent: session.accent !== false,
   }
@@ -416,7 +419,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
       restSec: play.restSec,
       ...(play.bpm === firstBpm ? {} : { bpm: play.bpm }),
     })),
-    routineEnabled: false,
+    practice: "steady",
     routine: freshRoutine(),
     countIn: Boolean(legacy.countIn ?? false),
     accent: true,

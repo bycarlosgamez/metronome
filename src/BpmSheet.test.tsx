@@ -9,7 +9,7 @@ function setup(increase: Partial<RoutineIncrease> = {}, routine: Partial<Routine
   const base = createDefaultSession(() => "s1")
   const session: Session = {
     ...base,
-    routineEnabled,
+    practice: routineEnabled ? "routine" : "steady",
     routine: { ...base.routine, ...routine, increase: { ...base.routine.increase, ...increase } },
   }
   const onChange = vi.fn()
@@ -21,7 +21,7 @@ describe("BpmSheet", () => {
   it("Simple keeps its own card bound to Simple's settings", async () => {
     const { user, last } = setup({}, {}, false)
     await user.click(screen.getByRole("button", { name: "On" }))
-    expect(last().time.increaseEvery).toBe("bars")
+    expect(last().practice).toBe("climb")
     expect(screen.queryByLabelText(/Every/)).not.toBeInTheDocument()
   })
 })

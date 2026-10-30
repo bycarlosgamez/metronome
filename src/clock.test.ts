@@ -28,7 +28,7 @@ describe("clock", () => {
 
   it("reports no beat during a rest", () => {
     const session = createDefaultSession(() => "set-1")
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const restIndex = segments.findIndex((segment) => segment.kind === "rest")
@@ -39,7 +39,7 @@ describe("clock", () => {
   it("places four accented-on-one count-in clicks and no rest clicks", () => {
     const session = createDefaultSession(() => "set-1")
     session.countIn = true
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const countIn = clicksInSegment(segments[0])
@@ -88,7 +88,7 @@ describe("clock", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 80
     session.meter = "4/4"
-    session.time.increaseEvery = "bars"
+    session.practice = "climb"
     session.beats = uniform("eighth", ["click-1", "click-1"])
     const segments = expandSession(session)
 
@@ -119,7 +119,7 @@ describe("clock", () => {
   it("splits one beat into five quintuplet clicks", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.bpm = 60
-    session.time.increaseEvery = "bars"
+    session.practice = "climb"
     session.beats = uniform("quintuplet", ["click-1", "click-1", "click-1", "click-1", "click-1"])
     const segments = expandSession(session)
     const play = segments.find((segment) => segment.kind === "play")!

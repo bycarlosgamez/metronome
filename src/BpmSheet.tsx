@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { clampBpm, clampSession } from "./session"
+import { choosePractice, clampBpm, clampSession } from "./session"
 import type { Session } from "./types"
 
 export function BpmSheet(props: {
@@ -56,11 +56,13 @@ export function BpmSheet(props: {
   }
 
   function chooseMode(mode: "off" | "bars") {
-    props.onChange(clampSession({ ...props.session, time: { ...props.session.time, increaseEvery: mode } }))
+    props.onChange(choosePractice(props.session, mode === "off" ? "steady" : "climb"))
   }
 
-  const { routineEnabled, bpm, bpmIncrease } = props.session
-  const { increaseEvery, targetBpm } = props.session.time
+  const { bpm, bpmIncrease, practice } = props.session
+  const routineEnabled = practice === "routine"
+  const increaseEvery = practice === "climb" ? "bars" : "off"
+  const { targetBpm } = props.session.time
 
   return (
     <div

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   sharedSubdivision,
+  choosePractice,
   clampSession,
   createDefaultSession,
   cycleGroupFromSimple,
@@ -14,7 +15,6 @@ import {
   migrateLegacy,
   sessionTitle,
   simplePlayedBpm,
-  timeDurationSec,
   timeSteps,
 } from "./session"
 import type { Session } from "./types"
@@ -35,7 +35,7 @@ describe("session", () => {
       complex: freshComplex(),
       time: freshTime(),
       cycles: [{ id: "cycle-1", length: { unit: "time", seconds: 120 }, restSec: 30 }],
-      routineEnabled: false,
+      practice: "steady",
       routine: freshRoutine(),
       countIn: false,
       accent: true,
@@ -55,8 +55,8 @@ describe("session", () => {
     expect(freshTime()).toEqual({
       seconds: 120,
       targetBpm: 120,
-      increaseEvery: "off",
-      everySec: 30,
+      everyUnit: "bars",
+      everySec: 120,
       everyBars: 4,
     })
   })
@@ -72,31 +72,11 @@ describe("session", () => {
     })
   })
 
-  it("migrates a saved time session to a routine with no increase", () => {
-    const session = createDefaultSession(() => "cycle-1")
-    session.type = "time" as Session["type"]
-    session.bpm = 80
-    session.bpmIncrease = 10
-    session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
-    const clamped = clampSession(session)
-    expect(clamped.type).toBe("simple")
-    expect(clamped.routineEnabled).toBe(true)
-    expect(clamped.routine.unit).toBe("bars")
-    expect(clamped.routine.round.enabled).toBe(false)
-    expect(clamped.routine.increase).toEqual({ mode: "off", roundStep: 5 })
-  })
 
-  it("keeps a migrated time session's length of everyBars", () => {
-    const session = createDefaultSession(() => "cycle-1")
-    session.type = "time" as Session["type"]
-    session.bpmIncrease = 0
-    session.time = { seconds: 120, targetBpm: 100, increaseEvery: "off", everySec: 30, everyBars: 8 }
-    expect(clampSession(session).routine.playDuration).toBe(8)
-  })
 
   it("clampSession falls back to freshRoutine defaults when routine has old shape", () => {
     const session = createDefaultSession(() => "s1")
-    session.routineEnabled = true
+    session.practice = "routine"
     // Old shape — TypeScript cast needed since type changed
     ;(session as any).routine = { barsPerLevel: 8, numLevels: 4, repeatCount: 3, restAfterSec: 10, loop: false }
     const clamped = clampSession(session)
@@ -107,7 +87,7 @@ describe("session", () => {
 
   it("clampSession enforces minimums on RepeatLevel fields", () => {
     const session = createDefaultSession(() => "s1")
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = {
       unit: "sec",
       playDuration: 0,
@@ -129,7 +109,7 @@ describe("session", () => {
     // time field still gets clamped regardless
     session.time = freshTime()
     session.type = "time" as Session["type"]
-    session.time.increaseEvery = "nope" as "off"
+    session.time.everyUnit = "nope" as "bars"
     session.time.seconds = 0
     session.time.everySec = 0
     session.time.everyBars = 0
@@ -137,19 +117,13 @@ describe("session", () => {
     expect(clamped.time).toEqual({
       seconds: 1,
       targetBpm: 120,
-      increaseEvery: "off",
+      everyUnit: "bars",
       everySec: 1,
       everyBars: 1,
     })
     // type migrates to simple
     expect(clamped.type).toBe("simple")
-    expect(clamped.routineEnabled).toBe(true)
-
-    // "time" as string legacy value in increaseEvery stays internal to clampTime
-    session.time.increaseEvery = "time" as "bars"
-    expect(clampSession(session).time.increaseEvery).toBe("bars")
-    session.time.increaseEvery = "bars"
-    expect(clampSession(session).time.increaseEvery).toBe("bars")
+    expect(clamped.practice).toBe("climb")
 
     // unknown type falls back to simple
     session.type = "nope" as "simple"
@@ -320,20 +294,12 @@ describe("session", () => {
   })
 
   describe("timeSteps", () => {
-    it("returns single step when increase is off", () => {
-      const session = createDefaultSession()
-      session.bpm = 80
-      session.bpmIncrease = 0
-      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "off", everySec: 30, everyBars: 4 }
-      const steps = timeSteps(session)
-      expect(steps).toEqual([{ atSec: 0, bpm: 80 }])
-    })
 
     it("returns single step when bpmIncrease is 0", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 0
-      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps).toEqual([{ atSec: 0, bpm: 80 }])
     })
@@ -342,7 +308,7 @@ describe("session", () => {
       const session = createDefaultSession()
       session.bpm = 120
       session.bpmIncrease = 5
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 100, everyUnit: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps).toEqual([{ atSec: 0, bpm: 120 }])
     })
@@ -352,7 +318,7 @@ describe("session", () => {
       session.bpm = 80
       session.bpmIncrease = 10
       session.meter = "4/4"
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 100, everyUnit: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       // window at 80bpm = 4*4*60/80 = 12s; window at 90bpm = 4*4*60/90 ≈ 10.67s
       expect(steps).toHaveLength(3)
@@ -366,30 +332,12 @@ describe("session", () => {
       const session = createDefaultSession()
       session.bpm = 80
       session.bpmIncrease = 15
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+      session.time = { seconds: 120, targetBpm: 100, everyUnit: "bars", everySec: 30, everyBars: 4 }
       const steps = timeSteps(session)
       expect(steps[steps.length - 1].bpm).toBe(100)
     })
   })
 
-  describe("timeDurationSec", () => {
-    it("returns POSITIVE_INFINITY when increaseEvery is off", () => {
-      const session = createDefaultSession()
-      session.time = { seconds: 120, targetBpm: 120, increaseEvery: "off", everySec: 30, everyBars: 4 }
-      expect(timeDurationSec(session)).toBe(Number.POSITIVE_INFINITY)
-    })
-
-    it("returns last step atSec plus one window", () => {
-      const session = createDefaultSession()
-      session.bpm = 80
-      session.bpmIncrease = 10
-      session.meter = "4/4"
-      session.time = { seconds: 120, targetBpm: 100, increaseEvery: "bars", everySec: 30, everyBars: 4 }
-      // window at 80bpm = 12s, at 90bpm ≈ 10.67s, final window at 100bpm = 9.6s
-      // steps: [80@0, 90@12, 100@~22.67], duration = round(~22.67 + 9.6) = 32
-      expect(timeDurationSec(session)).toBe(32)
-    })
-  })
 
   it("keeps a known time signature and rejects an unknown bottom number", () => {
     const session = createDefaultSession(() => "cycle-1")
@@ -471,7 +419,7 @@ describe("session", () => {
 describe("routine increase", () => {
   function withRoutine(routine: Record<string, unknown>, bpmIncrease = 0): Session {
     const session = createDefaultSession(() => "s1")
-    session.routineEnabled = true
+    session.practice = "routine"
     session.bpmIncrease = bpmIncrease
     ;(session as { routine: unknown }).routine = routine
     return session
@@ -521,5 +469,61 @@ describe("routine increase", () => {
     expect(clampSession(block).routine.increase.mode).toBe("off")
     const off = withRoutine({ ...legacy, bpmIncreaseAt: "off" }, 5)
     expect(clampSession(off).routine.increase.mode).toBe("off")
+  })
+})
+
+describe("practice", () => {
+  // Saved sessions from before practice existed: routineEnabled and time.increaseEvery decide it
+  function legacy(over: Record<string, unknown>): Session {
+    const { practice: _practice, ...base } = createDefaultSession(() => "s1")
+    void _practice
+    return { ...base, ...over } as unknown as Session
+  }
+
+  it("defaults to Steady with Climb every 4 bars or 2:00", () => {
+    const session = createDefaultSession()
+    expect(session.practice).toBe("steady")
+    expect(session.time.everyUnit).toBe("bars")
+    expect(session.time.everySec).toBe(120)
+  })
+
+  it("loads Simple with an increase as Climb and without as Steady", () => {
+    const base = createDefaultSession(() => "s1")
+    expect(clampSession(legacy({ time: { ...base.time, increaseEvery: "bars" } })).practice).toBe("climb")
+    expect(clampSession(legacy({ time: { ...base.time, increaseEvery: "off" } })).practice).toBe("steady")
+  })
+
+  it("loads routineEnabled as Routine and an unknown practice as Steady", () => {
+    expect(clampSession(legacy({ routineEnabled: true })).practice).toBe("routine")
+    expect(clampSession({ ...createDefaultSession(), practice: "bogus" as Session["practice"] }).practice).toBe("steady")
+  })
+
+  it("loads an old time session as Climb in bars, keeping target, step and bars", () => {
+    const base = createDefaultSession(() => "s1")
+    const clamped = clampSession(legacy({ type: "time", bpm: 80, bpmIncrease: 5, time: { ...base.time, targetBpm: 120, everyBars: 8 } }))
+    expect(clamped.practice).toBe("climb")
+    expect(clamped.time).toMatchObject({ everyUnit: "bars", everyBars: 8, targetBpm: 120 })
+    expect(clamped.bpmIncrease).toBe(5)
+  })
+
+  it("fills Climb defaults when entering Climb with no step", () => {
+    const next = choosePractice({ ...createDefaultSession(), bpmIncrease: 0 }, "climb")
+    expect(next.practice).toBe("climb")
+    expect(next.bpmIncrease).toBe(5)
+    expect(next.time).toMatchObject({ targetBpm: 120, everyBars: 4, everyUnit: "bars" })
+  })
+
+  it("keeps Climb settings that are already set", () => {
+    const base = createDefaultSession()
+    const next = choosePractice({ ...base, bpmIncrease: 3, time: { ...base.time, targetBpm: 140 } }, "climb")
+    expect(next.bpmIncrease).toBe(3)
+    expect(next.time.targetBpm).toBe(140)
+  })
+
+  it("leaves Climb settings alone when switching to Routine", () => {
+    const base = createDefaultSession()
+    const next = choosePractice({ ...base, practice: "climb", bpmIncrease: 3 }, "routine")
+    expect(next.practice).toBe("routine")
+    expect(next.bpmIncrease).toBe(3)
   })
 })

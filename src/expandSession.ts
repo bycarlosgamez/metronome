@@ -31,7 +31,7 @@ type Resolved = {
 }
 
 function resolved(session: Session): Resolved[] {
-  if (session.routineEnabled) {
+  if (session.practice === "routine") {
     const { unit, playDuration, restDuration, round, set, increase } = session.routine
     const items: Resolved[] = []
     const setPasses   = set.enabled   ? set.count   : 1
@@ -63,8 +63,8 @@ function resolved(session: Session): Resolved[] {
     }
     return items
   }
-  // Simple mode: one endless stretch; an active increase ramps up to the target and holds there.
-  const steps = session.time.increaseEvery === "off" ? [{ atSec: 0, bpm: session.bpm }] : timeSteps(session)
+  // Steady and Climb: one endless stretch; Climb ramps up to the target and holds there.
+  const steps = session.practice === "climb" ? timeSteps(session) : [{ atSec: 0, bpm: session.bpm }]
   return [{
     id: "simple",
     bpm: steps[0].bpm,

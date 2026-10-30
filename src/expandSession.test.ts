@@ -3,7 +3,29 @@ import { expandSession } from "./expandSession"
 import { createDefaultSession, freshRoutine } from "./session"
 import type { RoutineIncrease, Session } from "./types"
 
-describe("expandSession (Simple mode)", () => {
+describe("expandSession (Steady and Climb)", () => {
+  function climb(bpm: number, step: number, time: Partial<Session["time"]>): Session {
+    const base = createDefaultSession(() => "s1")
+    return { ...base, practice: "climb", bpm, bpmIncrease: step, time: { ...base.time, ...time } }
+  }
+
+  it("Steady plays one endless step at BPM, ignoring the step", () => {
+    const session = { ...createDefaultSession(() => "s1"), practice: "steady" as const, bpmIncrease: 5 }
+    const [play] = expandSession(session)
+    expect(play.steps).toEqual([{ atSec: 0, bpm: 80 }])
+    expect(play.durationSec).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it("Climb in minutes steps every everySec up to the target", () => {
+    const [play] = expandSession(climb(110, 5, { targetBpm: 125, everyUnit: "sec", everySec: 120 }))
+    expect(play.steps).toEqual([{ atSec: 0, bpm: 110 }, { atSec: 120, bpm: 115 }, { atSec: 240, bpm: 120 }, { atSec: 360, bpm: 125 }])
+  })
+
+  it("Climb with Start above Target is one step at Start", () => {
+    const [play] = expandSession(climb(130, 5, { targetBpm: 120, everyUnit: "sec", everySec: 120 }))
+    expect(play.steps).toEqual([{ atSec: 0, bpm: 130 }])
+  })
+
   it("produces no count-in by default (countIn defaults to false)", () => {
     const session = createDefaultSession(() => "s1")
     const segments = expandSession(session)
@@ -30,7 +52,8 @@ describe("expandSession (Simple mode)", () => {
   it("ignores the step amount while the increase is Off", () => {
     const session = createDefaultSession(() => "s1")
     session.bpmIncrease = 10
-    session.time = { ...session.time, increaseEvery: "off", targetBpm: 120 }
+    session.practice = "steady"
+    session.time = { ...session.time, targetBpm: 120 }
     expect(expandSession(session)[0].steps).toEqual([{ atSec: 0, bpm: 80 }])
   })
 
@@ -38,7 +61,8 @@ describe("expandSession (Simple mode)", () => {
     const session = createDefaultSession(() => "s1")
     session.bpm = 80
     session.bpmIncrease = 10
-    session.time = { ...session.time, increaseEvery: "bars", everyBars: 4, targetBpm: 100 }
+    session.practice = "climb"
+    session.time = { ...session.time, everyBars: 4, targetBpm: 100 }
     const segments = expandSession(session)
     expect(segments).toHaveLength(1)
     expect(segments[0].durationSec).toBe(Number.POSITIVE_INFINITY)
@@ -61,7 +85,7 @@ describe("expandSession (Simple mode)", () => {
 describe("routine", () => {
   function makeRoutineSession() {
     const session = createDefaultSession()
-    session.routineEnabled = true
+    session.practice = "routine"
     session.bpm = 80
     session.bpmIncrease = 5
     session.meter = "4/4"

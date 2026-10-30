@@ -55,7 +55,7 @@ describe("App", () => {
 
   it("starts again from the beginning when Play is pressed at the end", async () => {
     const session = createDefaultSession(() => "cycle-1")
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 1 }
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
@@ -176,7 +176,7 @@ describe("App", () => {
     const saved = createDefaultSession(() => "cycle-1")
     saved.bpm = bpm
     saved.countIn = true
-    saved.routineEnabled = true
+    saved.practice = "routine"
     saved.routine = { ...saved.routine, unit: "sec", playDuration: 120 }
     const play = expandSession(saved).find((segment) => segment.kind === "play")!
     const marks = clicksInSegment(play)
@@ -213,7 +213,7 @@ describe("App", () => {
     session.meter = "4/4"
     session.bpm = 80
     session.bpmIncrease = 5
-    session.time = { seconds: 180, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 180, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 }
     session.countIn = true
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)

@@ -51,13 +51,16 @@ export type ComplexPattern = {
   restBetweenSec: number
 }
 
+// Climb's settings (the step is session.bpmIncrease)
 export type TimePattern = {
   seconds: number
   targetBpm: number
-  increaseEvery: "off" | "bars"
+  everyUnit: "bars" | "sec"   // what Every counts; shown as Bars | Min
   everySec: number
   everyBars: number
 }
+
+export type Practice = "steady" | "climb" | "routine"
 
 export type RepeatLevel = {
   enabled: boolean
@@ -93,8 +96,8 @@ export type Session = {
   complex: ComplexPattern
   time: TimePattern
   cycles: Cycle[]
-  routineEnabled: boolean      // NEW
-  routine: RoutinePattern      // NEW
+  practice: Practice
+  routine: RoutinePattern
   countIn: boolean
   accent: boolean // beat 1 plays the accent tone
 }

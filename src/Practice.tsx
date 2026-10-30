@@ -2,7 +2,7 @@ import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
-import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
+import { choosePractice, clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { ClickSheet } from "./ClickSheet"
@@ -78,7 +78,8 @@ export function Practice(props: {
   const activeSubSlot = isPlaying ? Math.floor(posInBeat / subDur) : -1
 
   // Routine state
-  const { routineEnabled, routine } = props.session
+  const { routine } = props.session
+  const routineEnabled = props.session.practice === "routine"
   const { round, set, increase } = routine
   const roundPasses = round.enabled ? round.count : 1
   const setPasses   = set.enabled   ? set.count   : 1
@@ -141,7 +142,7 @@ export function Practice(props: {
 
   function switchMode(enable: boolean) {
     if (enable === routineEnabled) return
-    props.onChange(clampSession({ ...props.session, routineEnabled: enable }))
+    props.onChange(choosePractice(props.session, enable ? "routine" : "steady"))
     if (isPlaying) props.onReset()
   }
 
@@ -223,7 +224,7 @@ export function Practice(props: {
                   <span className="bpm-field-label">Now</span>
                 </div>
               )}
-              {!routineEnabled && props.session.time.increaseEvery !== "off" && (
+              {props.session.practice === "climb" && (
                 <div className="bpm-right">
                   <div className="bpm-target-group">
                     <span className="bpm-field-label">Target</span>
