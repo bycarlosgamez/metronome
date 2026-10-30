@@ -50,18 +50,16 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    increase: { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 },
+    increase: { mode: "off", roundStep: 5 },
   }
 }
 
 function clampIncrease(increase: unknown): RoutineIncrease {
   const fresh = freshRoutine().increase
-  const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
+  // Saves may still carry the removed Increase to target fields (step, targetBpm, every); a "target" mode loads as Off
+  const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease> & { step?: number }
   return {
-    mode: base.mode === "round" || base.mode === "target" ? base.mode : "off",
-    step: Math.max(0, integer(base.step ?? fresh.step)),
-    targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
-    every: Math.max(1, integer(base.every ?? fresh.every)),
+    mode: base.mode === "round" ? "round" : "off",
     // Per round saves from before roundStep existed kept their step in step
     roundStep: Math.max(1, integer(base.roundStep ?? (base.mode === "round" ? base.step : undefined) ?? fresh.roundStep)),
   }
@@ -125,26 +123,6 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
     index += 1
   }
   return steps
-}
-
-// One To target play: Start, Start+step, … capped at the target; each BPM lasts one window, the target included.
-export function routineClimb(session: Session): { steps: { atSec: number; bpm: number }[]; durationSec: number } {
-  const { unit, increase } = session.routine
-  const start = clampBpm(session.bpm)
-  const target = clampBpm(increase.targetBpm)
-  const step = Math.max(0, integer(increase.step))
-  const every = Math.max(1, integer(increase.every))
-  const windowSec = (bpm: number) => unit === "sec" ? every : every * beatsInMeter(session.meter) * 60 / bpm
-  const steps: { atSec: number; bpm: number }[] = []
-  let at = 0
-  let bpm = start
-  while (true) {
-    steps.push({ atSec: at, bpm })
-    at += windowSec(bpm)
-    if (step === 0 || bpm >= target) break
-    bpm = Math.min(target, bpm + step)
-  }
-  return { steps, durationSec: at }
 }
 
 export function timeDurationSec(session: Session): number {
@@ -333,22 +311,7 @@ export function clampSession(session: Session): Session {
     type = "simple"
     routineEnabled = true
     const everyBars = Math.max(1, integer(session.time?.everyBars ?? 4))
-    const startBpm = clampBpm(session.bpm)
-    const targetBpm = clampBpm(session.time?.targetBpm ?? 120)
-    const step = Math.max(0, integer(session.bpmIncrease))
-    const fresh = freshRoutine()
-    routine = clampRoutine({
-      ...fresh,
-      unit: "bars",
-      playDuration: everyBars,
-      increase: {
-        ...fresh.increase,
-        mode: step > 0 && targetBpm > startBpm ? "target" : "off",
-        step,
-        targetBpm,
-        every: everyBars,
-      },
-    }, step)
+    routine = clampRoutine({ ...freshRoutine(), unit: "bars", playDuration: everyBars }, 0)
   }
 
   return {

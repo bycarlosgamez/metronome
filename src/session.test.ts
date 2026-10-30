@@ -68,11 +68,11 @@ describe("session", () => {
       restDuration: 0,
       round:  { enabled: false, count: 4, restDuration: 0 },
       set:    { enabled: false, count: 3, restDuration: 30 },
-      increase: { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 },
+      increase: { mode: "off", roundStep: 5 },
     })
   })
 
-  it("migrates a saved time session to a To target routine", () => {
+  it("migrates a saved time session to a routine with no increase", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time" as Session["type"]
     session.bpm = 80
@@ -83,10 +83,7 @@ describe("session", () => {
     expect(clamped.routineEnabled).toBe(true)
     expect(clamped.routine.unit).toBe("bars")
     expect(clamped.routine.round.enabled).toBe(false)
-    expect(clamped.routine.increase).toMatchObject({ mode: "target", step: 10, targetBpm: 100, every: 4 })
-
-    session.bpmIncrease = 0
-    expect(clampSession(session).routine.increase.mode).toBe("off")
+    expect(clamped.routine.increase).toEqual({ mode: "off", roundStep: 5 })
   })
 
   it("keeps a migrated time session's length of everyBars", () => {
@@ -479,20 +476,23 @@ describe("routine increase", () => {
     ;(session as { routine: unknown }).routine = routine
     return session
   }
-  const defaults = { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 }
+  const defaults = { mode: "off", roundStep: 5 }
 
-  it("defaults to Off with step 5, target 120, every 4, round step 5", () => {
+  it("defaults to Off with round step 5", () => {
     expect(freshRoutine().increase).toEqual(defaults)
   })
 
   it("clamps out-of-range and unknown values", () => {
     const session = withRoutine({
       ...freshRoutine(),
-      increase: { mode: "bogus", step: -3, targetBpm: 999, every: 0, roundStep: 0 },
+      increase: { mode: "bogus", roundStep: 0 },
     })
-    expect(clampSession(session).routine.increase).toEqual({
-      mode: "off", step: 0, targetBpm: 300, every: 1, roundStep: 1,
-    })
+    expect(clampSession(session).routine.increase).toEqual({ mode: "off", roundStep: 1 })
+  })
+
+  it("loads a routine saved with Increase to target as no increase", () => {
+    const session = withRoutine({ ...freshRoutine(), increase: { mode: "target", step: 4, targetBpm: 125, every: 30 } })
+    expect(clampSession(session).routine.increase).toEqual({ mode: "off", roundStep: 5 })
   })
 
   it("keeps a per-round increase and its round step", () => {
@@ -502,7 +502,7 @@ describe("routine increase", () => {
 
   it("loads an older Per round save as a per-round increase using its step", () => {
     const session = withRoutine({ ...freshRoutine(), increase: { mode: "round", step: 7, nextSet: "keep", raiseBy: 3, targetBpm: 120, every: 4 } })
-    expect(clampSession(session).routine.increase).toEqual({ ...defaults, mode: "round", step: 7, roundStep: 7 })
+    expect(clampSession(session).routine.increase).toEqual({ mode: "round", roundStep: 7 })
   })
 
   it("loads legacy bpmIncreaseAt round as a per-round increase and set as no increase", () => {
@@ -521,10 +521,5 @@ describe("routine increase", () => {
     expect(clampSession(block).routine.increase.mode).toBe("off")
     const off = withRoutine({ ...legacy, bpmIncreaseAt: "off" }, 5)
     expect(clampSession(off).routine.increase.mode).toBe("off")
-  })
-
-  it("keeps an existing increase over a legacy bpmIncreaseAt", () => {
-    const session = withRoutine({ ...freshRoutine(), bpmIncreaseAt: "round", increase: { ...defaults, mode: "target" } }, 5)
-    expect(clampSession(session).routine.increase.mode).toBe("target")
   })
 })

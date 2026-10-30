@@ -1,4 +1,4 @@
-import { beatsInMeter, clampBpm, routineClimb, sessionTitle, timeSteps } from "./session"
+import { beatsInMeter, clampBpm, sessionTitle, timeSteps } from "./session"
 import type { BeatPattern, ClickId, Meter, Session, SetColor } from "./types"
 
 export type SegmentKind = "count-in" | "play" | "rest"
@@ -36,7 +36,6 @@ function resolved(session: Session): Resolved[] {
     const items: Resolved[] = []
     const setPasses   = set.enabled   ? set.count   : 1
     const roundPasses = round.enabled ? round.count : 1
-    const climb = increase.mode === "target" ? routineClimb(session) : null
     const barSec = (bars: number, bpm: number) => bars * beatsInMeter(session.meter) * 60 / bpm
 
     for (let s = 0; s < setPasses; s++) {
@@ -44,8 +43,8 @@ function resolved(session: Session): Resolved[] {
       for (let r = 0; r < roundPasses; r++) {
         const isLastRound = r === roundPasses - 1
         const bpm = clampBpm(increase.mode === "round" ? session.bpm + r * increase.roundStep : session.bpm)
-        const steps = climb ? climb.steps : [{ atSec: 0, bpm }]
-        const durationSec = climb ? climb.durationSec : unit === "bars" ? barSec(playDuration, bpm) : playDuration
+        const steps = [{ atSec: 0, bpm }]
+        const durationSec = unit === "bars" ? barSec(playDuration, bpm) : playDuration
         // A bars rest is measured at the BPM the play ended on
         const roundRestSec = unit === "bars" ? barSec(restDuration, steps[steps.length - 1].bpm) : restDuration
 

@@ -331,9 +331,10 @@ describe("Practice", () => {
     })
 
     it("keeps Start in the input and shows the playing BPM as Now", () => {
-      // 4 bars at 80 is 12s, so 13s is in the second window
+      // 4 bars at 80 is 12s, so 13s is in the second round
       const props = routineProps({
-        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+        round: { enabled: true, count: 2, restDuration: 0 },
+        increase: increase({ mode: "round", roundStep: 5 }),
       }, 13, "playing")
       render(<Practice {...props} />)
       expect(screen.getByTestId("bpm-current")).toHaveValue("80")
@@ -342,20 +343,20 @@ describe("Practice", () => {
     })
 
     it("shows the next play's BPM as Now during a rest", () => {
-      // Each play climbs 80 → 85 → 90 over 15s, then rests 5s; the next play restarts at 80
+      // Round 1 plays 10s at 80 then rests 5s; round 2 plays at 85
       const props = routineProps({
-        unit: "sec", restDuration: 5,
+        unit: "sec", playDuration: 10, restDuration: 5,
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "target", step: 5, targetBpm: 90, every: 5 }),
-      }, 17, "playing")
+        increase: increase({ mode: "round", roundStep: 5 }),
+      }, 12, "playing")
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
     })
 
     it("shows Start as Now when stopped", () => {
       const props = routineProps({
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+        increase: increase({ mode: "round", roundStep: 5 }),
       })
       render(<Practice {...props} />)
       expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
@@ -364,7 +365,7 @@ describe("Practice", () => {
     it("shows Start as Now after the routine has finished", () => {
       const props = routineProps({
         round: { enabled: true, count: 2, restDuration: 0 },
-        increase: increase({ mode: "target", step: 5, targetBpm: 90 }),
+        increase: increase({ mode: "round", roundStep: 5 }),
       })
       const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
       render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
@@ -377,30 +378,6 @@ describe("Practice", () => {
       expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
     })
 
-    it("To target shows the computed play length instead of a stepper", () => {
-      render(<Practice {...routineProps({ unit: "sec", playDuration: 60, increase: increase({ mode: "target", step: 4, targetBpm: 125, every: 30 }) })} />)
-      expect(screen.getByTestId("routine-play-computed")).toHaveTextContent("6:30")
-      expect(screen.queryByRole("textbox", { name: "Play minutes" })).not.toBeInTheDocument()
-    })
-
-    it("To target in Bars shows the computed length in bars", () => {
-      render(<Practice {...routineProps({ increase: increase({ mode: "target", step: 10, targetBpm: 90, every: 4 }) })} />)
-      expect(screen.getByTestId("routine-play-computed")).toHaveTextContent("8 bars")
-      expect(screen.queryByRole("button", { name: "Increase play duration" })).not.toBeInTheDocument()
-    })
-
-    it("switching Bars and Time resets Every to 30 sec or 4 bars", async () => {
-      const user = userEvent.setup()
-      const bars = routineProps({ increase: increase({ mode: "target", every: 4 }) })
-      const { unmount } = render(<Practice {...bars} />)
-      await user.click(screen.getByRole("button", { name: "Time" }))
-      expect(bars.onChange.mock.calls.at(-1)![0].routine.increase.every).toBe(30)
-      unmount()
-      const sec = routineProps({ unit: "sec", playDuration: 60, increase: increase({ mode: "target", every: 30 }) })
-      render(<Practice {...sec} />)
-      await user.click(screen.getByRole("button", { name: "Bars" }))
-      expect(sec.onChange.mock.calls.at(-1)![0].routine.increase.every).toBe(4)
-    })
   })
 
   it("progress shows Round label with count", () => {
@@ -718,8 +695,8 @@ describe("Practice", () => {
       expect(screen.queryByTestId("round-step")).not.toBeInTheDocument()
     })
 
-    it("turning it on switches to the per-round increase, replacing Increase to target", async () => {
-      const props = roundProps({}, { mode: "target" })
+    it("turning it on switches to the per-round increase", async () => {
+      const props = roundProps()
       render(<Practice {...props} />)
       await userEvent.setup().click(screen.getByRole("button", { name: "Toggle round increase" }))
       expect(last(props).routine.increase.mode).toBe("round")

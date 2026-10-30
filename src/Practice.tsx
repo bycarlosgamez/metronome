@@ -2,7 +2,7 @@ import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
-import { clampBpm, clampSession, routineClimb, sessionTitle, sharedSubdivision } from "./session"
+import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { BpmSheet } from "./BpmSheet"
 import { ClickSheet } from "./ClickSheet"
@@ -93,7 +93,6 @@ export function Practice(props: {
     : segment.kind === "rest"
     ? props.segments.slice(props.snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
     : currentBpm
-  const climb = routineEnabled && increase.mode === "target" ? routineClimb(props.session) : null
   const levelProgress = Number.isFinite(segment.durationSec) && segment.durationSec > 0
     ? Math.min(1, intoSec / segment.durationSec)
     : 0
@@ -349,8 +348,8 @@ export function Practice(props: {
                     onClick={() => {
                       if (routine.unit === u) return
                       const reset = u === "bars"
-                        ? { unit: u, playDuration: 4, restDuration: 0, increase: { ...increase, every: 4 } }
-                        : { unit: u, playDuration: 60, restDuration: 0, increase: { ...increase, every: 30 } }
+                        ? { unit: u, playDuration: 4, restDuration: 0 }
+                        : { unit: u, playDuration: 60, restDuration: 0 }
                       props.onChange(clampSession({ ...props.session, routine: { ...routine, ...reset } }))
                     }}>
                     {u === "bars" ? "Bars" : "Time"}
@@ -372,13 +371,7 @@ export function Practice(props: {
                 return (
                   <div className="routine-row" key={key}>
                     <span className="routine-row-label">{label}</span>
-                    {key === "play" && climb ? (
-                      <span className="routine-stepper-val" data-testid="routine-play-computed">
-                        {routine.unit === "bars"
-                          ? `${climb.steps.length * increase.every} bars`
-                          : formatClock(Math.round(climb.durationSec))}
-                      </span>
-                    ) : routine.unit === "bars" ? (
+                    {routine.unit === "bars" ? (
                       <div className="routine-stepper">
                         <button type="button" aria-label={`Decrease ${key} duration`} onClick={() => update(value - 1)}>−</button>
                         <span className="routine-stepper-val">{value} {value === 1 ? "bar" : "bars"}</span>

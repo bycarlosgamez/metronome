@@ -66,10 +66,7 @@ export type RepeatLevel = {
 }
 
 export type RoutineIncrease = {
-  mode: "off" | "round" | "target"
-  step: number                          // BPM added per window (target)
-  targetBpm: number
-  every: number                         // target window: bars when unit is "bars", seconds when "sec"
+  mode: "off" | "round"
   roundStep: number                     // BPM added each round (round); every set starts back at Start
 }
 

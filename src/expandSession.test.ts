@@ -167,7 +167,7 @@ describe("routine", () => {
   })
 
   it("Off plays every round at Start, ignoring the step", () => {
-    expect(playBpms(practiceSets({ mode: "off", step: 5 }))).toEqual(Array(8).fill(110))
+    expect(playBpms(practiceSets({ mode: "off", roundStep: 5 }))).toEqual(Array(8).fill(110))
   })
 
   it("ignores the legacy bpmIncreaseAt and session.bpmIncrease", () => {
@@ -175,58 +175,6 @@ describe("routine", () => {
     ;(session.routine as unknown as { bpmIncreaseAt: string }).bpmIncreaseAt = "round"
     session.bpmIncrease = 10
     expect(playBpms(session)).toEqual(Array(8).fill(110))
-  })
-
-  it("to target in seconds: climbs inside each play, holds target one window, restarts each round", () => {
-    const session = makeRoutineSession()
-    session.routine = {
-      ...session.routine,
-      unit: "sec",
-      round: { enabled: true, count: 2, restDuration: 0 },
-      increase: { ...session.routine.increase, mode: "target", step: 4, targetBpm: 125, every: 30 },
-    }
-    const plays = expandSession(session).filter((s) => s.kind === "play")
-    expect(plays).toHaveLength(2)
-    for (const play of plays) {
-      expect(play.bpm).toBe(80)
-      expect(play.steps?.map((step) => step.bpm)).toEqual([80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 125])
-      expect(play.steps?.[12].atSec).toBe(360)
-      expect(play.durationSec).toBe(390)
-    }
-  })
-
-  it("to target in bars: windows follow each step's BPM and the rest uses the BPM the play ended at", () => {
-    const session = makeRoutineSession()
-    session.routine = {
-      ...session.routine,
-      restDuration: 2,
-      round: { enabled: true, count: 2, restDuration: 0 },
-      increase: { ...session.routine.increase, mode: "target", step: 10, targetBpm: 90, every: 4 },
-    }
-    const segments = expandSession(session)
-    expect(segments.map((s) => s.kind)).toEqual(["play", "rest", "play"])
-    expect(segments[0].steps).toEqual([{ atSec: 0, bpm: 80 }, { atSec: 12, bpm: 90 }])
-    expect(segments[0].durationSec).toBeCloseTo(12 + 640 / 60)
-    expect(segments[1].durationSec).toBeCloseTo((2 * 4 * 60) / 90)
-  })
-
-  it("to target with Start at or above Target, or step 0, is a single window at Start", () => {
-    const session = makeRoutineSession()
-    session.bpm = 130
-    session.routine = {
-      ...session.routine,
-      unit: "sec",
-      increase: { ...session.routine.increase, mode: "target", step: 4, targetBpm: 120, every: 30 },
-    }
-    let play = expandSession(session)[0]
-    expect(play.steps).toEqual([{ atSec: 0, bpm: 130 }])
-    expect(play.durationSec).toBe(30)
-
-    session.bpm = 80
-    session.routine.increase.step = 0
-    play = expandSession(session)[0]
-    expect(play.steps).toEqual([{ atSec: 0, bpm: 80 }])
-    expect(play.durationSec).toBe(30)
   })
 
   it("setIndex increments across all segments for progress tracking", () => {
