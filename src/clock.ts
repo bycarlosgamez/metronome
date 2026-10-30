@@ -6,6 +6,7 @@ export type ClockSnapshot = {
   segmentIndex: number
   beat: number
   segmentRemainingSec: number
+  segmentElapsedSec: number // time into the current segment; stays finite in the endless Steady/Climb play
   elapsedSec: number
   remainingSec: number
 }
@@ -26,6 +27,7 @@ export function snapshotAt(segments: Segment[], elapsedSec: number): ClockSnapsh
         segmentIndex: index,
         beat: segment.kind === "rest" ? 0 : beatAt(segment, into),
         segmentRemainingSec: Math.max(0, segment.durationSec - into),
+        segmentElapsedSec: into,
         elapsedSec: elapsed,
         remainingSec: Math.max(0, total - elapsed),
       }

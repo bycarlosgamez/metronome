@@ -9,6 +9,15 @@ function uniform(subdivision: Subdivision, slots: Slot[], beats = 4): BeatPatter
 }
 
 describe("clock", () => {
+  it("reports how far into an endless play stretch you are", () => {
+    const session = createDefaultSession(() => "s1")
+    session.countIn = true
+    session.bpm = 80
+    const segments = expandSession(session)
+    // count-in is 3s at 80, so 13s is 10s into the endless play
+    expect(snapshotAt(segments, 13).segmentElapsedSec).toBe(10)
+  })
+
   it("starts on the first count-in beat and enters the playing stretch after that bar", () => {
     const session = createDefaultSession(() => "set-1")
     session.type = "simple"

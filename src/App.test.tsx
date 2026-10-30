@@ -269,4 +269,35 @@ describe("App", () => {
     expect(screen.getByTestId("play-elapsed")).toHaveTextContent("0:13")
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
   })
+
+  it("keeps the current Climb step when Start BPM changes while playing", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const session = createDefaultSession(() => "cycle-1")
+    session.practice = "climb"
+    session.bpm = 110
+    session.bpmIncrease = 5
+    session.time = { ...session.time, targetBpm: 130, everyUnit: "bars", everyBars: 4 }
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    // 4 bars at 110 is about 8.7s, so 10s is early in the second step (115)
+    await act(async () => {
+      tick?.(10_000)
+    })
+    const bpm = screen.getByTestId("bpm-current")
+    expect(bpm).toHaveValue("115")
+    await user.clear(bpm)
+    await user.type(bpm, "60")
+    await user.tab()
+    // 4 bars at 60 is 16s, so without carrying the step 10s would land back on the first step (60)
+    expect(screen.getByTestId("bpm-current")).toHaveValue("65")
+  })
 })

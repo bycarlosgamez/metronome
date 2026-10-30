@@ -64,7 +64,7 @@ export function Practice(props: {
   const { beats } = props.session
   const subsInBeat = (beat: number) => beats[Math.min(beat, beats.length) - 1]?.slots.length ?? 1
   const shared = sharedSubdivision(beats)
-  const intoSec = Math.max(0, segment.durationSec - props.snapshot.segmentRemainingSec)
+  const intoSec = props.snapshot.segmentElapsedSec
   const currentBpm = bpmAt(segment, intoSec)
 
   // Elapsed time (always counting up, always finite)
