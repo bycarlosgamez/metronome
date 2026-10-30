@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClickSounds, scheduleClicks, scheduleSegment, type ClickSounds } from "./audio"
-import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt, stepIndexAt } from "./clock"
+import { carryClimbPosition } from "./climb"
+import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt } from "./clock"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
 import { loadSession, saveSession } from "./store"
@@ -11,6 +12,8 @@ export function App() {
   const segments = useMemo(() => expandSession(session), [session])
   const { elapsed, status, setStatus, elapsedRef, setElapsed } = usePlayback(segments)
   const snapshot = snapshotAt(segments, elapsed)
+  // Climb edits move the playhead to keep your step; this keeps the shown practice clock counting on regardless
+  const [clockShiftSec, setClockShiftSec] = useState(0)
   const audioRef = useRef<AudioContext | null>(null)
   const buffersRef = useRef<ClickSounds | null>(null)
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
@@ -162,41 +165,36 @@ export function App() {
     playGen.current += 1
     stopNodes()
     writeElapsed(0)
+    setClockShiftSec(0)
     setStatus("stopped")
   }
 
   function onChange(next: Session) {
-    if (session.type === "time" && next.type === "time" && next.bpm !== session.bpm) {
+    const climbEdited = session.practice === "climb" && next.practice === "climb" && (
+      next.bpm !== session.bpm || next.bpmIncrease !== session.bpmIncrease || next.meter !== session.meter ||
+      JSON.stringify(next.time) !== JSON.stringify(session.time)
+    )
+    if (climbEdited) {
+      // Keep your place in the current Climb step instead of letting the same elapsed time land on a different step
       const current = snapshotAt(segments, elapsedRef.current)
       const currentSegment = segments[current.segmentIndex]
-      const into = Math.max(0, currentSegment.durationSec - current.segmentRemainingSec)
       const nextSegments = expandSession(next)
-      const total = nextSegments.reduce((sum, segment) => sum + segment.durationSec, 0)
+      const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
+      const nextPlay = nextSegments.find((segment) => segment.kind === "play")
       let nextElapsed = elapsedRef.current
-      if (currentSegment.kind === "play" && !Number.isFinite(currentSegment.durationSec)) {
-        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
-        const played = Math.max(0, elapsedRef.current - segments.slice(0, current.segmentIndex).reduce((sum, segment) => sum + segment.durationSec, 0))
-        nextElapsed = (nextCountIn?.durationSec ?? 0) + played
-      } else if (currentSegment.kind === "play") {
-        const step = stepIndexAt(currentSegment, into)
+      if (currentSegment.kind === "play" && nextPlay) {
         const steps = currentSegment.steps ?? [{ atSec: 0, bpm: currentSegment.bpm }]
-        const atSec = steps[step]?.atSec ?? 0
-        const endSec = steps[step + 1]?.atSec ?? currentSegment.durationSec
-        const window = endSec - atSec
-        const fraction = window > 0 ? (into - atSec) / window : 0
-        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
-        const nextPlay = nextSegments.find((segment) => segment.kind === "play")
-        const nextSteps = nextPlay?.steps ?? [{ atSec: 0, bpm: nextPlay?.bpm ?? next.bpm }]
-        const nextAt = nextSteps[step]?.atSec ?? 0
-        const nextEnd = nextSteps[step + 1]?.atSec ?? nextPlay?.durationSec ?? 0
-        nextElapsed = (nextCountIn?.durationSec ?? 0) + nextAt + fraction * (nextEnd - nextAt)
+        const nextSteps = nextPlay.steps ?? [{ atSec: 0, bpm: nextPlay.bpm }]
+        nextElapsed = (nextCountIn?.durationSec ?? 0) + carryClimbPosition(steps, current.segmentElapsedSec, nextSteps)
       } else if (currentSegment.kind === "count-in" && currentSegment.durationSec > 0) {
-        const nextCountIn = nextSegments.find((segment) => segment.kind === "count-in")
-        nextElapsed = (into / currentSegment.durationSec) * (nextCountIn?.durationSec ?? 0)
+        nextElapsed = (current.segmentElapsedSec / currentSegment.durationSec) * (nextCountIn?.durationSec ?? 0)
       }
       stopNodes()
-      writeElapsed(Math.min(total, Math.max(0, nextElapsed)))
+      const carried = Math.max(0, nextElapsed)
+      setClockShiftSec((shift) => shift + elapsedRef.current - carried)
+      writeElapsed(carried)
     }
+    if (next.practice !== session.practice) setClockShiftSec(0)
     setSession(next)
     saveSession(next, window.localStorage)
   }
@@ -206,6 +204,7 @@ export function App() {
       session={session}
       segments={segments}
       snapshot={snapshot}
+      clockShiftSec={clockShiftSec}
       status={status}
       onToggle={() => {
         void onToggle()

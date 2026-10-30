@@ -52,7 +52,7 @@ describe("scheduleSegment", () => {
     const session = createDefaultSession(() => "set-1")
     session.countIn = true
     session.bpm = 60
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 60, round: { enabled: true, count: 2, restDuration: 0 }, restDuration: 30 }
     const segments = expandSession(session)
     const { ctx, sounds, started } = fakeContext()
@@ -70,7 +70,7 @@ describe("scheduleSegment", () => {
   it("plays an eighth slot from that slot's accent buffer on beat 1", () => {
     const session = createDefaultSession(() => "set-1")
     session.bpm = 80
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 4 }
     session.beats = Array.from({ length: 4 }, () => ({ subdivision: "eighth" as const, slots: ["click-1" as const, "click-2" as const] }))
     const play = expandSession(session).find((segment) => segment.kind === "play")!

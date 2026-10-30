@@ -55,7 +55,7 @@ describe("App", () => {
 
   it("starts again from the beginning when Play is pressed at the end", async () => {
     const session = createDefaultSession(() => "cycle-1")
-    session.routineEnabled = true
+    session.practice = "routine"
     session.routine = { ...session.routine, unit: "sec", playDuration: 1 }
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
@@ -176,7 +176,7 @@ describe("App", () => {
     const saved = createDefaultSession(() => "cycle-1")
     saved.bpm = bpm
     saved.countIn = true
-    saved.routineEnabled = true
+    saved.practice = "routine"
     saved.routine = { ...saved.routine, unit: "sec", playDuration: 120 }
     const play = expandSession(saved).find((segment) => segment.kind === "play")!
     const marks = clicksInSegment(play)
@@ -207,13 +207,13 @@ describe("App", () => {
     expect(playNodes.some((node) => node.started && node.when < 0)).toBe(false)
   })
 
-  it("updates start BPM from the BPM sheet while playing a Time session", async () => {
+  it("updates Start BPM from the BPM card while playing a Climb", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
     session.meter = "4/4"
     session.bpm = 80
     session.bpmIncrease = 5
-    session.time = { seconds: 180, targetBpm: 120, increaseEvery: "bars", everySec: 30, everyBars: 4 }
+    session.time = { seconds: 180, targetBpm: 120, everyUnit: "bars", everySec: 30, everyBars: 4 }
     session.countIn = true
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     vi.stubGlobal("AudioContext", FakeAudioContext)
@@ -231,13 +231,12 @@ describe("App", () => {
     await act(async () => {
       tick?.((countInSec + 30) * 1000)
     })
-    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
-    const bpm = screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!
+    const bpm = screen.getByTestId("bpm-current")
     expect(bpm).toHaveValue("80")
     await user.clear(bpm)
     await user.type(bpm, "150")
     await user.tab()
-    expect(screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!).toHaveValue("150")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("150")
   })
 
   it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
@@ -261,12 +260,74 @@ describe("App", () => {
       tick?.((countInSec + 10) * 1000)
     })
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "More BPM settings" }))
-    const bpm = screen.getAllByRole("textbox", { name: "BPM" }).at(-1)!
+    const bpm = screen.getByTestId("bpm-current")
     await user.clear(bpm)
     await user.type(bpm, "100")
     await user.tab()
-    expect(screen.getByTestId("play-elapsed")).toHaveTextContent("0:13")
+    expect(screen.getByTestId("player-number")).toHaveTextContent("0:13")
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument()
+  })
+
+  it("keeps the current Climb step when Start BPM changes while playing", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const session = createDefaultSession(() => "cycle-1")
+    session.practice = "climb"
+    session.bpm = 110
+    session.bpmIncrease = 5
+    session.time = { ...session.time, targetBpm: 130, everyUnit: "bars", everyBars: 4 }
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    // 4 bars at 110 is about 8.7s, so 10s is early in the second step (115)
+    await act(async () => {
+      tick?.(10_000)
+    })
+    const bpm = screen.getByTestId("bpm-current")
+    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    await user.clear(bpm)
+    await user.type(bpm, "60")
+    await user.tab()
+    // 4 bars at 60 is 16s, so without carrying the step 10s would land back on the first step (60)
+    expect(screen.getByTestId("bpm-now")).toHaveTextContent("65")
+  })
+
+  it("keeps the current Climb step when Every changes while playing", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    vi.spyOn(performance, "now").mockReturnValue(0)
+    let tick: FrameRequestCallback | null = null
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      tick ??= callback
+      return 1
+    })
+    vi.stubGlobal("cancelAnimationFrame", () => {})
+    const session = createDefaultSession(() => "cycle-1")
+    session.practice = "climb"
+    session.bpm = 110
+    session.bpmIncrease = 5
+    session.time = { ...session.time, targetBpm: 130, everyUnit: "sec", everySec: 120 }
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: "Play" }))
+    await act(async () => {
+      tick?.(150_000)
+    })
+    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    const minutes = screen.getByRole("textbox", { name: "Every minutes" })
+    await user.clear(minutes)
+    await user.type(minutes, "1")
+    await user.tab()
+    // With 1:00 windows, 150s would be the third step (120) without carrying the step
+    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    // The practice clock keeps counting from where it was; only the climb position moves
+    expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
   })
 })

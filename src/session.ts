@@ -1,4 +1,4 @@
-import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type RepeatLevel, type RoutineIncrease, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
+import { BEATS, CLICKS, COLORS, NOTES, SUBDIVISIONS, type BeatPattern, type ClickId, type ComplexPattern, type Cycle, type IncreaseEvery, type Length, type Meter, type Practice, type RepeatLevel, type RoutineIncrease, type RoutinePattern, type Session, type SetColor, type SimplePattern, type Slot, type Subdivision, type TimePattern } from "./types"
 
 const integer = (value: number) => Math.round(Number.isFinite(value) ? value : 0)
 
@@ -37,8 +37,8 @@ export function freshTime(): TimePattern {
   return {
     seconds: 120,
     targetBpm: 120,
-    increaseEvery: "off",
-    everySec: 30,
+    everyUnit: "bars",
+    everySec: 120,
     everyBars: 4,
   }
 }
@@ -50,18 +50,16 @@ export function freshRoutine(): RoutinePattern {
     restDuration: 0,
     round:  { enabled: false, count: 4, restDuration: 0 },
     set:    { enabled: false, count: 3, restDuration: 30 },
-    increase: { mode: "off", step: 5, targetBpm: 120, every: 4, roundStep: 5 },
+    increase: { mode: "off", roundStep: 5 },
   }
 }
 
 function clampIncrease(increase: unknown): RoutineIncrease {
   const fresh = freshRoutine().increase
-  const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease>
+  // Saves may still carry the removed Increase to target fields (step, targetBpm, every); a "target" mode loads as Off
+  const base = (increase && typeof increase === "object" ? increase : {}) as Partial<RoutineIncrease> & { step?: number }
   return {
-    mode: base.mode === "round" || base.mode === "target" ? base.mode : "off",
-    step: Math.max(0, integer(base.step ?? fresh.step)),
-    targetBpm: clampBpm(base.targetBpm ?? fresh.targetBpm),
-    every: Math.max(1, integer(base.every ?? fresh.every)),
+    mode: base.mode === "round" ? "round" : "off",
     // Per round saves from before roundStep existed kept their step in step
     roundStep: Math.max(1, integer(base.roundStep ?? (base.mode === "round" ? base.step : undefined) ?? fresh.roundStep)),
   }
@@ -98,10 +96,22 @@ function clampTime(pattern: TimePattern | undefined): TimePattern {
   return {
     seconds: Math.max(1, integer(base.seconds)),
     targetBpm: clampBpm(base.targetBpm ?? 120),
-    increaseEvery: base.increaseEvery === "bars" ? "bars" : base.increaseEvery === ("time" as string) ? "bars" : "off",
+    everyUnit: base.everyUnit === "sec" ? "sec" : "bars",
     everySec: Math.max(1, integer(base.everySec)),
     everyBars: Math.max(1, integer(base.everyBars)),
   }
+}
+
+const PRACTICES: readonly Practice[] = ["steady", "climb", "routine"]
+
+// Switch how to practice. Entering Climb with no step fills Climb's defaults so it never plays like Steady by surprise.
+export function choosePractice(session: Session, practice: Practice): Session {
+  const next = { ...session, practice }
+  if (practice === "climb" && session.bpmIncrease === 0) {
+    next.bpmIncrease = 5
+    next.time = { ...session.time, targetBpm: 120, everyUnit: "bars", everyBars: 4 }
+  }
+  return clampSession(next)
 }
 
 export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
@@ -119,41 +129,12 @@ export function timeSteps(session: Session): { atSec: number; bpm: number }[] {
     const bpm = Math.min(targetBpm, startBpm + increase * index)
     steps.push({ atSec: at, bpm })
     if (bpm >= targetBpm) break
-    const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
+    const window = pattern.everyUnit === "sec" ? pattern.everySec : pattern.everyBars * beatsInMeter(session.meter) * 60 / bpm
     if (!(window > 0)) break
     at += window
     index += 1
   }
   return steps
-}
-
-// One To target play: Start, Start+step, … capped at the target; each BPM lasts one window, the target included.
-export function routineClimb(session: Session): { steps: { atSec: number; bpm: number }[]; durationSec: number } {
-  const { unit, increase } = session.routine
-  const start = clampBpm(session.bpm)
-  const target = clampBpm(increase.targetBpm)
-  const step = Math.max(0, integer(increase.step))
-  const every = Math.max(1, integer(increase.every))
-  const windowSec = (bpm: number) => unit === "sec" ? every : every * beatsInMeter(session.meter) * 60 / bpm
-  const steps: { atSec: number; bpm: number }[] = []
-  let at = 0
-  let bpm = start
-  while (true) {
-    steps.push({ atSec: at, bpm })
-    at += windowSec(bpm)
-    if (step === 0 || bpm >= target) break
-    bpm = Math.min(target, bpm + step)
-  }
-  return { steps, durationSec: at }
-}
-
-export function timeDurationSec(session: Session): number {
-  const pattern = clampTime(session.time)
-  if (pattern.increaseEvery === "off") return Number.POSITIVE_INFINITY
-  const steps = timeSteps(session)
-  const lastStep = steps[steps.length - 1]
-  const window = pattern.everyBars * beatsInMeter(session.meter) * 60 / lastStep.bpm
-  return Math.max(1, Math.round(lastStep.atSec + window))
 }
 
 function clampComplex(pattern: ComplexPattern | undefined): ComplexPattern {
@@ -208,7 +189,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     complex: freshComplex(),
     time: freshTime(),
     cycles: [{ id: nextId(), length: { unit: "time", seconds: 120 }, restSec: 30 }],
-    routineEnabled: false,
+    practice: "steady",
     routine: freshRoutine(),
     countIn: false,
     accent: true,
@@ -324,32 +305,17 @@ export function clampSession(session: Session): Session {
   const click = CLICKS.includes(session.click) ? session.click : "click-1"
   const meter = clampMeter(session.meter)
 
-  // Migrate legacy time sessions → simple + routineEnabled
-  let type: Session["type"] = session.type === "complex" ? "complex" : "simple"
-  let routineEnabled = Boolean(session.routineEnabled)
-  let routine = clampRoutine(session.routine as unknown, session.bpmIncrease)
-
-  if (session.type === "time") {
-    type = "simple"
-    routineEnabled = true
-    const everyBars = Math.max(1, integer(session.time?.everyBars ?? 4))
-    const startBpm = clampBpm(session.bpm)
-    const targetBpm = clampBpm(session.time?.targetBpm ?? 120)
-    const step = Math.max(0, integer(session.bpmIncrease))
-    const fresh = freshRoutine()
-    routine = clampRoutine({
-      ...fresh,
-      unit: "bars",
-      playDuration: everyBars,
-      increase: {
-        ...fresh.increase,
-        mode: step > 0 && targetBpm > startBpm ? "target" : "off",
-        step,
-        targetBpm,
-        every: everyBars,
-      },
-    }, step)
-  }
+  const type: Session["type"] = session.type === "complex" ? "complex" : "simple"
+  const time = clampTime(session.time)
+  // Saves from before practice existed: legacy time sessions were climbs, routineEnabled meant Routine,
+  // and Simple's time.increaseEvery "bars" (or older "time") meant Climb
+  const legacy = session as Session & { routineEnabled?: unknown; time?: { increaseEvery?: string } }
+  const practice: Practice = session.type === "time" ? "climb"
+    : PRACTICES.includes(session.practice) ? session.practice
+    : legacy.routineEnabled ? "routine"
+    : legacy.time?.increaseEvery === "bars" || legacy.time?.increaseEvery === "time" ? "climb"
+    : "steady"
+  if (session.type === "time") time.everyUnit = "bars"
 
   return {
     name: session.name ?? "",
@@ -363,10 +329,10 @@ export function clampSession(session: Session): Session {
     type,
     simple: clampSimple(session.simple),
     complex: clampComplex(session.complex),
-    time: clampTime(session.time),
+    time,
     cycles,
-    routineEnabled,
-    routine,
+    practice,
+    routine: clampRoutine(session.routine as unknown, session.bpmIncrease),
     countIn: Boolean(session.countIn ?? false),
     accent: session.accent !== false,
   }
@@ -453,7 +419,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
       restSec: play.restSec,
       ...(play.bpm === firstBpm ? {} : { bpm: play.bpm }),
     })),
-    routineEnabled: false,
+    practice: "steady",
     routine: freshRoutine(),
     countIn: Boolean(legacy.countIn ?? false),
     accent: true,

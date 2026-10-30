@@ -34,17 +34,19 @@ Session (localStorage) → expandSession() → Segment[] → clock.ts → audio.
 
 ### Practice Modes
 
-Practice has two modes, chosen with the Simple | Routine control (`session.routineEnabled`):
-- **Simple** — one endless stretch at the session BPM; an optional increase (every N bars by a step) ramps up to the target BPM and holds there until stopped
-- **Routine** — Round/Set structure with play/rest durations (bars or MIN:SEC) and its own BPM increase (`routine.increase`, separate from Simple's): one of Off, per round (set on the routine card: each round +N BPM, every set restarts at Start) or Increase to target (set in the BPM sheet: climbs inside each play)
+Practice has three ways to play, chosen with the Steady | Climb | Routine switch in the player card (`session.practice`):
+- **Steady** — one endless stretch at the session BPM until stopped
+- **Climb** — one endless stretch that steps from Start BPM by `bpmIncrease` every N bars or N seconds (`time.everyUnit`, `everyBars`, `everySec`) up to `time.targetBpm`, then holds there until stopped. Editing Climb while playing keeps your place in the current step (`climb.ts`, `App.onChange`)
+- **Routine** — Round/Set structure with play/rest durations (bars or MIN:SEC) and an optional per-round increase (`routine.increase`: each round +N BPM, every set restarts at Start)
 
-Legacy fields (`type`, `simple`, `complex`, `cycles`, `name`, `color`) are still loaded and clamped for old saved sessions but no longer drive playback or UI.
+Older saves load through `clampSession`: `routineEnabled` → Routine, Simple with an increase or `type: "time"` → Climb, otherwise Steady. Legacy fields (`type`, `simple`, `complex`, `cycles`, `name`, `color`) are still loaded and clamped for old saved sessions but no longer drive playback or UI.
 
 ### Key Modules
 
 - **`types.ts`** — All domain types (`Session`, `Meter`, `Length`, `Subdivision`, `Segment`, etc.)
 - **`session.ts`** — Session creation, validation (`clampSession`), BPM math, legacy migration
 - **`expandSession.ts`** — Transforms a `Session` into an ordered array of `Segment` objects (count-in → play → rest)
+- **`climb.ts`** — Where you are in a Climb's steps, and how to keep that place when its settings change
 - **`clock.ts`** — Given elapsed time, computes current segment/beat/BPM; generates the 2-second click window for scheduling
 - **`audio.ts`** — Web Audio API: creates sine-wave click buffers for 4 click styles; schedules audio nodes
 - **`store.ts`** — `loadSession()` / `saveSession()` via `localStorage` key `"mentronome.session"`
@@ -52,7 +54,8 @@ Legacy fields (`type`, `simple`, `complex`, `cycles`, `name`, `color`) are still
 ### UI Components
 
 - **`App.tsx`** — Root: owns session state, audio context, playback loop via `requestAnimationFrame`
-- **`Practice.tsx`** — The only screen: beat display, BPM card, meter/subdivision sheets, routine card, play controls and count-in toggle
+- **`Practice.tsx`** — The only screen: beat display, BPM card (BPM / Start BPM and Now), Time sig / Subdiv / Click sheets
+- **`PlayerCard.tsx`** — Player for all three practices: darker panel (label + Count-in, big number, progress, Play/Stop), the Steady | Climb | Routine switch, and Climb or Routine settings
 
 ### Styling
 

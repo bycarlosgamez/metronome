@@ -69,14 +69,14 @@ describe("store", () => {
     expect(loaded.color).toBe("green")
   })
 
-  it("loads a time session and migrates to simple with routineEnabled", () => {
+  it("loads a time session and migrates it to Climb", () => {
     const storage = memory()
     const session = createDefaultSession(() => "cycle-1")
     session.type = "time"
     session.time.seconds = 90
     saveSession(session, storage)
-    // clampSession migrates type:"time" → type:"simple" + routineEnabled:true
-    expect(loadSession(storage)).toMatchObject({ type: "simple", routineEnabled: true, time: { seconds: 90 } })
+    // clampSession migrates type:"time" → type:"simple" + practice:"climb"
+    expect(loadSession(storage)).toMatchObject({ type: "simple", practice: "climb", time: { seconds: 90 } })
 
     const { time: _time, ...withoutTime } = createDefaultSession(() => "cycle-1")
     storage.setItem(SESSION_KEY, JSON.stringify(withoutTime))
