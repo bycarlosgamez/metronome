@@ -9,6 +9,21 @@ function uniform(subdivision: Subdivision, slots: Slot[], beats = 4): BeatPatter
 }
 
 describe("clock", () => {
+  it("times the position in a beat from the same clicks the audio plays, across a Climb step", () => {
+    const session = createDefaultSession(() => "s1")
+    session.practice = "climb"
+    session.bpm = 110
+    session.bpmIncrease = 5
+    session.time = { ...session.time, targetBpm: 115, everyUnit: "sec", everySec: 10 }
+    const [play] = expandSession(session)
+    // 10s at 110 is 18.33 beats, so total elapsed % beat length would be wrong here
+    const at = 10.05
+    const lastClick = clicksInSegment(play, 0, at).at(-1)!
+    const snap = snapshotAt([play], at)
+    expect(snap.beat).toBe(lastClick.beat)
+    expect(snap.beatFraction).toBeCloseTo((at - lastClick.offsetSec) / (60 / 110), 5)
+  })
+
   it("reports how far into an endless play stretch you are", () => {
     const session = createDefaultSession(() => "s1")
     session.countIn = true

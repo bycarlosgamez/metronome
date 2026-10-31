@@ -45,15 +45,10 @@ export function Practice(props: {
   const intoSec = props.snapshot.segmentElapsedSec
   const currentBpm = bpmAt(segment, intoSec)
 
-  // Elapsed time (always counting up, always finite)
-  const elapsedSec = props.snapshot.elapsedSec
-
   // Current beat subdivision dot index (0-based within beat)
-  // Use elapsedSec — intoSec is Infinity for endless sessions and breaks % math
-  const beatDur = currentBpm > 0 ? 60 / currentBpm : 1
-  const subDur = beatDur / subsInBeat(Math.max(1, props.snapshot.beat))
-  const posInBeat = elapsedSec % beatDur
-  const activeSubSlot = isPlaying ? Math.floor(posInBeat / subDur) : -1
+  // Timed from the same beat as the lit square, so the dot can't drift after rests or tempo steps
+  const subs = subsInBeat(Math.max(1, props.snapshot.beat))
+  const activeSubSlot = isPlaying ? Math.min(subs - 1, Math.floor(props.snapshot.beatFraction * subs)) : -1
 
   // Routine Now: stopped (including after the routine ends) shows where it will start; during a rest, the play coming up
   const { increase } = props.session.routine

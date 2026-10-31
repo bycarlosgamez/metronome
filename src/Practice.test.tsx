@@ -43,6 +43,20 @@ describe("Practice", () => {
     expect(screen.getByTestId("beat-2")).toHaveAttribute("data-accent", "false")
   })
 
+  it("lights the first dot at the start of a beat after a rest that isn't a whole number of beats", () => {
+    const base = createDefaultSession(() => "s1")
+    const props = makeProps({
+      practice: "routine", bpm: 80,
+      beats: base.beats.map(() => ({ subdivision: "eighth" as const, slots: ["click-1" as const, "click-1" as const] })),
+      routine: { ...base.routine, unit: "sec", playDuration: 10, restDuration: 1, round: { enabled: true, count: 2, restDuration: 0 } },
+    })
+    // Round 2 starts at 11s; 0.1s in is the first eighth of beat 1
+    render(<Practice {...props} snapshot={snapshotAt(props.segments, 11.1)} status="playing" />)
+    const dots = within(screen.getByRole("region", { name: "Beat display" }))
+    expect(dots.getByRole("button", { name: "Beat 1 click 1" })).toHaveClass("lit")
+    expect(dots.getByRole("button", { name: "Beat 1 click 2" })).not.toHaveClass("lit")
+  })
+
   it("mutes a click by tapping its dot under the beat", async () => {
     const props = makeProps()
     render(<Practice {...props} />)
