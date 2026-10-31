@@ -195,6 +195,11 @@ button.beat-sq { font: inherit; font-size: 26px; font-weight: 700; padding: 0; c
 .player-panel.is-rest .player-phase, .player-panel.is-rest .player-number { color: var(--rest-ink); }
 .player-panel.is-rest .routine-progress-bar-fill { background: var(--rest-ink); }
 .player-panel .play-controls { margin: 28px 0 0; }
+.transport-row { display: flex; align-items: center; gap: 24px; }
+.skip-btn { width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--control-edge); background: none; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
+.skip-btn:hover { background: var(--surface-raised); }
+/* A routine played to its end: the phase reads as an achievement */
+.player-panel.is-complete .player-phase { color: var(--stage-play); }
 .player-switch { margin: 14px 0 10px; }
 .player-switch-note { margin: -4px 4px 8px; font-size: 13px; color: var(--ink-muted); }
 .player-switch .routine-seg-btn { flex: 1; padding: 9px 0; font-size: 13px; }

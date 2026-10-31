@@ -62,6 +62,7 @@ export function PlayerCard(props: {
   // The tempo control (− / BPM / +), drawn by the page; `live` means it shows the playing BPM and can't be typed in
   renderTempo(bpm: number, live: boolean): ReactNode
   onToggle(): void
+  onJump(direction: -1 | 1): void
   onReset(): void
   onChange(session: Session): void
 }) {
@@ -88,7 +89,16 @@ export function PlayerCard(props: {
     : null
   const atTarget = climb !== null && !Number.isFinite(climb.nextInSec)
 
-  const phaseLabel = props.status === "paused" ? "Paused"
+  // A routine that played to its end, rather than one that was stopped
+  const finished = practice === "routine" && props.status === "stopped" && snapshot.remainingSec <= 0 && snapshot.elapsedSec > 0
+  const plays = props.segments.filter((s) => s.kind === "play")
+  const firstBpm = plays[0]?.bpm ?? session.bpm
+  const topBpm = plays.reduce((max, s) => Math.max(max, s.bpm), firstBpm)
+  const bpmRange = topBpm > firstBpm ? `${firstBpm} → ${topBpm} BPM` : `${firstBpm} BPM`
+  const routineTotal = props.segments.filter((s) => s.kind !== "count-in").reduce((sum, s) => sum + s.durationSec, 0)
+
+  const phaseLabel = finished ? "Routine complete"
+    : props.status === "paused" ? "Paused"
     : !isPlaying ? "Stopped"
     : segment.kind === "count-in" ? "Ready"
     : practice === "routine" ? (isRest ? "Rest" : "Play")
@@ -108,7 +118,9 @@ export function PlayerCard(props: {
   let progress: number | null = null
   if (practice === "routine") {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
-    subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
+    subLine = finished
+      ? `${formatClock(Math.round(routineTotal))} practised · ${bpmRange}`
+      : `${formatClock(Math.ceil(snapshot.remainingSec))} left`
     roundLine = `Round ${roundN}/${roundPasses}${round.enabled && set.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
     // Like Climb, the bar only appears once the routine is running
     progress = props.status === "stopped" ? null
@@ -117,7 +129,7 @@ export function PlayerCard(props: {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
     if (climb) {
       if (atTarget) {
-        subLine = "At target"
+        subLine = "Target reached"
       } else {
         const barSec = beatsInMeter(session.meter) * 60 / currentBpm
         const nextIn = session.time.everyUnit === "bars"
@@ -140,16 +152,12 @@ export function PlayerCard(props: {
   // Routine in one line: rounds, sets, tempo range and total time, so the plan can be checked without adding it up
   function routineSummary(): string {
     const length = (n: number) => routine.unit === "bars" ? `${n} bar${n === 1 ? "" : "s"}` : formatClock(n)
-    const plays = props.segments.filter((s) => s.kind === "play")
-    const first = plays[0]?.bpm ?? session.bpm
-    const top = plays.reduce((max, s) => Math.max(max, s.bpm), first)
-    const total = props.segments.filter((s) => s.kind !== "count-in").reduce((sum, s) => sum + s.durationSec, 0)
     const rest = round.enabled && routine.restDuration > 0 ? ` + ${length(routine.restDuration)} rest` : ""
     return [
       round.enabled ? `${round.count} rounds of ${length(routine.playDuration)}${rest}` : length(routine.playDuration),
       round.enabled && set.enabled ? `${set.count} sets${set.restDuration > 0 ? `, ${formatClock(set.restDuration)} between` : ""}` : null,
-      top > first ? `${first} → ${top} BPM` : `${first} BPM`,
-      `${formatClock(Math.round(total))} total`,
+      bpmRange,
+      `${formatClock(Math.round(routineTotal))} total`,
     ].filter(Boolean).join(" · ")
   }
 
@@ -176,7 +184,7 @@ export function PlayerCard(props: {
         {isPlaying ? [phaseLabel, `${playingBpm} BPM`, practice === "routine" ? `Round ${roundN} of ${roundPasses}` : null].filter(Boolean).join(", ") : ""}
       </div>
       {/* Live state, sized to read from the music stand: phase and round, then time and tempo side by side */}
-      <div className={`player-panel${isRest ? " is-rest" : ""}`}>
+      <div className={`player-panel${isRest ? " is-rest" : ""}${finished ? " is-complete" : ""}`}>
         <div className="player-status">
           <span className="player-phase" data-testid="player-phase">{phaseLabel}</span>
           {roundLine && <span className="player-round" data-testid="player-round">{roundLine}</span>}
@@ -197,14 +205,23 @@ export function PlayerCard(props: {
           </div>
         )}
         <div className="play-controls">
-          <button
-            type="button"
-            className={`play-btn${isPlaying ? " playing" : ""}`}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            onClick={props.onToggle}
-          >
-            <Icon name={isPlaying ? "pause" : "play"} size={30} />
-          </button>
+          {/* While a routine runs, back and skip-ahead sit either side of Play */}
+          <div className="transport-row">
+            {practice === "routine" && props.status !== "stopped" && (
+              <button type="button" className="skip-btn" aria-label="Back" onClick={() => props.onJump(-1)}><Icon name="back" size={22} /></button>
+            )}
+            <button
+              type="button"
+              className={`play-btn${isPlaying ? " playing" : ""}`}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              onClick={props.onToggle}
+            >
+              <Icon name={isPlaying ? "pause" : "play"} size={30} />
+            </button>
+            {practice === "routine" && props.status !== "stopped" && (
+              <button type="button" className="skip-btn" aria-label="Skip ahead" onClick={() => props.onJump(1)}><Icon name="ahead" size={22} /></button>
+            )}
+          </div>
           <button type="button" className={`stop-link${props.status === "stopped" ? " is-idle" : ""}`} aria-label="Stop" onClick={props.onReset}>
             <Icon name="stop" size={12} /> Stop
           </button>

@@ -214,6 +214,7 @@ export function Practice(props: {
             </div>
           )}
           onToggle={props.onToggle}
+          onJump={props.onJump}
           onReset={props.onReset}
           onChange={props.onChange}
         />

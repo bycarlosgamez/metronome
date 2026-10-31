@@ -799,7 +799,7 @@ describe("Practice", () => {
 
     it("Climb at the target says so and shows the target", () => {
       render(<Practice {...climbProps({}, 600, "playing")} />)
-      expect(screen.getByTestId("player-sub")).toHaveTextContent("At target")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("Target reached")
       expect(screen.getByTestId("bpm-current")).toHaveValue("130")
       expect(screen.queryByTestId("player-target")).not.toBeInTheDocument()
       expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
@@ -1029,6 +1029,34 @@ describe("Practice", () => {
     it("hides Routine's progress bar while stopped, like Climb", () => {
       render(<Practice {...makeProps({ practice: "routine" })} />)
       expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("endings and skipping", () => {
+    const base = createDefaultSession(() => "s1")
+    const routine = () => makeProps({
+      practice: "routine", bpm: 110, countIn: false,
+      routine: { ...base.routine, unit: "sec", playDuration: 120, restDuration: 15, round: { enabled: true, count: 4, restDuration: 0 }, set: { enabled: true, count: 3, restDuration: 60 }, increase: { mode: "round", roundStep: 5 } },
+    })
+
+    it("marks a finished routine instead of just stopping", () => {
+      const props = routine()
+      const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Routine complete")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("28:45 practised · 110 → 125 BPM")
+    })
+
+    it("offers back and skip-ahead while a routine runs, and nowhere else", async () => {
+      const props = routine()
+      const { unmount } = render(<Practice {...props} snapshot={snapshotAt(props.segments, 30)} status="playing" />)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Skip ahead" }))
+      expect(props.onJump).toHaveBeenCalledWith(1)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Back" }))
+      expect(props.onJump).toHaveBeenCalledWith(-1)
+      unmount()
+      render(<Practice {...makeProps()} status="playing" />)
+      expect(screen.queryByRole("button", { name: "Skip ahead" })).not.toBeInTheDocument()
     })
   })
 })
