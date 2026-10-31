@@ -16,6 +16,8 @@ import {
   sessionTitle,
   simplePlayedBpm,
   timeSteps,
+  toggleAccent,
+  toggleClick,
 } from "./session"
 import type { Session } from "./types"
 
@@ -38,7 +40,7 @@ describe("session", () => {
       practice: "steady",
       routine: freshRoutine(),
       countIn: false,
-      accent: true,
+      accents: [1],
     })
     // freshSimple / freshTime assertions stay unchanged
     expect(freshSimple()).toEqual({
@@ -408,11 +410,38 @@ describe("session", () => {
     })
   })
 
-  it("keeps the beat-1 accent on unless a session turned it off", () => {
-    const session = createDefaultSession(() => "cycle-1")
-    delete (session as { accent?: boolean }).accent
-    expect(clampSession(session).accent).toBe(true)
-    expect(clampSession({ ...session, accent: false }).accent).toBe(false)
+  describe("accents", () => {
+    function legacy(over: Record<string, unknown>): Session {
+      const { accents: _accents, ...base } = createDefaultSession(() => "cycle-1")
+      void _accents
+      return { ...base, ...over } as unknown as Session
+    }
+
+    it("accents beat 1 by default, and none for an old save that turned the accent off", () => {
+      expect(createDefaultSession().accents).toEqual([1])
+      expect(clampSession(legacy({})).accents).toEqual([1])
+      expect(clampSession(legacy({ accent: false })).accents).toEqual([])
+    })
+
+    it("keeps accented beats that exist in the meter, sorted and once each", () => {
+      const session = { ...createDefaultSession(), accents: [3, 1, 9, 3, 0] }
+      expect(clampSession(session).accents).toEqual([1, 3])
+      expect(clampSession({ ...session, meter: "2/4" }).accents).toEqual([1])
+    })
+
+    it("toggles a beat's accent", () => {
+      const session = createDefaultSession()
+      expect(toggleAccent(session, 3).accents).toEqual([1, 3])
+      expect(toggleAccent(session, 1).accents).toEqual([])
+    })
+  })
+
+  it("mutes and unmutes a single click", () => {
+    const session = createDefaultSession()
+    session.beats[1] = { subdivision: "eighth", slots: ["click-1", "click-1"] }
+    const muted = toggleClick(session, 1, 1)
+    expect(muted.beats[1].slots).toEqual(["click-1", "off"])
+    expect(toggleClick(muted, 1, 1).beats[1].slots).toEqual(["click-1", "click-1"])
   })
 })
 

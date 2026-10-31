@@ -158,6 +158,9 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border: 1.5px solid var(--line);
   transition: background 0.06s, border-color 0.06s, transform 0.06s;
 }
+button.beat-sub { padding: 0; cursor: pointer; }
+/* A muted click: hollow and faint, so the beat's rhythm still reads */
+.beat-sub.muted { background: transparent; border-style: dashed; opacity: 0.6; }
 .beat-sub.lit {
   background: var(--blue);
   border-color: var(--blue);
@@ -634,7 +637,22 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 /* Click sheet */
 .click-sounds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .click-sounds .subdiv-opt strong { font-size: 20px; }
-.click-accent-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; color: var(--ink); font-size: 14px; }
+/* Accent: one button per beat; accented beats are filled blue */
+.click-accent-label { margin-top: 16px; }
+.accent-beats { display: flex; flex-wrap: wrap; gap: 6px; }
+.accent-beat {
+  flex: 1 0 40px;
+  height: 40px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-field);
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.accent-beat[aria-pressed="true"] { background: color-mix(in srgb, var(--blue) 15%, transparent); border-color: var(--blue); color: var(--ink); }
 
 /* Per-beat subdivision tiles */
 .beat-tiles-label { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }

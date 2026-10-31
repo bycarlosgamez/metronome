@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
-import { clampBpm, clampSession, sessionTitle, sharedSubdivision } from "./session"
+import { clampBpm, clampSession, sessionTitle, sharedSubdivision, toggleClick } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
@@ -65,6 +65,9 @@ export function Practice(props: {
     ? props.segments.slice(props.snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
     : currentBpm
 
+  const { accents } = props.session
+  const accentLabel = accents.length === 0 ? "no accent" : `accent beat${accents.length > 1 ? "s" : ""} ${accents.join(", ")}`
+
   function closeSheet() { setSheet(null) }
 
   return (
@@ -79,21 +82,27 @@ export function Practice(props: {
           {Array.from({ length: beatCount }, (_, i) => {
             const beat = i + 1
             const isLit = isPlaying && beat === props.snapshot.beat
+            const isAccent = segment.kind !== "count-in" && props.session.accents.includes(beat)
             return (
               <div key={beat} className="beat-col">
                 <div
-                  className={`beat-sq${beat === 1 ? " accent" : ""}${isLit ? " lit" : ""}`}
+                  className={`beat-sq${isAccent ? " accent" : ""}${isLit ? " lit" : ""}`}
                   data-testid={`beat-${beat}`}
                   data-current={isLit ? "true" : "false"}
-                  data-accent={beat === 1 ? "true" : "false"}
+                  data-accent={isAccent ? "true" : "false"}
                 >
                   {beat}
                 </div>
+                {/* Tap a dot to mute or unmute that click, same as in the Subdivision sheet */}
                 <div className="beat-subs">
-                  {Array.from({ length: subsInBeat(beat) }, (_, si) => (
-                    <div
+                  {(beats[i]?.slots ?? []).map((slot, si) => (
+                    <button
                       key={si}
-                      className={`beat-sub${isLit && si === activeSubSlot ? " lit" : ""}`}
+                      type="button"
+                      className={`beat-sub${slot === "off" ? " muted" : ""}${isLit && si === activeSubSlot ? " lit" : ""}`}
+                      aria-label={`Beat ${beat} click ${si + 1}`}
+                      aria-pressed={slot !== "off"}
+                      onClick={() => props.onChange(toggleClick(props.session, i, si))}
                     />
                   ))}
                 </div>
@@ -165,7 +174,7 @@ export function Practice(props: {
             <button
               type="button"
               className="pick-btn"
-              aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, accent ${props.session.accent ? "on" : "off"}`}
+              aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, ${accentLabel}`}
               onClick={() => setSheet("click")}
             >
               <strong>{CLICKS.indexOf(props.session.click) + 1}</strong>

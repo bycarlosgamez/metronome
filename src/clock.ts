@@ -72,7 +72,9 @@ export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segmen
     slots.forEach((slot, index) => {
       const at = offsetSec + index * slotDur
       if (at < start - 1e-9 || at >= end - 1e-9 || slot === "off") return
-      marks.push({ offsetSec: at, beat, accent: segment.accent !== false && beat === 1, click: slot })
+      const accents = segment.accents ?? [1]
+      const accent = segment.kind === "count-in" ? beat === 1 && accents.length > 0 : accents.includes(beat)
+      marks.push({ offsetSec: at, beat, accent, click: slot })
     })
     offsetSec += beatDur
     beatIndex += 1

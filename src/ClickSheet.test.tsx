@@ -36,9 +36,17 @@ describe("ClickSheet", () => {
     ])
   })
 
+  it("shows one accent button per beat and turns beats on and off", async () => {
+    const { user, last } = setup()
+    expect(screen.getAllByRole("button", { name: /^Accent beat / })).toHaveLength(4)
+    expect(screen.getByRole("button", { name: "Accent beat 3" })).toHaveAttribute("aria-pressed", "false")
+    await user.click(screen.getByRole("button", { name: "Accent beat 3" }))
+    expect(last().accents).toEqual([1, 3])
+  })
+
   it("turns the beat-1 accent off", async () => {
     const { user, last } = setup()
     await user.click(screen.getByRole("button", { name: "Accent beat 1" }))
-    expect(last().accent).toBe(false)
+    expect(last().accents).toEqual([])
   })
 })

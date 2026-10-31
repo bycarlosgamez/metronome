@@ -37,6 +37,21 @@ describe("Practice", () => {
     expect(screen.queryByTestId("beat-5")).not.toBeInTheDocument()
   })
 
+  it("marks every accented beat square", () => {
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    expect(screen.getByTestId("beat-3")).toHaveAttribute("data-accent", "true")
+    expect(screen.getByTestId("beat-2")).toHaveAttribute("data-accent", "false")
+  })
+
+  it("mutes a click by tapping its dot under the beat", async () => {
+    const props = makeProps()
+    render(<Practice {...props} />)
+    const dot = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 2 click 1" })
+    expect(dot).toHaveAttribute("aria-pressed", "true")
+    await userEvent.setup().click(dot)
+    expect(props.onChange.mock.calls.at(-1)![0].beats[1].slots).toEqual(["off"])
+  })
+
   it("shows beat-1 as accent", () => {
     render(<Practice {...makeProps()} />)
     expect(screen.getByTestId("beat-1")).toHaveAttribute("data-accent", "true")
@@ -552,15 +567,18 @@ describe("Practice", () => {
     const props = makeProps()
     const user = userEvent.setup()
     render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Click: Sound 1, accent on" }))
+    await user.click(screen.getByRole("button", { name: "Click: Sound 1, accent beat 1" }))
     expect(screen.getByRole("dialog", { name: "Click" })).toHaveClass("open")
     await user.click(screen.getByRole("button", { name: "Sound 2" }))
     expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ click: "click-2" }))
   })
 
-  it("shows accent off on the Click button", () => {
-    render(<Practice {...makeProps({ accent: false })} />)
-    expect(screen.getByRole("button", { name: "Click: Sound 1, accent off" })).toBeInTheDocument()
+  it("names the accented beats on the Click button", () => {
+    const { unmount } = render(<Practice {...makeProps({ accents: [] })} />)
+    expect(screen.getByRole("button", { name: "Click: Sound 1, no accent" })).toBeInTheDocument()
+    unmount()
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    expect(screen.getByRole("button", { name: "Click: Sound 1, accent beats 1, 3" })).toBeInTheDocument()
   })
 
   describe("routine per-round increase", () => {

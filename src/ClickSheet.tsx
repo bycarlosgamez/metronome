@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { toggleAccent } from "./session"
 import { CLICKS, type ClickId, type Session } from "./types"
 
 export function ClickSheet(props: {
@@ -58,17 +59,21 @@ export function ClickSheet(props: {
             </button>
           ))}
         </div>
-        <div className="click-accent-row">
-          <span>Accent beat 1</span>
-          <button
-            type="button"
-            className="routine-toggle-btn"
-            aria-label="Accent beat 1"
-            aria-pressed={props.session.accent}
-            onClick={() => props.onChange({ ...props.session, accent: !props.session.accent })}
-          >
-            {props.session.accent ? "On" : "Off"}
-          </button>
+        {/* Tap a beat to accent it, tap again to make it normal; any number of beats can be accented */}
+        <p className="beat-tiles-label click-accent-label">Accent</p>
+        <div className="accent-beats">
+          {props.session.beats.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              className="accent-beat"
+              aria-label={`Accent beat ${index + 1}`}
+              aria-pressed={props.session.accents.includes(index + 1)}
+              onClick={() => props.onChange(toggleAccent(props.session, index + 1))}
+            >
+              {index + 1}
+            </button>
+          ))}
         </div>
       </div>
     </div>

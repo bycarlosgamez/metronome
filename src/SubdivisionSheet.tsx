@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { SubdivIcon } from "./SubdivIcon"
-import { SUBDIVISION_SLOTS } from "./session"
+import { SUBDIVISION_SLOTS, toggleClick } from "./session"
 import { SUBDIVISIONS, type Session, type Subdivision } from "./types"
 
 const names: Record<Subdivision, string> = {
@@ -54,15 +54,6 @@ export function SubdivisionSheet(props: {
     })
   }
 
-  function toggleClick(beatIndex: number, slotIndex: number) {
-    props.onChange({
-      ...props.session,
-      beats: beats.map((beat, index) => index !== beatIndex ? beat : {
-        ...beat,
-        slots: beat.slots.map((slot, i) => i !== slotIndex ? slot : slot === "off" ? click : "off"),
-      }),
-    })
-  }
 
   const selectedSubs = new Set(beats.filter((_, index) => selected.has(index)).map((beat) => beat.subdivision))
 
@@ -101,7 +92,7 @@ export function SubdivisionSheet(props: {
                     className={`beat-dot${slotIndex === 0 ? " first" : ""}`}
                     aria-label={`Beat ${index + 1} click ${slotIndex + 1}`}
                     aria-pressed={slot !== "off"}
-                    onClick={() => toggleClick(index, slotIndex)}
+                    onClick={() => props.onChange(toggleClick(props.session, index, slotIndex))}
                   />
                 ))}
               </div>
