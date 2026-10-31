@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
-import { clampBpm, clampSession, sessionTitle, sharedSubdivision, toggleClick } from "./session"
+import { clampBpm, clampSession, sharedSubdivision, toggleClick } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
 import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
@@ -105,7 +105,7 @@ export function Practice(props: {
   return (
     <main className="practice">
       <header className="topbar">
-        <h1 aria-label="Mentronome">{sessionTitle(props.session)}</h1>
+        <h1>Mentronome</h1>
       </header>
 
       <div className="practice-body">
@@ -145,6 +145,7 @@ export function Practice(props: {
             )
           })}
         </div>
+        <p className="beat-hint">Tap a dot to mute that click</p>
 
         {/* Tempo first: small round − / + either side of the BPM; settings as a chip row below */}
         <div className="bpm-block">

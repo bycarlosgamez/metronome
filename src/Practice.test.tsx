@@ -24,9 +24,9 @@ function makeProps(overrides: Partial<Session> = {}) {
 }
 
 describe("Practice", () => {
-  it("renders the session name and no Edit button", () => {
+  it("shows the product name as the page title, the same as it's announced, and no Edit button", () => {
     render(<Practice {...makeProps()} />)
-    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Mentronome$/)
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument()
   })
 
@@ -821,7 +821,7 @@ describe("Practice", () => {
       expect(screen.getByRole("textbox", { name: "Target BPM" })).toHaveValue("130")
       expect(screen.getByRole("textbox", { name: "Step" })).toHaveValue("5")
       const unit = screen.getByRole("group", { name: "Every unit" })
-      expect(within(unit).getByRole("button", { name: "Min" })).toHaveAttribute("aria-pressed", "true")
+      expect(within(unit).getByRole("button", { name: "Time" })).toHaveAttribute("aria-pressed", "true")
       expect(screen.getByRole("textbox", { name: "Every minutes" })).toHaveValue("2")
       expect(screen.getByRole("textbox", { name: "Every seconds" })).toHaveValue("00")
     })
@@ -850,7 +850,7 @@ describe("Practice", () => {
       const user = userEvent.setup()
       const bars = climb({ everyUnit: "bars", everyBars: 8 })
       const { unmount } = render(<Practice {...bars} />)
-      await user.click(screen.getByRole("button", { name: "Min" }))
+      await user.click(screen.getByRole("button", { name: "Time" }))
       expect(last(bars).time).toMatchObject({ everyUnit: "sec", everySec: 120 })
       unmount()
       const min = climb({ everySec: 30 })
@@ -960,6 +960,26 @@ describe("Practice", () => {
     it("keeps it short for a single round at one tempo", () => {
       render(<Practice {...routine({ restDuration: 0 })} />)
       expect(screen.getByTestId("routine-summary")).toHaveTextContent(/^2:00 · 110 BPM · 2:00 total$/)
+    })
+  })
+
+  describe("wording", () => {
+    it("says BPM on the round increase", () => {
+      const base = createDefaultSession(() => "s1")
+      render(<Practice {...makeProps({ practice: "routine", routine: { ...base.routine, round: { enabled: true, count: 4, restDuration: 0 }, increase: { mode: "round", roundStep: 5 } } })} />)
+      expect(screen.getByTestId("round-step")).toHaveTextContent(/^\+5 BPM$/)
+    })
+
+    it("explains Round and Set in a line each", () => {
+      const base = createDefaultSession(() => "s1")
+      render(<Practice {...makeProps({ practice: "routine", routine: { ...base.routine, round: { enabled: true, count: 4, restDuration: 0 } } })} />)
+      expect(screen.getByText("One play and the rest after it")).toBeInTheDocument()
+      expect(screen.getByText("All the rounds, played again")).toBeInTheDocument()
+    })
+
+    it("says the beat dots can be tapped to mute", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.getByText("Tap a dot to mute that click")).toBeInTheDocument()
     })
   })
 })

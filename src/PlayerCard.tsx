@@ -231,7 +231,7 @@ export function PlayerCard(props: {
                       if (session.time.everyUnit === unit) return
                       setTime(unit === "bars" ? { everyUnit: unit, everyBars: 4 } : { everyUnit: unit, everySec: 120 })
                     }}>
-                    {unit === "bars" ? "Bars" : "Min"}
+                    {unit === "bars" ? "Bars" : "Time"}
                   </button>
                 ))}
               </div>
@@ -246,6 +246,7 @@ export function PlayerCard(props: {
           {/* Each section is a bordered box; settings a Repeat switch controls open in a panel under it */}
           <div className="routine-box" data-testid="round-box">
             <div className="routine-section-title">Round</div>
+            <p className="routine-section-hint">One play and the rest after it</p>
             {/* Duration sets the units Play and Rest are measured in */}
             <div className="routine-row">
               <span className="routine-row-label">Duration</span>
@@ -314,7 +315,7 @@ export function PlayerCard(props: {
                         if (roundStep === 0) return
                         setRoutine({ increase: roundStep === 1 ? { ...increase, mode: "off" } : { mode: "round", roundStep: roundStep - 1 } })
                       }}>−</button>
-                    <span className="routine-stepper-val" data-testid="round-step">+{roundStep}</span>
+                    <span className="routine-stepper-val" data-testid="round-step">+{roundStep} BPM</span>
                     <button type="button" aria-label="Increase round increase"
                       onClick={() => setRoutine({ increase: { mode: "round", roundStep: roundStep + 1 } })}>+</button>
                   </div>
@@ -326,6 +327,7 @@ export function PlayerCard(props: {
           {round.enabled && (
             <div className="routine-box" data-testid="set-box">
               <div className="routine-section-title">Set</div>
+              <p className="routine-section-hint">All the rounds, played again</p>
               <div className="routine-row routine-repeat-row">
                 <span className="routine-row-label">Repeat</span>
                 <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
