@@ -25,6 +25,51 @@ export function Practice(props: {
 }) {
   const [sheet, setSheet] = useState<"meter" | "subdiv" | "click" | null>(null)
 
+  // − / + step once on click; held down, they repeat after a short pause. The held run tracks its own BPM
+  // because the session prop only catches up after each change renders.
+  const hold = useRef<{ bpm: number; held: boolean; delay?: number; repeat?: number }>({ bpm: 0, held: false })
+  function nudge(step: number) {
+    hold.current.bpm = clampBpm(hold.current.bpm + step)
+    props.onChange(clampSession({ ...props.session, bpm: hold.current.bpm }))
+  }
+  function stopHold() {
+    window.clearTimeout(hold.current.delay)
+    window.clearInterval(hold.current.repeat)
+  }
+  function startHold(step: number) {
+    stopHold()
+    hold.current = { bpm: props.session.bpm, held: false }
+    hold.current.delay = window.setTimeout(() => {
+      hold.current.held = true
+      nudge(step)
+      hold.current.repeat = window.setInterval(() => nudge(step), 80)
+    }, 400)
+  }
+  function stepClick(step: number) {
+    if (hold.current.held) { hold.current.held = false; return }
+    hold.current.bpm = props.session.bpm
+    nudge(step)
+  }
+  const stepProps = (step: number) => ({
+    onPointerDown: () => startHold(step),
+    onPointerUp: stopHold,
+    onPointerLeave: stopHold,
+    onPointerCancel: stopHold,
+    onClick: () => stepClick(step),
+  })
+
+  // The beat dots are one tab stop; arrow keys move between them
+  const [dotFocus, setDotFocus] = useState(0)
+  function onDotKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    const move = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0
+    if (!move) return
+    event.preventDefault()
+    const dots = Array.from(event.currentTarget.closest(".beat-grid")?.querySelectorAll<HTMLButtonElement>(".beat-sub") ?? [])
+    const next = (index + move + dots.length) % dots.length
+    setDotFocus(next)
+    dots[next]?.focus()
+  }
+
   // Inline BPM editing
   const bpmRef = useRef<string | null>(null)
   const [bpmText, setBpmText] = useState<string | null>(null)
@@ -50,6 +95,10 @@ export function Practice(props: {
 
   const { accents } = props.session
   const accentLabel = accents.length === 0 ? "no accent" : `accent beat${accents.length > 1 ? "s" : ""} ${accents.join(", ")}`
+
+  // Position of a dot across the whole bar, for the single tab stop
+  const dotIndex = (beatIndex: number, slotIndex: number) =>
+    beats.slice(0, beatIndex).reduce((sum, beat) => sum + beat.slots.length, 0) + slotIndex
 
   function closeSheet() { setSheet(null) }
 
@@ -85,6 +134,9 @@ export function Practice(props: {
                       className={`beat-sub${slot === "off" ? " muted" : ""}${isLit && si === activeSubSlot ? " lit" : ""}`}
                       aria-label={`Beat ${beat} click ${si + 1}`}
                       aria-pressed={slot !== "off"}
+                      tabIndex={dotIndex(i, si) === dotFocus ? 0 : -1}
+                      onFocus={() => setDotFocus(dotIndex(i, si))}
+                      onKeyDown={(event) => onDotKey(event, dotIndex(i, si))}
                       onClick={() => props.onChange(toggleClick(props.session, i, si))}
                     />
                   ))}
@@ -100,7 +152,7 @@ export function Practice(props: {
             type="button"
             className="bpm-round-btn"
             aria-label="Decrease BPM"
-            onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
+            {...stepProps(-1)}
           >−</button>
           <div className="bpm-center">
             <input
@@ -120,7 +172,7 @@ export function Practice(props: {
             type="button"
             className="bpm-round-btn"
             aria-label="Increase BPM"
-            onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
+            {...stepProps(1)}
           >+</button>
         </div>
 
@@ -178,10 +230,7 @@ export function Practice(props: {
         meter={props.session.meter}
         open={sheet === "meter"}
         onClose={closeSheet}
-        onChange={(meter) => {
-          props.onChange(clampSession({ ...props.session, meter }))
-          closeSheet()
-        }}
+        onChange={(meter) => props.onChange(clampSession({ ...props.session, meter }))}
       />
       <SubdivisionSheet
         session={props.session}

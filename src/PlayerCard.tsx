@@ -79,11 +79,11 @@ export function PlayerCard(props: {
     : null
   const atTarget = climb !== null && !Number.isFinite(climb.nextInSec)
 
-  const phaseLabel = segment.kind === "count-in" ? "Ready"
+  const phaseLabel = props.status === "paused" ? "Paused"
+    : !isPlaying ? "Stopped"
+    : segment.kind === "count-in" ? "Ready"
     : practice === "routine" ? (isRest ? "Rest" : "Play")
-    : props.status === "playing" || props.status === "no-audio" ? "Playing"
-    : props.status === "paused" ? "Paused"
-    : "Stopped"
+    : "Playing"
 
   let bigNumber: string
   let subLine: string | null = null
@@ -119,10 +119,10 @@ export function PlayerCard(props: {
     }
   }
 
+  // The switch is locked while playing, so a misclick can't end the session
   function choose(next: Practice) {
-    if (next === practice) return
+    if (next === practice || isPlaying) return
     props.onChange(choosePractice(session, next))
-    if (isPlaying) props.onReset()
   }
 
   function setTime(next: Partial<Session["time"]>) {
@@ -135,6 +135,10 @@ export function PlayerCard(props: {
 
   return (
     <div className="player-card">
+      {/* Screen readers hear phase, tempo and round changes, not every tick of the timer */}
+      <div className="visually-hidden" aria-live="polite" data-testid="player-announce">
+        {isPlaying ? [phaseLabel, `${playingBpm} BPM`, practice === "routine" ? `Round ${roundN} of ${roundPasses}` : null].filter(Boolean).join(", ") : ""}
+      </div>
       {/* Live state, sized to read from the music stand: phase and round, then time and tempo side by side */}
       <div className={`player-panel${isRest ? " is-rest" : ""}`}>
         <div className="player-status">
@@ -173,7 +177,8 @@ export function PlayerCard(props: {
 
       <div className="routine-seg player-switch" role="group" aria-label="How to practice">
         {PRACTICES.map(({ value, label }) => (
-          <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} onClick={() => choose(value)}>
+          <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} disabled={isPlaying}
+            title={isPlaying ? "Stop to change how you practise" : undefined} onClick={() => choose(value)}>
             {label}
           </button>
         ))}

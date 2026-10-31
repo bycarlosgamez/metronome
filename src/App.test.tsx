@@ -330,4 +330,33 @@ describe("App", () => {
     // The practice clock keeps counting from where it was; only the climb position moves
     expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
   })
+
+  it("nudges the BPM with the arrow keys, by 5 with Shift, but not while typing", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 100
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard("{ArrowUp}")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("101")
+    await user.keyboard("{Shift>}{ArrowDown}{/Shift}")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("96")
+    await user.click(screen.getByTestId("bpm-current"))
+    await user.keyboard("{ArrowUp}")
+    await user.tab()
+    expect(screen.getByTestId("bpm-current")).toHaveValue("96")
+  })
+
+  it("sets the BPM from taps on T", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const now = vi.spyOn(performance, "now")
+    const user = userEvent.setup()
+    render(<App />)
+    for (const at of [0, 500, 1000, 1500]) {
+      now.mockReturnValue(at)
+      await user.keyboard("t")
+    }
+    expect(screen.getByTestId("bpm-current")).toHaveValue("120")
+  })
 })

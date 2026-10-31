@@ -1,6 +1,8 @@
 @import "./tokens.css";
 
 * { box-sizing: border-box; }
+/* One designed focus ring for every control */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 body { margin: 0; background: var(--page); color: var(--ink); font-family: system-ui, sans-serif; }
 button, input, select { font: inherit; color: inherit; }
 button:disabled { opacity: 0.4; cursor: default; }
@@ -580,6 +582,22 @@ button.beat-sub { padding: 0; cursor: pointer; }
 /* Center title in sheets that are not card-based (meter, subdiv) */
 .sheet > .sheet-title { text-align: center; }
 .sheet-divider { border: none; border-top: 1px solid var(--line); margin: 16px 0; }
+/* Every popup ends in a Done button, so closing never depends on Escape or a backdrop tap */
+.sheet-done {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px 0;
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-field);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sheet-done:hover { background: var(--surface-high); }
 
 /* Meter sheet */
 .meter-selects {
