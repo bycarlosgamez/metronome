@@ -168,53 +168,42 @@ button.beat-sub { padding: 0; cursor: pointer; }
 }
 
 /* BPM + pick row */
-.bpm-pick-row {
-  display: flex;
-  gap: 12px;
+/* BPM card: − / + are small round buttons either side of the number */
+.bpm-block {
   width: 100%;
   max-width: 520px;
-  align-items: stretch;
-}
-.pick-col {
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  flex: 0 0 50%;
-}
-.pick-col .pick-btn {
-  flex: 1;
-}
-
-/* BPM block */
-.bpm-block {
-  flex: 0 0 50%;
-  min-width: 0;
+  padding: 14px 16px;
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
-  overflow: hidden;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 .bpm-block:focus-within { border-color: var(--blue); }
-.bpm-top { display: flex; justify-content: space-between; align-items: stretch; padding: 14px 16px 12px; }
-/* Grows to fill the card when the pick column is taller */
-.bpm-step-bar { flex: 1; display: flex; border-top: 1px solid var(--line); }
-.bpm-bar-btn {
-  flex: 1;
+.bpm-center { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.bpm-center .bpm-current { text-align: center; }
+.bpm-round-btn {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--surface-high);
   background: none;
-  border: none;
-  border-right: 1px solid var(--line);
-  color: var(--ink);
+  color: var(--ink-muted);
   font-size: 22px;
-  font-weight: 300;
-  padding: 12px 0;
-  cursor: pointer;
   line-height: 1;
+  cursor: pointer;
 }
-.bpm-bar-btn:last-child { border-right: none; }
-.bpm-bar-btn:hover { background: var(--surface-raised); }
+.bpm-round-btn:hover { color: var(--ink); border-color: var(--ink-muted); }
+/* Time sig, Subdiv and Sound as equal chips */
+.pick-row { display: flex; gap: 10px; width: 100%; max-width: 520px; }
+.pick-row .pick-btn { padding: 10px 6px; gap: 4px; }
+.pick-accents { display: flex; gap: 3px; }
+.pick-accents i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-high); }
+.pick-accents i.on { background: var(--blue); }
 .bpm-current {
   font-size: 52px;
   font-weight: 700;
@@ -231,7 +220,6 @@ button.beat-sub { padding: 0; cursor: pointer; }
 }
 .bpm-current:focus { color: var(--blue); }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
-.bpm-left { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 0; }
 .bpm-progress-bar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .bpm-progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue), var(--stage-play)); transition: width 0.3s; }
 .bpm-progress-labels {

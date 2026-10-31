@@ -588,6 +588,21 @@ describe("Practice", () => {
     expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ click: "click-2" }))
   })
 
+  it("puts − BPM + on one row and Time sig, Subdiv and Sound as a chip row below", () => {
+    render(<Practice {...makeProps()} />)
+    const card = document.querySelector(".bpm-block") as HTMLElement
+    const order = Array.from(card.querySelectorAll("button, input")).map((el) => el.getAttribute("aria-label"))
+    expect(order).toEqual(["Decrease BPM", "BPM", "Increase BPM"])
+    const chips = Array.from(document.querySelectorAll(".pick-row .pick-btn")).map((el) => el.querySelector(":scope > span:last-child")?.textContent)
+    expect(chips).toEqual(["Time Sig", "Subdiv", "Sound"])
+  })
+
+  it("shows the accented beats as dots on the Sound chip", () => {
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    const dots = Array.from(document.querySelectorAll(".pick-accents i")).map((el) => el.classList.contains("on"))
+    expect(dots).toEqual([true, false, true, false])
+  })
+
   it("names the accented beats on the Click button", () => {
     const { unmount } = render(<Practice {...makeProps({ accents: [] })} />)
     expect(screen.getByRole("button", { name: "Click: Sound 1, no accent" })).toBeInTheDocument()

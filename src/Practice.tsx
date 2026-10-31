@@ -94,70 +94,68 @@ export function Practice(props: {
           })}
         </div>
 
-        {/* BPM + pick */}
-        <div className="bpm-pick-row">
-          <div className="bpm-block">
-            <div className="bpm-top">
-              <div className="bpm-left">
-                <input
-                  className="bpm-current"
-                  data-testid="bpm-current"
-                  inputMode="numeric"
-                  aria-label="BPM"
-                  value={bpmText ?? String(props.session.bpm)}
-                  onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
-                  onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
-                  onBlur={commitBpm}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                />
-                <span className="bpm-label">{props.session.practice === "steady" ? "BPM" : "Start BPM"}</span>
-              </div>
-            </div>
-            <div className="bpm-step-bar">
-              <button
-                type="button"
-                className="bpm-bar-btn"
-                aria-label="Decrease BPM"
-                onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
-              >−</button>
-              <button
-                type="button"
-                className="bpm-bar-btn"
-                aria-label="Increase BPM"
-                onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
-              >+</button>
-            </div>
+        {/* Tempo first: small round − / + either side of the BPM; settings as a chip row below */}
+        <div className="bpm-block">
+          <button
+            type="button"
+            className="bpm-round-btn"
+            aria-label="Decrease BPM"
+            onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm - 1 }))}
+          >−</button>
+          <div className="bpm-center">
+            <input
+              className="bpm-current"
+              data-testid="bpm-current"
+              inputMode="numeric"
+              aria-label="BPM"
+              value={bpmText ?? String(props.session.bpm)}
+              onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
+              onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
+              onBlur={commitBpm}
+              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+            />
+            <span className="bpm-label">{props.session.practice === "steady" ? "BPM" : "Start BPM"}</span>
           </div>
+          <button
+            type="button"
+            className="bpm-round-btn"
+            aria-label="Increase BPM"
+            onClick={() => props.onChange(clampSession({ ...props.session, bpm: props.session.bpm + 1 }))}
+          >+</button>
+        </div>
 
-          <div className="pick-col">
-            <button
-              type="button"
-              className="pick-btn"
-              aria-label={`Time signature: ${props.session.meter}`}
-              onClick={() => setSheet("meter")}
-            >
-              <strong>{props.session.meter}</strong>
-              <span>Time Sig</span>
-            </button>
-            <button
-              type="button"
-              className="pick-btn"
-              aria-label={`Subdivision: ${shared ?? "mixed"}`}
-              onClick={() => setSheet("subdiv")}
-            >
-              {shared ? <SubdivIcon subdivision={shared} size="sm" /> : <strong className="pick-mixed">Mixed</strong>}
-              <span>Subdiv</span>
-            </button>
-            <button
-              type="button"
-              className="pick-btn"
-              aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, ${accentLabel}`}
-              onClick={() => setSheet("click")}
-            >
-              <strong>{CLICKS.indexOf(props.session.click) + 1}</strong>
-              <span>Click</span>
-            </button>
-          </div>
+        <div className="pick-row">
+          <button
+            type="button"
+            className="pick-btn"
+            aria-label={`Time signature: ${props.session.meter}`}
+            onClick={() => setSheet("meter")}
+          >
+            <strong>{props.session.meter}</strong>
+            <span>Time Sig</span>
+          </button>
+          <button
+            type="button"
+            className="pick-btn"
+            aria-label={`Subdivision: ${shared ?? "mixed"}`}
+            onClick={() => setSheet("subdiv")}
+          >
+            {shared ? <SubdivIcon subdivision={shared} size="sm" /> : <strong className="pick-mixed">Mixed</strong>}
+            <span>Subdiv</span>
+          </button>
+          <button
+            type="button"
+            className="pick-btn"
+            aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, ${accentLabel}`}
+            onClick={() => setSheet("click")}
+          >
+            <strong><span aria-hidden="true">🔊</span> {CLICKS.indexOf(props.session.click) + 1}</strong>
+            {/* One dot per beat; accented beats are blue */}
+            <div className="pick-accents" aria-hidden="true">
+              {props.session.beats.map((_, index) => <i key={index} className={accents.includes(index + 1) ? "on" : ""} />)}
+            </div>
+            <span>Sound</span>
+          </button>
         </div>
 
         <PlayerCard
