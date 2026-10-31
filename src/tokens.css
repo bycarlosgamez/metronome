@@ -10,6 +10,8 @@
   --play: #ffffff;
   --play-ink: #111111;
   --line: #2e2e2e;
+  --control-edge: #777777; /* edges of controls: ≥3:1 on every surface */
+  --rest-ink: var(--yellow); /* Rest phase: its own colour, so red only means Pause */
   --stage-stop: #e23b32;
   --stage-play: #2ea85a;
   --stage-rest: #f0c429;

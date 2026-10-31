@@ -93,29 +93,27 @@ export function PlayerCard(props: {
     : isRest
     ? props.segments.slice(snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
     : currentBpm
-  const bpmNow = <span className="player-bpm" data-testid="player-bpm">{playingBpm}</span>
 
-  let info: React.ReactNode = null
+  let roundLine: string | null = null
+  let target: number | null = null
   let progress: number | null = null
   if (practice === "routine") {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
     subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
-    info = (<><div>{bpmNow} BPM</div><div>Round {roundN}/{roundPasses}</div>{round.enabled && <div>Set {setN}/{setPasses}</div>}</>)
+    roundLine = `Round ${roundN}/${roundPasses}${round.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
     progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
     if (climb) {
-      const target = session.time.targetBpm
       if (atTarget) {
         subLine = "At target"
-        info = bpmNow
       } else {
         const barSec = beatsInMeter(session.meter) * 60 / currentBpm
         const nextIn = session.time.everyUnit === "bars"
           ? `${Math.ceil(climb.nextInSec / barSec - 1e-9)} bars`
           : formatClock(Math.ceil(climb.nextInSec))
         subLine = `Next +${session.bpmIncrease} in ${nextIn}`
-        info = <>{bpmNow} → {target}</>
+        target = session.time.targetBpm
         progress = climb.fraction
       }
     }
@@ -137,14 +135,23 @@ export function PlayerCard(props: {
 
   return (
     <div className="player-card">
-      <div className="player-panel">
-        <div className="routine-progress-row">
-          <div className="routine-countdown-col">
-            <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="player-phase">{phaseLabel}</div>
-            <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="player-number">{bigNumber}</div>
-            {subLine && <div className="routine-total-left" data-testid="player-sub">{subLine}</div>}
+      {/* Live state, sized to read from the music stand: phase and round, then time and tempo side by side */}
+      <div className={`player-panel${isRest ? " is-rest" : ""}`}>
+        <div className="player-status">
+          <span className="player-phase" data-testid="player-phase">{phaseLabel}</span>
+          {roundLine && <span className="player-round" data-testid="player-round">{roundLine}</span>}
+        </div>
+        <div className="player-readout">
+          <div className="player-time">
+            <div className="player-number" data-testid="player-number">{bigNumber}</div>
+            {subLine && <div className="player-sub" data-testid="player-sub">{subLine}</div>}
           </div>
-          {info !== null && <div className="routine-cycle-info" data-testid="player-info">{info}</div>}
+          <div className="player-tempo">
+            <div className="player-bpm" data-testid="player-bpm">{playingBpm}</div>
+            <div className="player-sub">
+              BPM{target !== null && <> <span data-testid="player-target">→ {target}</span></>}
+            </div>
+          </div>
         </div>
         {progress !== null && (
           <div className="routine-progress-bar-wrap">
@@ -180,7 +187,7 @@ export function PlayerCard(props: {
       </div>
 
       {practice === "climb" && (
-        <div className="routine-section climb-settings">
+        <div className="routine-box climb-settings">
           <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
           <NumberRow id="climb-step" label="Step" value={session.bpmIncrease}
             onCommit={(n) => props.onChange(clampSession({ ...session, bpmIncrease: Math.max(0, Math.round(n)) }))} />

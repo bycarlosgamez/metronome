@@ -7,7 +7,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .practice { width: 100%; margin-inline: auto; min-height: 100vh; }
 .practice { max-width: 960px; display: flex; flex-direction: column; }
-.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 16px 0; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 16px 0; width: 100%; max-width: 552px; margin-inline: auto; box-sizing: border-box; }
 .stage { margin: 20px 16px 0; border-radius: var(--radius-stage); max-height: 640px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 16px; gap: 10px; }
 .stage p { margin: 0; }
 .stage-time { font-size: var(--time-size); font-weight: 700; letter-spacing: -0.04em; line-height: 0.9; margin: 0; background: transparent; border: 0; color: inherit; text-align: center; padding: 0; }
@@ -143,7 +143,8 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   color: var(--ink-muted);
   transition: background 0.08s, border-color 0.08s, color 0.08s;
 }
-.beat-sq.accent { border-color: var(--surface-high); }
+/* Accented beats: a bright edge and lifted fill, readable without colour */
+.beat-sq.accent { border-color: var(--ink-muted); background: var(--surface-raised); color: var(--ink); }
 .beat-sq.lit { background: var(--stage-play); border-color: var(--stage-play); color: #000; }
 .beat-sq.accent.lit { background: var(--ink); border-color: var(--ink); color: var(--play-ink); }
 .beat-subs {
@@ -155,7 +156,7 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   height: 12px;
   border-radius: 50%;
   background: var(--surface-raised);
-  border: 1.5px solid var(--line);
+  border: 1.5px solid var(--control-edge);
   transition: background 0.06s, border-color 0.06s, transform 0.06s;
 }
 button.beat-sub { padding: 0; cursor: pointer; }
@@ -190,7 +191,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1.5px solid var(--surface-high);
+  border: 1.5px solid var(--control-edge);
   background: none;
   color: var(--ink-muted);
   font-size: 22px;
@@ -230,52 +231,44 @@ button.beat-sub { padding: 0; cursor: pointer; }
   font-variant-numeric: tabular-nums;
 }
 /* Player card: play panel, Steady | Climb | Routine switch, settings */
+/* Player: the play panel is the one card; the switch and settings sit below it on the page */
 .player-card {
-  background: var(--surface-raised);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-card);
-  overflow: hidden;
   width: 100%;
   max-width: 520px;
   box-sizing: border-box;
 }
-
-/* Progress row (reused) */
-/* Darker panel at the top of the player card: big number, progress and Play */
 .player-panel {
   background: var(--surface-sunk);
   border: 1.5px solid var(--line);
   border-radius: var(--radius-card);
-  margin: 10px;
-  padding: 14px 16px 18px;
+  padding: 18px 20px 22px;
+  transition: background 0.3s ease-out, border-color 0.3s ease-out;
 }
-.routine-progress-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.player-panel.is-rest {
+  background: color-mix(in srgb, var(--rest-ink) 12%, var(--surface-sunk));
+  border-color: color-mix(in srgb, var(--rest-ink) 40%, var(--line));
 }
-.routine-countdown-col { display: inline-flex; flex-direction: column; }
-.player-bpm { color: var(--ink); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
-.routine-cycle-info {
-  text-align: right;
-  font-size: 12px;
-  color: var(--ink-muted);
-  line-height: 1.6;
-}
-.routine-phase { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
-.routine-countdown { font-size: 56px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); margin: 4px 0 6px; }
-.routine-total-left { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.routine-phase.is-rest, .routine-countdown.is-rest { color: var(--stage-stop); }
-.routine-progress-bar-fill.is-rest { background: var(--stage-stop); }
+/* Read from the music stand: phase and round at 16px, time and tempo as the largest text on the page */
+.player-status { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.player-phase { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+.player-round { font-size: 16px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.player-readout { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; margin-top: 8px; }
+.player-number, .player-bpm { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
+.player-number { font-size: 72px; }
+.player-tempo { text-align: right; }
+.player-bpm { font-size: 56px; }
+.player-sub { margin-top: 8px; font-size: 15px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.player-panel.is-rest .player-phase, .player-panel.is-rest .player-number { color: var(--rest-ink); }
+.player-panel.is-rest .routine-progress-bar-fill { background: var(--rest-ink); }
 .player-panel .play-controls { margin: 28px 0 0; }
-.player-switch { margin: 0 10px 10px; }
-.player-switch .routine-seg-btn { flex: 1; padding: 8px 0; font-size: 12px; }
+.player-switch { margin: 14px 0 10px; }
+.player-switch .routine-seg-btn { flex: 1; padding: 9px 0; font-size: 13px; }
 /* Climb settings: Target BPM and Step inputs match the MIN:SEC boxes */
 .climb-input {
   width: 56px;
   text-align: center;
   background: var(--surface-raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: 8px;
   color: var(--ink);
   font: inherit;
@@ -308,7 +301,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .routine-section:last-child { border-bottom: none; }
 /* Round and Set: each a bordered box; a Repeat switch opens a darker panel with the settings it controls */
 .routine-box {
-  margin: 10px;
+  margin: 10px 0;
   padding: 10px 12px;
   border: 1.5px solid var(--surface-high);
   border-radius: var(--radius-field);
@@ -323,7 +316,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   background: var(--surface-sunk);
 }
 .routine-section-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -347,7 +340,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .routine-stepper {
   display: flex;
   align-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -401,7 +394,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   height: 20px;
   flex: none;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: var(--radius-pill);
   background: var(--surface-high);
   cursor: pointer;
@@ -425,13 +418,13 @@ button.beat-sub { padding: 0; cursor: pointer; }
 /* Segment control (Bars/Time and BPM row) */
 .routine-seg {
   display: flex;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: 6px;
   overflow: hidden;
 }
 .routine-seg-btn {
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--ink-muted);
   background: none;
   border: none;
@@ -449,7 +442,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   width: 44px;
   text-align: center;
   background: var(--surface-raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-edge);
   border-radius: 8px;
   color: var(--ink);
   font: inherit;
@@ -459,7 +452,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   padding: 6px 0;
 }
 .time-input-box input:focus { outline: none; border-color: var(--blue); }
-.time-input-box span { font-size: 9px; letter-spacing: 0.1em; color: var(--ink-muted); }
+.time-input-box span { font-size: 11px; letter-spacing: 0.1em; color: var(--ink-muted); }
 .time-input-colon { font-size: 16px; font-weight: 600; color: var(--ink-muted); padding-top: 6px; }
 
 /* BPM row */
@@ -512,7 +505,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   padding: 4px 8px;
 }
 .stop-link:hover { color: var(--ink); }
-.count-in-row { margin: 0 14px 10px; }
+.routine-row.count-in-row { margin: 0 4px 4px; }
 
 /* SubdivIcon */
 .subdiv-icon {
@@ -631,7 +624,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .accent-beat[aria-pressed="true"] { background: color-mix(in srgb, var(--blue) 15%, transparent); border-color: var(--blue); color: var(--ink); }
 
 /* Per-beat subdivision tiles */
-.beat-tiles-label { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+.beat-tiles-label { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
 .beat-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
 .beat-tile {
   flex: 1 0 64px;
