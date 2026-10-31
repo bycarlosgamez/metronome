@@ -9,6 +9,21 @@ function uniform(subdivision: Subdivision, slots: Slot[], beats = 4): BeatPatter
 }
 
 describe("clock", () => {
+  it("times the position in a beat from the same clicks the audio plays, across a Climb step", () => {
+    const session = createDefaultSession(() => "s1")
+    session.practice = "climb"
+    session.bpm = 110
+    session.bpmIncrease = 5
+    session.time = { ...session.time, targetBpm: 115, everyUnit: "sec", everySec: 10 }
+    const [play] = expandSession(session)
+    // 10s at 110 is 18.33 beats, so total elapsed % beat length would be wrong here
+    const at = 10.05
+    const lastClick = clicksInSegment(play, 0, at).at(-1)!
+    const snap = snapshotAt([play], at)
+    expect(snap.beat).toBe(lastClick.beat)
+    expect(snap.beatFraction).toBeCloseTo((at - lastClick.offsetSec) / (60 / 110), 5)
+  })
+
   it("reports how far into an endless play stretch you are", () => {
     const session = createDefaultSession(() => "s1")
     session.countIn = true
@@ -184,10 +199,18 @@ describe("clock", () => {
     expect(clicksInSegment(expandSession(session)[0])).toHaveLength(4)
   })
 
-  it("plays every click unaccented when the accent is off, count-in included", () => {
+  it("accents every chosen beat", () => {
+    const session = createDefaultSession(() => "cycle-1")
+    session.accents = [1, 3]
+    // one bar at 80 BPM in 4/4 is 3s
+    const accented = clicksInSegment(expandSession(session)[0], 0, 3).filter((click) => click.accent).map((click) => click.beat)
+    expect(accented).toEqual([1, 3])
+  })
+
+  it("plays every click unaccented when no beat is accented, count-in included", () => {
     const session = createDefaultSession(() => "cycle-1")
     session.countIn = true
-    session.accent = false
+    session.accents = []
     session.beats = uniform("eighth", ["click-1", "click-1"])
     const [countIn, play] = expandSession(session)
     expect(clicksInSegment(countIn).some((click) => click.accent)).toBe(false)

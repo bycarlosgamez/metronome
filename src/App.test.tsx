@@ -53,6 +53,27 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
   })
 
+  it("lets Space press a focused switch instead of starting playback", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const user = userEvent.setup()
+    render(<App />)
+    const countIn = screen.getByRole("switch", { name: "Count-in" })
+    countIn.focus()
+    await user.keyboard(" ")
+    expect(countIn).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+  })
+
+  it("doesn't start playback with Space while a popup is open", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: /^Click: Sound 1/ }))
+    ;(document.activeElement as HTMLElement).blur()
+    await user.keyboard(" ")
+    expect(screen.getByRole("button", { name: "Play", hidden: true })).toBeInTheDocument()
+  })
+
   it("starts again from the beginning when Play is pressed at the end", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.practice = "routine"
@@ -231,12 +252,10 @@ describe("App", () => {
     await act(async () => {
       tick?.((countInSec + 30) * 1000)
     })
-    const bpm = screen.getByTestId("bpm-current")
-    expect(bpm).toHaveValue("80")
-    await user.clear(bpm)
-    await user.type(bpm, "150")
-    await user.tab()
-    expect(screen.getByTestId("bpm-current")).toHaveValue("150")
+    // While a Climb plays the tempo shows the live BPM; + still raises Start, which moves the live BPM with it
+    const live = Number((screen.getByTestId("bpm-current") as HTMLInputElement).value)
+    await user.click(screen.getByRole("button", { name: "Increase BPM" }))
+    expect(screen.getByTestId("bpm-current")).toHaveValue(String(live + 1))
   })
 
   it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
@@ -290,13 +309,11 @@ describe("App", () => {
     await act(async () => {
       tick?.(10_000)
     })
-    const bpm = screen.getByTestId("bpm-current")
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
-    await user.clear(bpm)
-    await user.type(bpm, "60")
-    await user.tab()
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
+    // Shift+↓ ten times takes Start from 110 to 60
+    await user.keyboard("{Shift>}" + "{ArrowDown}".repeat(10) + "{/Shift}")
     // 4 bars at 60 is 16s, so without carrying the step 10s would land back on the first step (60)
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("65")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("65")
   })
 
   it("keeps the current Climb step when Every changes while playing", async () => {
@@ -320,14 +337,43 @@ describe("App", () => {
     await act(async () => {
       tick?.(150_000)
     })
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
     const minutes = screen.getByRole("textbox", { name: "Every minutes" })
     await user.clear(minutes)
     await user.type(minutes, "1")
     await user.tab()
     // With 1:00 windows, 150s would be the third step (120) without carrying the step
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
     // The practice clock keeps counting from where it was; only the climb position moves
     expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
+  })
+
+  it("nudges the BPM with the arrow keys, by 5 with Shift, but not while typing", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const session = createDefaultSession(() => "cycle-1")
+    session.bpm = 100
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    const user = userEvent.setup()
+    render(<App />)
+    await user.keyboard("{ArrowUp}")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("101")
+    await user.keyboard("{Shift>}{ArrowDown}{/Shift}")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("96")
+    await user.click(screen.getByTestId("bpm-current"))
+    await user.keyboard("{ArrowUp}")
+    await user.tab()
+    expect(screen.getByTestId("bpm-current")).toHaveValue("96")
+  })
+
+  it("sets the BPM from taps on T", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const now = vi.spyOn(performance, "now")
+    const user = userEvent.setup()
+    render(<App />)
+    for (const at of [0, 500, 1000, 1500]) {
+      now.mockReturnValue(at)
+      await user.keyboard("t")
+    }
+    expect(screen.getByTestId("bpm-current")).toHaveValue("120")
   })
 })

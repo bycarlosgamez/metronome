@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { snapshotAt } from "./clock"
@@ -24,9 +24,9 @@ function makeProps(overrides: Partial<Session> = {}) {
 }
 
 describe("Practice", () => {
-  it("renders the session name and no Edit button", () => {
+  it("shows the product name as the page title, the same as it's announced, and no Edit button", () => {
     render(<Practice {...makeProps()} />)
-    expect(screen.getByRole("heading", { name: "Mentronome" })).toHaveTextContent("Practice")
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Mentronome$/)
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument()
   })
 
@@ -35,6 +35,44 @@ describe("Practice", () => {
     expect(screen.getByTestId("beat-1")).toBeInTheDocument()
     expect(screen.getByTestId("beat-4")).toBeInTheDocument()
     expect(screen.queryByTestId("beat-5")).not.toBeInTheDocument()
+  })
+
+  it("marks every accented beat square", () => {
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    expect(screen.getByTestId("beat-3")).toHaveAttribute("data-accent", "true")
+    expect(screen.getByTestId("beat-2")).toHaveAttribute("data-accent", "false")
+  })
+
+  it("lights the first dot at the start of a beat after a rest that isn't a whole number of beats", () => {
+    const base = createDefaultSession(() => "s1")
+    const props = makeProps({
+      practice: "routine", bpm: 80,
+      beats: base.beats.map(() => ({ subdivision: "eighth" as const, slots: ["click-1" as const, "click-1" as const] })),
+      routine: { ...base.routine, unit: "sec", playDuration: 10, restDuration: 1, round: { enabled: true, count: 2, restDuration: 0 } },
+    })
+    // Round 2 starts at 11s; 0.1s in is the first eighth of beat 1
+    render(<Practice {...props} snapshot={snapshotAt(props.segments, 11.1)} status="playing" />)
+    const dots = within(screen.getByRole("region", { name: "Beat display" }))
+    expect(dots.getByRole("button", { name: "Beat 1 click 1" })).toHaveClass("lit")
+    expect(dots.getByRole("button", { name: "Beat 1 click 2" })).not.toHaveClass("lit")
+  })
+
+  it("accents a beat by tapping its square", async () => {
+    const props = makeProps()
+    render(<Practice {...props} />)
+    const square = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 3" })
+    expect(square).toHaveAttribute("aria-pressed", "false")
+    await userEvent.setup().click(square)
+    expect(props.onChange.mock.calls.at(-1)![0].accents).toEqual([1, 3])
+  })
+
+  it("mutes a click by tapping its dot under the beat", async () => {
+    const props = makeProps()
+    render(<Practice {...props} />)
+    const dot = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 2 click 1" })
+    expect(dot).toHaveAttribute("aria-pressed", "true")
+    await userEvent.setup().click(dot)
+    expect(props.onChange.mock.calls.at(-1)![0].beats[1].slots).toEqual(["off"])
   })
 
   it("shows beat-1 as accent", () => {
@@ -207,8 +245,7 @@ describe("Practice", () => {
     render(<Practice {...props} />)
     expect(document.querySelector(".player-card")).not.toHaveTextContent(/Block/)
     expect(screen.queryByText(/BPM \+/)).not.toBeInTheDocument()
-    expect(screen.getByText("Round 1/2")).toBeInTheDocument()
-    expect(screen.getByText("Set 1/2")).toBeInTheDocument()
+    expect(screen.getByTestId("player-round")).toHaveTextContent(/^Round 1\/2 · Set 1\/2$/)
   })
 
   describe("routine Start and Now BPM", () => {
@@ -218,11 +255,12 @@ describe("Practice", () => {
       return { ...props, snapshot: snapshotAt(props.segments, elapsed), status }
     }
 
-    it("shows Start BPM and no Now when the increase is Off", () => {
+    it("shows one tempo, in the stage: Start BPM while stopped", () => {
       render(<Practice {...routineProps({})} />)
+      expect(document.querySelector(".player-panel")).toContainElement(screen.getByTestId("bpm-current"))
       expect(screen.getByTestId("bpm-current")).toHaveValue("80")
       expect(screen.getByText("Start BPM")).toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      expect(screen.getAllByTestId("bpm-current")).toHaveLength(1)
     })
 
     it("keeps Start in the input and shows the playing BPM as Now", () => {
@@ -232,9 +270,9 @@ describe("Practice", () => {
         increase: increase({ mode: "round", roundStep: 5 }),
       }, 13, "playing")
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
-      expect(screen.getByText("Now")).toBeInTheDocument()
+      // Playing, the one tempo shows the live BPM and is read-only
+      expect(screen.getByTestId("bpm-current")).toHaveValue("85")
+      expect(screen.getByTestId("bpm-current")).toHaveAttribute("readonly")
     })
 
     it("shows the next play's BPM as Now during a rest", () => {
@@ -245,7 +283,7 @@ describe("Practice", () => {
         increase: increase({ mode: "round", roundStep: 5 }),
       }, 12, "playing")
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("85")
     })
 
     it("shows Start as Now when stopped", () => {
@@ -254,7 +292,7 @@ describe("Practice", () => {
         increase: increase({ mode: "round", roundStep: 5 }),
       })
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
     })
 
     it("shows Start as Now after the routine has finished", () => {
@@ -264,13 +302,13 @@ describe("Practice", () => {
       })
       const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
       render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
     })
 
-    it("keeps the BPM label and no Now in Simple mode", () => {
+    it("keeps the BPM label in Steady, with the same tempo in the timer card", () => {
       render(<Practice {...makeProps()} />)
       expect(screen.queryByText("Start BPM")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      expect(screen.getByTestId("bpm-current")).toHaveValue("80")
     })
 
   })
@@ -426,7 +464,7 @@ describe("Practice", () => {
 
     it("shows the first stretch and the full routine length when stopped", () => {
       render(<Practice {...routineProps(0, "stopped")} />)
-      expect(screen.getByTestId("player-phase")).toHaveTextContent("Play")
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Stopped")
       expect(screen.getByTestId("player-number")).toHaveTextContent("1:00")
       expect(screen.getByTestId("player-sub")).toHaveTextContent("2:10 left")
     })
@@ -434,23 +472,23 @@ describe("Practice", () => {
     it("counts down the current play stretch, rounding up", () => {
       render(<Practice {...routineProps(17.4)} />)
       expect(screen.getByTestId("player-number")).toHaveTextContent("0:43")
-      expect(screen.getByTestId("player-number")).not.toHaveClass("is-rest")
+      expect(document.querySelector(".player-panel")).not.toHaveClass("is-rest")
       expect(screen.getByTestId("player-sub")).toHaveTextContent("1:53 left")
     })
 
-    it("shows rest time left in red with a moving progress bar", () => {
+    it("shows rest time left in the rest colour with a moving progress bar", () => {
       render(<Practice {...routineProps(65)} />)
       expect(screen.getByTestId("player-phase")).toHaveTextContent("Rest")
       expect(screen.getByTestId("player-number")).toHaveTextContent("0:05")
-      expect(screen.getByTestId("player-number")).toHaveClass("is-rest")
+      expect(document.querySelector(".player-panel")).toHaveClass("is-rest")
       const fill = document.querySelector(".routine-progress-bar-fill") as HTMLElement
       expect(fill).toHaveClass("is-rest")
       expect(fill.style.width).toBe("50%")
     })
 
-    it("labels the count-in bar Ready, so it doesn't repeat the Count-in button beside it", () => {
+    it("labels the count-in bar Ready while it plays", () => {
       const props = makeProps({ practice: "routine", countIn: true })
-      render(<Practice {...props} />)
+      render(<Practice {...props} status="playing" />)
       expect(screen.getByTestId("player-phase")).toHaveTextContent(/^Ready$/)
     })
 
@@ -552,15 +590,33 @@ describe("Practice", () => {
     const props = makeProps()
     const user = userEvent.setup()
     render(<Practice {...props} />)
-    await user.click(screen.getByRole("button", { name: "Click: Sound 1, accent on" }))
+    await user.click(screen.getByRole("button", { name: "Click: Sound 1, accent beat 1" }))
     expect(screen.getByRole("dialog", { name: "Click" })).toHaveClass("open")
     await user.click(screen.getByRole("button", { name: "Sound 2" }))
     expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ click: "click-2" }))
   })
 
-  it("shows accent off on the Click button", () => {
-    render(<Practice {...makeProps({ accent: false })} />)
-    expect(screen.getByRole("button", { name: "Click: Sound 1, accent off" })).toBeInTheDocument()
+  it("puts − BPM + together in the stage and Time sig, Subdiv and Sound as a chip row", () => {
+    render(<Practice {...makeProps()} />)
+    const card = document.querySelector(".tempo-control") as HTMLElement
+    const order = Array.from(card.querySelectorAll("button, input")).map((el) => el.getAttribute("aria-label"))
+    expect(order).toEqual(["Decrease BPM", "BPM", "Increase BPM"])
+    const chips = Array.from(document.querySelectorAll(".pick-row .pick-btn")).map((el) => el.querySelector(":scope > span:last-child")?.textContent)
+    expect(chips).toEqual(["Time Sig", "Subdiv", "Sound"])
+  })
+
+  it("shows the accented beats as dots on the Sound chip", () => {
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    const dots = Array.from(document.querySelectorAll(".pick-accents i")).map((el) => el.classList.contains("on"))
+    expect(dots).toEqual([true, false, true, false])
+  })
+
+  it("names the accented beats on the Click button", () => {
+    const { unmount } = render(<Practice {...makeProps({ accents: [] })} />)
+    expect(screen.getByRole("button", { name: "Click: Sound 1, no accent" })).toBeInTheDocument()
+    unmount()
+    render(<Practice {...makeProps({ accents: [1, 3] })} />)
+    expect(screen.getByRole("button", { name: "Click: Sound 1, accent beats 1, 3" })).toBeInTheDocument()
   })
 
   describe("routine per-round increase", () => {
@@ -657,7 +713,7 @@ describe("Practice", () => {
       // Default 4 bars at 110 is about 8.7s, so 10s is in the second round
       const props = roundProps({}, { mode: "round", roundStep: 5 })
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 10)} status="playing" />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("115")
     })
   })
 
@@ -681,12 +737,40 @@ describe("Practice", () => {
       expect(within(group).getByRole("button", { name: "Routine" })).toHaveAttribute("aria-pressed", "false")
     })
 
-    it("choosing Climb fills its defaults and stops playback", async () => {
-      const props = { ...makeProps(), status: "playing" as const }
+    it("choosing Climb fills its defaults", async () => {
+      const props = makeProps()
       render(<Practice {...props} />)
       await userEvent.setup().click(screen.getByRole("button", { name: "Climb" }))
       expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ practice: "climb", bpmIncrease: 5 }))
-      expect(props.onReset).toHaveBeenCalledOnce()
+    })
+
+    it("locks the practice switch while playing and says why on screen", () => {
+      render(<Practice {...makeProps()} status="playing" />)
+      for (const name of ["Steady", "Climb", "Routine"]) {
+        expect(screen.getByRole("button", { name })).toBeDisabled()
+      }
+      expect(screen.getByText("Stop to change how you practise")).toBeVisible()
+    })
+
+    it("tells Routine apart when stopped or paused", () => {
+      const props = makeProps({ practice: "routine" })
+      const { unmount } = render(<Practice {...props} />)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Stopped")
+      unmount()
+      render(<Practice {...props} status="paused" />)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Paused")
+    })
+
+    it("announces phase, round and tempo changes to screen readers", () => {
+      const base = createDefaultSession(() => "s1")
+      const props = makeProps({
+        practice: "routine", bpm: 80, countIn: false,
+        routine: { ...base.routine, unit: "sec", playDuration: 10, restDuration: 5, round: { enabled: true, count: 2, restDuration: 0 }, increase: { mode: "round", roundStep: 5 } },
+      })
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, 16)} status="playing" />)
+      const live = screen.getByTestId("player-announce")
+      expect(live).toHaveAttribute("aria-live", "polite")
+      expect(live).toHaveTextContent("Play, 85 BPM, Round 2 of 2")
     })
 
     it("Steady shows elapsed time, no progress bar and no settings", () => {
@@ -702,26 +786,29 @@ describe("Practice", () => {
       render(<Practice {...climbProps()} />)
       expect(screen.getByTestId("player-number")).toHaveTextContent("0:00")
       expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 2:00")
-      expect(screen.getByTestId("player-info")).toHaveTextContent("110 → 130")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("110")
+      expect(screen.getByTestId("player-target")).toHaveTextContent("130")
     })
 
     it("Climb while climbing shows the next step and current → target", () => {
       render(<Practice {...climbProps({}, 150, "playing")} />)
       expect(screen.getByTestId("player-sub")).toHaveTextContent("Next +5 in 1:30")
-      expect(screen.getByTestId("player-info")).toHaveTextContent("115 → 130")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("115")
+      expect(screen.getByTestId("player-target")).toHaveTextContent("130")
     })
 
     it("Climb at the target says so and shows the target", () => {
       render(<Practice {...climbProps({}, 600, "playing")} />)
-      expect(screen.getByTestId("player-sub")).toHaveTextContent("At target")
-      expect(screen.getByTestId("player-info")).toHaveTextContent(/^130$/)
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("Target reached")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("130")
+      expect(screen.queryByTestId("player-target")).not.toBeInTheDocument()
       expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
     })
 
     it("Climb that can't climb (Step 0) shows no target line, like Steady", () => {
       render(<Practice {...climbProps({ bpmIncrease: 0 }, 30, "playing")} />)
       expect(screen.queryByTestId("player-sub")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("player-info")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("player-target")).not.toBeInTheDocument()
     })
 
     it("Climb in bars counts the next step in bars, rounding up", () => {
@@ -744,7 +831,7 @@ describe("Practice", () => {
       expect(screen.getByRole("textbox", { name: "Target BPM" })).toHaveValue("130")
       expect(screen.getByRole("textbox", { name: "Step" })).toHaveValue("5")
       const unit = screen.getByRole("group", { name: "Every unit" })
-      expect(within(unit).getByRole("button", { name: "Min" })).toHaveAttribute("aria-pressed", "true")
+      expect(within(unit).getByRole("button", { name: "Time" })).toHaveAttribute("aria-pressed", "true")
       expect(screen.getByRole("textbox", { name: "Every minutes" })).toHaveValue("2")
       expect(screen.getByRole("textbox", { name: "Every seconds" })).toHaveValue("00")
     })
@@ -773,7 +860,7 @@ describe("Practice", () => {
       const user = userEvent.setup()
       const bars = climb({ everyUnit: "bars", everyBars: 8 })
       const { unmount } = render(<Practice {...bars} />)
-      await user.click(screen.getByRole("button", { name: "Min" }))
+      await user.click(screen.getByRole("button", { name: "Time" }))
       expect(last(bars).time).toMatchObject({ everyUnit: "sec", everySec: 120 })
       unmount()
       const min = climb({ everySec: 30 })
@@ -791,19 +878,185 @@ describe("Practice", () => {
       render(<Practice {...climb()} />)
       expect(screen.queryByRole("button", { name: "More BPM settings" })).not.toBeInTheDocument()
       expect(screen.queryByRole("dialog", { name: "BPM settings", hidden: true })).not.toBeInTheDocument()
-      expect(document.querySelector(".bpm-block")).not.toContainElement(screen.getByRole("textbox", { name: "Target BPM" }))
+      expect(document.querySelector(".player-panel")).not.toContainElement(screen.getByRole("textbox", { name: "Target BPM" }))
     })
 
-    it("labels the BPM card BPM in Steady and Start BPM in Climb, with Now in Climb", () => {
+    it("labels the tempo BPM in Steady and shows the live BPM → target in a playing Climb", () => {
       const { unmount } = render(<Practice {...makeProps()} />)
       expect(screen.getByText("BPM", { selector: ".bpm-label" })).toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
       unmount()
       const props = climb()
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 150)} status="playing" />)
-      expect(screen.getByText("Start BPM")).toBeInTheDocument()
-      expect(screen.getByTestId("bpm-current")).toHaveValue("110")
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+      expect(screen.getByTestId("bpm-current")).toHaveValue("115")
+      expect(screen.getByTestId("player-target")).toHaveTextContent("130")
+    })
+  })
+
+  describe("popups and keyboard", () => {
+    it("keeps the Time signature popup open after a change", async () => {
+      const user = userEvent.setup()
+      render(<Practice {...makeProps()} />)
+      await user.click(screen.getByRole("button", { name: "Time signature: 4/4" }))
+      await user.selectOptions(screen.getByRole("combobox", { name: "Beats" }), "7")
+      expect(screen.getByRole("dialog", { name: "Time Signature" })).toHaveClass("open")
+    })
+
+    it("moves focus into a popup and back to its chip when Done closes it", async () => {
+      const user = userEvent.setup()
+      render(<Practice {...makeProps()} />)
+      const chip = screen.getByRole("button", { name: /^Click: Sound 1/ })
+      await user.click(chip)
+      const dialog = screen.getByRole("dialog", { name: "Click" })
+      expect(dialog).toContainElement(document.activeElement as HTMLElement)
+      await user.click(within(dialog).getByRole("button", { name: "Done" }))
+      expect(dialog).not.toHaveClass("open")
+      expect(chip).toHaveFocus()
+    })
+
+    it("gives every popup a Done button", () => {
+      render(<Practice {...makeProps()} />)
+      for (const name of ["Time Signature", "Subdivision", "Click"]) {
+        const dialog = document.querySelector(`[role="dialog"][aria-label="${name}"]`) as HTMLElement
+        expect(within(dialog).getByText("Done", { selector: "button" })).toBeInTheDocument()
+      }
+    })
+
+    it("repeats + while it's held down", () => {
+      vi.useFakeTimers()
+      try {
+        const props = makeProps({ bpm: 80 })
+        render(<Practice {...props} />)
+        const plus = screen.getByRole("button", { name: "Increase BPM" })
+        fireEvent.pointerDown(plus)
+        act(() => { vi.advanceTimersByTime(1000) })
+        fireEvent.pointerUp(plus)
+        fireEvent.click(plus)
+        const bpms = props.onChange.mock.calls.map((call) => (call[0] as Session).bpm)
+        expect(bpms.length).toBeGreaterThan(3)
+        expect(bpms.at(-1)).toBe(80 + bpms.length)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("makes the beat dots one tab stop, moved with the arrow keys", async () => {
+      const user = userEvent.setup()
+      render(<Practice {...makeProps()} />)
+      const dots = within(screen.getByRole("region", { name: "Beat display" })).getAllByRole("button", { name: / click / })
+      expect(dots.filter((dot) => dot.tabIndex === 0)).toHaveLength(1)
+      dots[0].focus()
+      await user.keyboard("{ArrowRight}")
+      expect(dots[1]).toHaveFocus()
+    })
+  })
+
+  describe("routine summary", () => {
+    const base = createDefaultSession(() => "s1")
+    const routine = (over: Partial<Session["routine"]>) => makeProps({
+      practice: "routine", bpm: 110, countIn: false,
+      routine: { ...base.routine, unit: "sec", playDuration: 120, restDuration: 15, ...over },
+    })
+
+    it("sums up the whole plan in one line", () => {
+      render(<Practice {...routine({
+        round: { enabled: true, count: 4, restDuration: 0 },
+        set: { enabled: true, count: 3, restDuration: 60 },
+        increase: { mode: "round", roundStep: 5 },
+      })} />)
+      expect(screen.getByTestId("routine-summary")).toHaveTextContent("4 rounds of 2:00 + 0:15 rest · 3 sets, 1:00 between · 110 → 125 BPM · 28:45 total")
+    })
+
+    it("keeps it short for a single round at one tempo", () => {
+      render(<Practice {...routine({ restDuration: 0 })} />)
+      expect(screen.getByTestId("routine-summary")).toHaveTextContent(/^2:00 · 110 BPM · 2:00 total$/)
+    })
+  })
+
+  describe("wording", () => {
+    it("says BPM on the round increase", () => {
+      const base = createDefaultSession(() => "s1")
+      render(<Practice {...makeProps({ practice: "routine", routine: { ...base.routine, round: { enabled: true, count: 4, restDuration: 0 }, increase: { mode: "round", roundStep: 5 } } })} />)
+      expect(screen.getByTestId("round-step")).toHaveTextContent(/^\+5 BPM$/)
+    })
+
+    it("explains Round and Set in a line each", () => {
+      const base = createDefaultSession(() => "s1")
+      render(<Practice {...makeProps({ practice: "routine", routine: { ...base.routine, round: { enabled: true, count: 4, restDuration: 0 } } })} />)
+      expect(screen.getByText("One play and the rest after it")).toBeInTheDocument()
+      expect(screen.getByText("All the rounds, played again")).toBeInTheDocument()
+    })
+
+    it("tells you the dots mute on the dots themselves, not with a permanent hint", () => {
+      render(<Practice {...makeProps()} />)
+      expect(screen.queryByText("Tap a dot to mute that click")).not.toBeInTheDocument()
+      const dot = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 1 click 1" })
+      expect(dot).toHaveAttribute("title", "Tap to mute or unmute this click")
+    })
+  })
+
+  describe("polish", () => {
+    it("draws its icons instead of using text glyphs or emoji", () => {
+      render(<Practice {...makeProps()} />)
+      expect(document.body).not.toHaveTextContent(/[▶❚■🔊]/u)
+      expect(screen.getByRole("button", { name: "Play" }).querySelector("svg")).not.toBeNull()
+    })
+
+    it("hides Climb's progress bar until playback has started", () => {
+      const base = createDefaultSession(() => "s1")
+      const props = makeProps({ practice: "climb", bpm: 110, bpmIncrease: 5, time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120 } })
+      const { unmount } = render(<Practice {...props} />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+      unmount()
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, 30)} status="playing" />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).toBeInTheDocument()
+    })
+  })
+
+  describe("consistency", () => {
+    const base = createDefaultSession(() => "s1")
+    const climb = () => makeProps({ practice: "climb", bpm: 110, bpmIncrease: 5, time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120 } })
+
+    it("titles the Climb box and gives Target BPM and Step − / + steppers", async () => {
+      const props = climb()
+      render(<Practice {...props} />)
+      expect(screen.getByText("Climb", { selector: ".routine-section-title" })).toBeInTheDocument()
+      await userEvent.setup().click(screen.getByRole("button", { name: "Increase Target BPM" }))
+      expect(props.onChange.mock.calls.at(-1)![0].time.targetBpm).toBe(131)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Decrease Step" }))
+      expect(props.onChange.mock.calls.at(-1)![0].bpmIncrease).toBe(4)
+    })
+
+    it("hides Routine's progress bar while stopped, like Climb", () => {
+      render(<Practice {...makeProps({ practice: "routine" })} />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("endings and skipping", () => {
+    const base = createDefaultSession(() => "s1")
+    const routine = () => makeProps({
+      practice: "routine", bpm: 110, countIn: false,
+      routine: { ...base.routine, unit: "sec", playDuration: 120, restDuration: 15, round: { enabled: true, count: 4, restDuration: 0 }, set: { enabled: true, count: 3, restDuration: 60 }, increase: { mode: "round", roundStep: 5 } },
+    })
+
+    it("marks a finished routine instead of just stopping", () => {
+      const props = routine()
+      const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
+      expect(screen.getByTestId("player-phase")).toHaveTextContent("Routine complete")
+      expect(screen.getByTestId("player-sub")).toHaveTextContent("28:45 practised · 110 → 125 BPM")
+    })
+
+    it("offers back and skip-ahead while a routine runs, and nowhere else", async () => {
+      const props = routine()
+      const { unmount } = render(<Practice {...props} snapshot={snapshotAt(props.segments, 30)} status="playing" />)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Skip ahead" }))
+      expect(props.onJump).toHaveBeenCalledWith(1)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Back" }))
+      expect(props.onJump).toHaveBeenCalledWith(-1)
+      unmount()
+      render(<Practice {...makeProps()} status="playing" />)
+      expect(screen.queryByRole("button", { name: "Skip ahead" })).not.toBeInTheDocument()
     })
   })
 })

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react"
+import type { ReactNode } from "react"
 import { climbProgress } from "./climb"
+import { Icon } from "./Icon"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
@@ -14,8 +16,9 @@ const PRACTICES: { value: Practice; label: string }[] = [
   { value: "routine", label: "Routine" },
 ]
 
-// A settings row whose number commits on blur or Enter; an empty or non-numeric entry is dropped
-function NumberRow(props: { id: string; label: string; value: number; onCommit(n: number): void }) {
+// A settings row with the same − / value / + stepper as the rest of the settings; the value can also be typed,
+// committing on blur or Enter (an empty or non-numeric entry is dropped)
+function NumberRow(props: { id: string; label: string; value: number; min: number; onCommit(n: number): void }) {
   const [text, setText] = useState<string | null>(null)
   const ref = useRef<string | null>(null)
   function commit() {
@@ -30,16 +33,20 @@ function NumberRow(props: { id: string; label: string; value: number; onCommit(n
   return (
     <div className="routine-row">
       <label className="routine-row-label" htmlFor={props.id}>{props.label}</label>
-      <input
-        id={props.id}
-        className="climb-input"
-        inputMode="numeric"
-        value={text ?? String(props.value)}
-        onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
-        onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-      />
+      <div className="routine-stepper">
+        <button type="button" aria-label={`Decrease ${props.label}`} onClick={() => props.onCommit(Math.max(props.min, props.value - 1))}>−</button>
+        <input
+          id={props.id}
+          className="routine-stepper-val stepper-input"
+          inputMode="numeric"
+          value={text ?? String(props.value)}
+          onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
+          onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+        />
+        <button type="button" aria-label={`Increase ${props.label}`} onClick={() => props.onCommit(props.value + 1)}>+</button>
+      </div>
     </div>
   )
 }
@@ -52,7 +59,10 @@ export function PlayerCard(props: {
   snapshot: ClockSnapshot
   status: PlaybackStatus
   clockShiftSec: number
+  // The tempo control (− / BPM / +), drawn by the page; `live` means it shows the playing BPM and can't be typed in
+  renderTempo(bpm: number, live: boolean): ReactNode
   onToggle(): void
+  onJump(direction: -1 | 1): void
   onReset(): void
   onChange(session: Session): void
 }) {
@@ -79,44 +89,76 @@ export function PlayerCard(props: {
     : null
   const atTarget = climb !== null && !Number.isFinite(climb.nextInSec)
 
-  const phaseLabel = segment.kind === "count-in" ? "Ready"
-    : practice === "routine" ? (isRest ? "Rest" : "Play")
-    : props.status === "playing" || props.status === "no-audio" ? "Playing"
+  // A routine that played to its end, rather than one that was stopped
+  const finished = practice === "routine" && props.status === "stopped" && snapshot.remainingSec <= 0 && snapshot.elapsedSec > 0
+  const plays = props.segments.filter((s) => s.kind === "play")
+  const firstBpm = plays[0]?.bpm ?? session.bpm
+  const topBpm = plays.reduce((max, s) => Math.max(max, s.bpm), firstBpm)
+  const bpmRange = topBpm > firstBpm ? `${firstBpm} → ${topBpm} BPM` : `${firstBpm} BPM`
+  const routineTotal = props.segments.filter((s) => s.kind !== "count-in").reduce((sum, s) => sum + s.durationSec, 0)
+
+  const phaseLabel = finished ? "Routine complete"
     : props.status === "paused" ? "Paused"
-    : "Stopped"
+    : !isPlaying ? "Stopped"
+    : segment.kind === "count-in" ? "Ready"
+    : practice === "routine" ? (isRest ? "Rest" : "Play")
+    : "Playing"
 
   let bigNumber: string
   let subLine: string | null = null
-  let info: React.ReactNode = null
+  // The BPM playing now: stopped (including after a routine ends) it's where playback will start; during a rest, the play coming up
+  const playingBpm = props.status === "stopped"
+    ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? session.bpm
+    : isRest
+    ? props.segments.slice(snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
+    : currentBpm
+
+  let roundLine: string | null = null
+  let target: number | null = null
   let progress: number | null = null
   if (practice === "routine") {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
-    subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
-    info = (<><div>Round {roundN}/{roundPasses}</div>{round.enabled && <div>Set {setN}/{setPasses}</div>}</>)
-    progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
+    subLine = finished
+      ? `${formatClock(Math.round(routineTotal))} practised · ${bpmRange}`
+      : `${formatClock(Math.ceil(snapshot.remainingSec))} left`
+    roundLine = `Round ${roundN}/${roundPasses}${round.enabled && set.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
+    // Like Climb, the bar only appears once the routine is running
+    progress = props.status === "stopped" ? null
+      : Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
     if (climb) {
-      const target = session.time.targetBpm
       if (atTarget) {
-        subLine = "At target"
-        info = String(currentBpm)
+        subLine = "Target reached"
       } else {
         const barSec = beatsInMeter(session.meter) * 60 / currentBpm
         const nextIn = session.time.everyUnit === "bars"
           ? `${Math.ceil(climb.nextInSec / barSec - 1e-9)} bars`
           : formatClock(Math.ceil(climb.nextInSec))
         subLine = `Next +${session.bpmIncrease} in ${nextIn}`
-        info = `${currentBpm} → ${target}`
-        progress = climb.fraction
+        target = session.time.targetBpm
+        // An empty bar before playback reads as a divider, so it only appears once the climb is running
+        progress = props.status === "stopped" ? null : climb.fraction
       }
     }
   }
 
+  // The switch is locked while playing, so a misclick can't end the session
   function choose(next: Practice) {
-    if (next === practice) return
+    if (next === practice || isPlaying) return
     props.onChange(choosePractice(session, next))
-    if (isPlaying) props.onReset()
+  }
+
+  // Routine in one line: rounds, sets, tempo range and total time, so the plan can be checked without adding it up
+  function routineSummary(): string {
+    const length = (n: number) => routine.unit === "bars" ? `${n} bar${n === 1 ? "" : "s"}` : formatClock(n)
+    const rest = round.enabled && routine.restDuration > 0 ? ` + ${length(routine.restDuration)} rest` : ""
+    return [
+      round.enabled ? `${round.count} rounds of ${length(routine.playDuration)}${rest}` : length(routine.playDuration),
+      round.enabled && set.enabled ? `${set.count} sets${set.restDuration > 0 ? `, ${formatClock(set.restDuration)} between` : ""}` : null,
+      bpmRange,
+      `${formatClock(Math.round(routineTotal))} total`,
+    ].filter(Boolean).join(" · ")
   }
 
   function setTime(next: Partial<Session["time"]>) {
@@ -127,16 +169,35 @@ export function PlayerCard(props: {
     props.onChange(clampSession({ ...session, routine: { ...routine, ...next } }))
   }
 
+  // One tempo display: the playing BPM once playback has started (outside Steady), otherwise Start BPM
+  const live = props.status !== "stopped" && practice !== "steady"
+  const routineTop = practice === "routine" && increase.mode === "round"
+    ? props.segments.reduce((max, s) => s.kind === "play" ? Math.max(max, s.bpm) : max, session.bpm)
+    : null
+  const tempoTarget = target ?? (!live && routineTop !== null && routineTop > session.bpm ? routineTop : null)
+
   return (
-    <div className="player-card">
-      <div className="player-panel">
-        <div className="routine-progress-row">
-          <div className="routine-countdown-col">
-            <div className={`routine-phase${isRest ? " is-rest" : ""}`} data-testid="player-phase">{phaseLabel}</div>
-            <div className={`routine-countdown${isRest ? " is-rest" : ""}`} data-testid="player-number">{bigNumber}</div>
-            {subLine && <div className="routine-total-left" data-testid="player-sub">{subLine}</div>}
+    <>
+    <section className="player-card practice-stage">
+      {/* Screen readers hear phase, tempo and round changes, not every tick of the timer */}
+      <div className="visually-hidden" aria-live="polite" data-testid="player-announce">
+        {isPlaying ? [phaseLabel, `${playingBpm} BPM`, practice === "routine" ? `Round ${roundN} of ${roundPasses}` : null].filter(Boolean).join(", ") : ""}
+      </div>
+      {/* Live state, sized to read from the music stand: phase and round, then time and tempo side by side */}
+      <div className={`player-panel${isRest ? " is-rest" : ""}${finished ? " is-complete" : ""}`}>
+        <div className="player-status">
+          <span className="player-phase" data-testid="player-phase">{phaseLabel}</span>
+          {roundLine && <span className="player-round" data-testid="player-round">{roundLine}</span>}
+        </div>
+        {/* Time and tempo share a baseline; their sub-lines share the row below */}
+        <div className="player-readout">
+          <div className="player-number" data-testid="player-number">{bigNumber}</div>
+          <div className="player-tempo">{props.renderTempo(live ? playingBpm : session.bpm, live)}</div>
+          {subLine ? <div className="player-sub" data-testid="player-sub">{subLine}</div> : <div />}
+          <div className="player-sub player-tempo-sub">
+            <span className="bpm-label">{live || practice === "steady" ? "BPM" : "Start BPM"}</span>
+            {tempoTarget !== null && <span data-testid="player-target"> → {tempoTarget}</span>}
           </div>
-          {info !== null && <div className="routine-cycle-info" data-testid="player-info">{info}</div>}
         </div>
         {progress !== null && (
           <div className="routine-progress-bar-wrap">
@@ -144,25 +205,41 @@ export function PlayerCard(props: {
           </div>
         )}
         <div className="play-controls">
-          <button
-            type="button"
-            className={`play-btn${isPlaying ? " playing" : ""}`}
-            aria-label={isPlaying ? "Pause" : "Play"}
-            onClick={props.onToggle}
-          >
-            {isPlaying ? "❚❚" : "▶"}
+          {/* While a routine runs, back and skip-ahead sit either side of Play */}
+          <div className="transport-row">
+            {practice === "routine" && props.status !== "stopped" && (
+              <button type="button" className="skip-btn" aria-label="Back" onClick={() => props.onJump(-1)}><Icon name="back" size={22} /></button>
+            )}
+            <button
+              type="button"
+              className={`play-btn${isPlaying ? " playing" : ""}`}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              onClick={props.onToggle}
+            >
+              <Icon name={isPlaying ? "pause" : "play"} size={30} />
+            </button>
+            {practice === "routine" && props.status !== "stopped" && (
+              <button type="button" className="skip-btn" aria-label="Skip ahead" onClick={() => props.onJump(1)}><Icon name="ahead" size={22} /></button>
+            )}
+          </div>
+          <button type="button" className={`stop-link${props.status === "stopped" ? " is-idle" : ""}`} aria-label="Stop" onClick={props.onReset}>
+            <Icon name="stop" size={12} /> Stop
           </button>
-          <button type="button" className="stop-link" aria-label="Stop" onClick={props.onReset}>■ Stop</button>
         </div>
       </div>
+    </section>
 
+    <section className="practice-settings">
       <div className="routine-seg player-switch" role="group" aria-label="How to practice">
         {PRACTICES.map(({ value, label }) => (
-          <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} onClick={() => choose(value)}>
+          <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} disabled={isPlaying}
+            onClick={() => choose(value)}>
             {label}
           </button>
         ))}
       </div>
+
+      {isPlaying && <p className="player-switch-note">Stop to change how you practise</p>}
 
       {/* Applies to every practice: one 4-beat bar before the first play */}
       <div className="routine-row count-in-row">
@@ -172,9 +249,10 @@ export function PlayerCard(props: {
       </div>
 
       {practice === "climb" && (
-        <div className="routine-section climb-settings">
-          <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
-          <NumberRow id="climb-step" label="Step" value={session.bpmIncrease}
+        <div className="routine-box climb-settings">
+          <div className="routine-section-title">Climb</div>
+          <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} min={40} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
+          <NumberRow id="climb-step" label="Step" value={session.bpmIncrease} min={0}
             onCommit={(n) => props.onChange(clampSession({ ...session, bpmIncrease: Math.max(0, Math.round(n)) }))} />
           <div className="routine-row">
             <span className="routine-row-label">Every</span>
@@ -195,7 +273,7 @@ export function PlayerCard(props: {
                       if (session.time.everyUnit === unit) return
                       setTime(unit === "bars" ? { everyUnit: unit, everyBars: 4 } : { everyUnit: unit, everySec: 120 })
                     }}>
-                    {unit === "bars" ? "Bars" : "Min"}
+                    {unit === "bars" ? "Bars" : "Time"}
                   </button>
                 ))}
               </div>
@@ -206,9 +284,11 @@ export function PlayerCard(props: {
 
       {practice === "routine" && (
         <>
+          <p className="routine-summary" data-testid="routine-summary">{routineSummary()}</p>
           {/* Each section is a bordered box; settings a Repeat switch controls open in a panel under it */}
           <div className="routine-box" data-testid="round-box">
             <div className="routine-section-title">Round</div>
+            <p className="routine-section-hint">One play and the rest after it</p>
             {/* Duration sets the units Play and Rest are measured in */}
             <div className="routine-row">
               <span className="routine-row-label">Duration</span>
@@ -277,7 +357,7 @@ export function PlayerCard(props: {
                         if (roundStep === 0) return
                         setRoutine({ increase: roundStep === 1 ? { ...increase, mode: "off" } : { mode: "round", roundStep: roundStep - 1 } })
                       }}>−</button>
-                    <span className="routine-stepper-val" data-testid="round-step">+{roundStep}</span>
+                    <span className="routine-stepper-val" data-testid="round-step">+{roundStep} BPM</span>
                     <button type="button" aria-label="Increase round increase"
                       onClick={() => setRoutine({ increase: { mode: "round", roundStep: roundStep + 1 } })}>+</button>
                   </div>
@@ -289,6 +369,7 @@ export function PlayerCard(props: {
           {round.enabled && (
             <div className="routine-box" data-testid="set-box">
               <div className="routine-section-title">Set</div>
+              <p className="routine-section-hint">All the rounds, played again</p>
               <div className="routine-row routine-repeat-row">
                 <span className="routine-row-label">Repeat</span>
                 <button type="button" role="switch" className="switch" aria-label="Set repeat" aria-checked={set.enabled}
@@ -317,6 +398,7 @@ export function PlayerCard(props: {
           )}
         </>
       )}
-    </div>
+    </section>
+    </>
   )
 }

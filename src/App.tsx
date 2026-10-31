@@ -4,6 +4,7 @@ import { carryClimbPosition } from "./climb"
 import { clickWindow, clicksInSegment, scheduleOrigin, snapshotAt } from "./clock"
 import { expandSession, type Segment } from "./expandSession"
 import { Practice, type PlaybackStatus } from "./Practice"
+import { clampSession } from "./session"
 import { loadSession, saveSession } from "./store"
 import type { Session } from "./types"
 
@@ -19,6 +20,9 @@ export function App() {
   const nodesRef = useRef<AudioBufferSourceNode[]>([])
   const playGen = useRef(0)
   const toggleRef = useRef<() => void>(() => {})
+  const nudgeRef = useRef<(step: number) => void>(() => {})
+  const tapRef = useRef<() => void>(() => {})
+  const tapsRef = useRef<number[]>([])
   const [seekCount, setSeekCount] = useState(0)
   const segmentsRef = useRef(segments)
   const remainingRef = useRef(snapshot.segmentRemainingSec)
@@ -101,17 +105,29 @@ export function App() {
   }, [snapshot.segmentIndex, status, segments, seekCount])
 
   useEffect(() => {
+    // Space plays/pauses, ↑/↓ nudge the BPM (±5 with Shift), T taps the tempo; typing in a field is left alone
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== " " || event.repeat) return
       const target = event.target
       if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
+        event.defaultPrevented ||
+        event.metaKey || event.ctrlKey || event.altKey ||
+        (target instanceof HTMLElement &&
+          (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT"))
       ) {
         return
       }
-      event.preventDefault()
-      toggleRef.current()
+      if (event.key === " ") {
+        // Space presses a focused control as usual, and does nothing behind an open popup
+        if (target instanceof Element && target.closest("button, a, [role=switch], [role=dialog]")) return
+        if (document.querySelector(".sheet-overlay.open")) return
+        event.preventDefault()
+        if (!event.repeat) toggleRef.current()
+      } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault()
+        nudgeRef.current((event.key === "ArrowUp" ? 1 : -1) * (event.shiftKey ? 5 : 1))
+      } else if ((event.key === "t" || event.key === "T") && !event.repeat) {
+        tapRef.current()
+      }
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
@@ -143,6 +159,16 @@ export function App() {
 
   toggleRef.current = () => {
     void onToggle()
+  }
+  nudgeRef.current = (step) => onChange(clampSession({ ...session, bpm: session.bpm + step }))
+  // Tap tempo: the average gap between the last few taps sets the BPM; a pause over 2s starts a new count
+  tapRef.current = () => {
+    const now = performance.now()
+    const taps = [...tapsRef.current.filter((at) => now - at < 2000), now].slice(-5)
+    tapsRef.current = taps
+    if (taps.length < 2) return
+    const gap = (taps[taps.length - 1] - taps[0]) / (taps.length - 1)
+    if (gap > 0) onChange(clampSession({ ...session, bpm: Math.round(60000 / gap) }))
   }
 
   function onSeek(index: number) {

@@ -99,5 +99,5 @@ export type Session = {
   practice: Practice
   routine: RoutinePattern
   countIn: boolean
-  accent: boolean // beat 1 plays the accent tone
+  accents: number[] // beat numbers (1-based) that play the accent tone
 }

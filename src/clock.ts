@@ -5,6 +5,7 @@ import type { ClickId } from "./types"
 export type ClockSnapshot = {
   segmentIndex: number
   beat: number
+  beatFraction: number // how far through the current beat (0–1), timed like beat so subdivision dots stay in step
   segmentRemainingSec: number
   segmentElapsedSec: number // time into the current segment; stays finite in the endless Steady/Climb play
   elapsedSec: number
@@ -23,9 +24,11 @@ export function snapshotAt(segments: Segment[], elapsedSec: number): ClockSnapsh
     const isLast = index === segments.length - 1
     if (elapsed < end || isLast) {
       const into = elapsed - cursor
+      const position = segment.kind === "rest" ? { beat: 0, fraction: 0 } : beatAt(segment, into)
       return {
         segmentIndex: index,
-        beat: segment.kind === "rest" ? 0 : beatAt(segment, into),
+        beat: position.beat,
+        beatFraction: position.fraction,
         segmentRemainingSec: Math.max(0, segment.durationSec - into),
         segmentElapsedSec: into,
         elapsedSec: elapsed,
@@ -72,7 +75,9 @@ export function clicksInSegment(segment: Segment, fromSec = 0, untilSec = segmen
     slots.forEach((slot, index) => {
       const at = offsetSec + index * slotDur
       if (at < start - 1e-9 || at >= end - 1e-9 || slot === "off") return
-      marks.push({ offsetSec: at, beat, accent: segment.accent !== false && beat === 1, click: slot })
+      const accents = segment.accents ?? [1]
+      const accent = segment.kind === "count-in" ? beat === 1 && accents.length > 0 : accents.includes(beat)
+      marks.push({ offsetSec: at, beat, accent, click: slot })
     })
     offsetSec += beatDur
     beatIndex += 1
@@ -97,17 +102,23 @@ export function clickWindow(segment: Segment, fromSec: number): { untilSec: numb
   return { untilSec, marks: clicksInSegment(segment, fromSec, untilSec) }
 }
 
-function beatAt(segment: Segment, intoSec: number): number {
+// Which beat you're on, counted from the segment start at the tempo actually playing, and how far through it you are
+function beatAt(segment: Segment, intoSec: number): { beat: number; fraction: number } {
   const beats = segment.kind === "count-in" ? 4 : beatsInMeter(segment.meter)
   let offsetSec = 0
   let index = 0
   let beat = 1
+  let fraction = 0
   while (offsetSec < segment.durationSec - 1e-9) {
     beat = (index % beats) + 1
-    const next = offsetSec + 60 / bpmAt(segment, offsetSec)
-    if (!(next > offsetSec) || next > intoSec + 1e-9) break
+    const beatSec = 60 / bpmAt(segment, offsetSec)
+    const next = offsetSec + beatSec
+    if (!(next > offsetSec) || next > intoSec + 1e-9) {
+      fraction = beatSec > 0 ? Math.min(1, Math.max(0, (intoSec - offsetSec) / beatSec)) : 0
+      break
+    }
     offsetSec = next
     index += 1
   }
-  return beat
+  return { beat, fraction }
 }

@@ -192,7 +192,7 @@ export function createDefaultSession(nextId: () => string = () => crypto.randomU
     practice: "steady",
     routine: freshRoutine(),
     countIn: false,
-    accent: true,
+    accents: [1],
   }
 }
 
@@ -250,6 +250,31 @@ function clampBeats(session: Session, meter: Meter, click: ClickId): BeatPattern
     const beat = saved[Math.min(index, saved.length - 1)]
     return { subdivision: beat.subdivision, slots: [...beat.slots] }
   })
+}
+
+// Accented beat numbers inside the meter, sorted, once each. Saves from before accents existed
+// accented beat 1 unless they had turned the accent off.
+function clampAccents(session: Session, meter: Meter): number[] {
+  const legacy = session as Session & { accent?: unknown }
+  const saved = Array.isArray(session.accents) ? session.accents : legacy.accent === false ? [] : [1]
+  const beats = beatsInMeter(meter)
+  return [...new Set(saved.map(integer))].filter((beat) => beat >= 1 && beat <= beats).sort((a, b) => a - b)
+}
+
+export function toggleAccent(session: Session, beat: number): Session {
+  const accents = session.accents.includes(beat) ? session.accents.filter((b) => b !== beat) : [...session.accents, beat]
+  return clampSession({ ...session, accents })
+}
+
+// Mute or unmute one click; an unmuted click plays the session's sound
+export function toggleClick(session: Session, beatIndex: number, slotIndex: number): Session {
+  return {
+    ...session,
+    beats: session.beats.map((beat, index) => index !== beatIndex ? beat : {
+      ...beat,
+      slots: beat.slots.map((slot, i) => i !== slotIndex ? slot : slot === "off" ? session.click : "off"),
+    }),
+  }
 }
 
 export function sharedSubdivision(beats: BeatPattern[]): Subdivision | null {
@@ -334,7 +359,7 @@ export function clampSession(session: Session): Session {
     practice,
     routine: clampRoutine(session.routine as unknown, session.bpmIncrease),
     countIn: Boolean(session.countIn ?? false),
-    accent: session.accent !== false,
+    accents: clampAccents(session, meter),
   }
 }
 
@@ -422,7 +447,7 @@ export function migrateLegacy(raw: unknown, nextId: () => string = () => crypto.
     practice: "steady",
     routine: freshRoutine(),
     countIn: Boolean(legacy.countIn ?? false),
-    accent: true,
+    accents: [1],
   })
 }
 

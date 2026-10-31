@@ -15,7 +15,7 @@ export type Segment = {
   setIndex: number
   cycleIndex: number
   click: ClickId
-  accent?: boolean // false: beat 1 is not accented (default true)
+  accents?: number[] // accented beat numbers (default [1]); a count-in accents its beat 1 when any beat is accented
   beats?: BeatPattern[] // per-beat clicks for play segments; count-in and rest have none
   restRole?: "after" | "between"
   steps?: { atSec: number; bpm: number }[]
@@ -93,7 +93,7 @@ export function expandSession(session: Session): Segment[] {
         setIndex: index,
         cycleIndex: index,
         click: session.click,
-        accent: session.accent,
+        accents: session.accents,
       })
     }
     segments.push({
@@ -108,7 +108,7 @@ export function expandSession(session: Session): Segment[] {
       setIndex: index,
       cycleIndex: index,
       click: session.click,
-      accent: session.accent,
+      accents: session.accents,
       beats: session.beats,
       ...(play.steps ? { steps: play.steps } : {}),
     })
