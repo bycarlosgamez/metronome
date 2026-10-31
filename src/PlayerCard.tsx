@@ -125,6 +125,22 @@ export function PlayerCard(props: {
     props.onChange(choosePractice(session, next))
   }
 
+  // Routine in one line: rounds, sets, tempo range and total time, so the plan can be checked without adding it up
+  function routineSummary(): string {
+    const length = (n: number) => routine.unit === "bars" ? `${n} bar${n === 1 ? "" : "s"}` : formatClock(n)
+    const plays = props.segments.filter((s) => s.kind === "play")
+    const first = plays[0]?.bpm ?? session.bpm
+    const top = plays.reduce((max, s) => Math.max(max, s.bpm), first)
+    const total = props.segments.filter((s) => s.kind !== "count-in").reduce((sum, s) => sum + s.durationSec, 0)
+    const rest = round.enabled && routine.restDuration > 0 ? ` + ${length(routine.restDuration)} rest` : ""
+    return [
+      round.enabled ? `${round.count} rounds of ${length(routine.playDuration)}${rest}` : length(routine.playDuration),
+      round.enabled && set.enabled ? `${set.count} sets` : null,
+      top > first ? `${first} → ${top} BPM` : `${first} BPM`,
+      `${formatClock(Math.round(total))} total`,
+    ].filter(Boolean).join(" · ")
+  }
+
   function setTime(next: Partial<Session["time"]>) {
     props.onChange(clampSession({ ...session, time: { ...session.time, ...next } }))
   }
@@ -226,6 +242,7 @@ export function PlayerCard(props: {
 
       {practice === "routine" && (
         <>
+          <p className="routine-summary" data-testid="routine-summary">{routineSummary()}</p>
           {/* Each section is a bordered box; settings a Repeat switch controls open in a panel under it */}
           <div className="routine-box" data-testid="round-box">
             <div className="routine-section-title">Round</div>

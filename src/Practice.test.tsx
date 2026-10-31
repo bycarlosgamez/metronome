@@ -940,4 +940,26 @@ describe("Practice", () => {
       expect(dots[1]).toHaveFocus()
     })
   })
+
+  describe("routine summary", () => {
+    const base = createDefaultSession(() => "s1")
+    const routine = (over: Partial<Session["routine"]>) => makeProps({
+      practice: "routine", bpm: 110, countIn: false,
+      routine: { ...base.routine, unit: "sec", playDuration: 120, restDuration: 15, ...over },
+    })
+
+    it("sums up the whole plan in one line", () => {
+      render(<Practice {...routine({
+        round: { enabled: true, count: 4, restDuration: 0 },
+        set: { enabled: true, count: 3, restDuration: 60 },
+        increase: { mode: "round", roundStep: 5 },
+      })} />)
+      expect(screen.getByTestId("routine-summary")).toHaveTextContent("4 rounds of 2:00 + 0:15 rest · 3 sets · 110 → 125 BPM · 28:45 total")
+    })
+
+    it("keeps it short for a single round at one tempo", () => {
+      render(<Practice {...routine({ restDuration: 0 })} />)
+      expect(screen.getByTestId("routine-summary")).toHaveTextContent(/^2:00 · 110 BPM · 2:00 total$/)
+    })
+  })
 })

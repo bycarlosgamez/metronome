@@ -301,6 +301,8 @@ button.beat-sub { padding: 0; cursor: pointer; }
   border-bottom: 1px solid var(--line);
 }
 .routine-section:last-child { border-bottom: none; }
+/* The whole routine in one line, above its settings */
+.routine-summary { margin: 4px 4px 0; font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Round and Set: each a bordered box; a Repeat switch opens a darker panel with the settings it controls */
 .routine-box {
   margin: 10px 0;
