@@ -982,4 +982,22 @@ describe("Practice", () => {
       expect(screen.getByText("Tap a dot to mute that click")).toBeInTheDocument()
     })
   })
+
+  describe("polish", () => {
+    it("draws its icons instead of using text glyphs or emoji", () => {
+      render(<Practice {...makeProps()} />)
+      expect(document.body).not.toHaveTextContent(/[▶❚■🔊]/u)
+      expect(screen.getByRole("button", { name: "Play" }).querySelector("svg")).not.toBeNull()
+    })
+
+    it("hides Climb's progress bar until playback has started", () => {
+      const base = createDefaultSession(() => "s1")
+      const props = makeProps({ practice: "climb", bpm: 110, bpmIncrease: 5, time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120 } })
+      const { unmount } = render(<Practice {...props} />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
+      unmount()
+      render(<Practice {...props} snapshot={snapshotAt(props.segments, 30)} status="playing" />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).toBeInTheDocument()
+    })
+  })
 })

@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { clampBpm, clampSession, sharedSubdivision, toggleClick } from "./session"
+import { Icon } from "./Icon"
 import { SubdivIcon } from "./SubdivIcon"
 import { ClickSheet } from "./ClickSheet"
 import { MeterSheet } from "./MeterSheet"
@@ -202,7 +203,7 @@ export function Practice(props: {
             aria-label={`Click: Sound ${CLICKS.indexOf(props.session.click) + 1}, ${accentLabel}`}
             onClick={() => setSheet("click")}
           >
-            <strong><span aria-hidden="true">🔊</span> {CLICKS.indexOf(props.session.click) + 1}</strong>
+            <strong className="pick-sound"><Icon name="sound" size={18} /> {CLICKS.indexOf(props.session.click) + 1}</strong>
             {/* One dot per beat; accented beats are blue */}
             <div className="pick-accents" aria-hidden="true">
               {props.session.beats.map((_, index) => <i key={index} className={accents.includes(index + 1) ? "on" : ""} />)}

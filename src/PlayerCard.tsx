@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { climbProgress } from "./climb"
+import { Icon } from "./Icon"
 import { bpmAt, type ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { formatClock } from "./format"
@@ -100,7 +101,7 @@ export function PlayerCard(props: {
   if (practice === "routine") {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
     subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
-    roundLine = `Round ${roundN}/${roundPasses}${round.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
+    roundLine = `Round ${roundN}/${roundPasses}${round.enabled && set.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
     progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
@@ -114,7 +115,8 @@ export function PlayerCard(props: {
           : formatClock(Math.ceil(climb.nextInSec))
         subLine = `Next +${session.bpmIncrease} in ${nextIn}`
         target = session.time.targetBpm
-        progress = climb.fraction
+        // An empty bar before playback reads as a divider, so it only appears once the climb is running
+        progress = props.status === "stopped" ? null : climb.fraction
       }
     }
   }
@@ -185,9 +187,11 @@ export function PlayerCard(props: {
             aria-label={isPlaying ? "Pause" : "Play"}
             onClick={props.onToggle}
           >
-            {isPlaying ? "❚❚" : "▶"}
+            <Icon name={isPlaying ? "pause" : "play"} size={30} />
           </button>
-          <button type="button" className="stop-link" aria-label="Stop" onClick={props.onReset}>■ Stop</button>
+          <button type="button" className={`stop-link${props.status === "stopped" ? " is-idle" : ""}`} aria-label="Stop" onClick={props.onReset}>
+            <Icon name="stop" size={12} /> Stop
+          </button>
         </div>
       </div>
 
