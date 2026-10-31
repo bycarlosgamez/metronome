@@ -963,7 +963,7 @@ describe("Practice", () => {
         set: { enabled: true, count: 3, restDuration: 60 },
         increase: { mode: "round", roundStep: 5 },
       })} />)
-      expect(screen.getByTestId("routine-summary")).toHaveTextContent("4 rounds of 2:00 + 0:15 rest · 3 sets · 110 → 125 BPM · 28:45 total")
+      expect(screen.getByTestId("routine-summary")).toHaveTextContent("4 rounds of 2:00 + 0:15 rest · 3 sets, 1:00 between · 110 → 125 BPM · 28:45 total")
     })
 
     it("keeps it short for a single round at one tempo", () => {
@@ -1009,6 +1009,26 @@ describe("Practice", () => {
       unmount()
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 30)} status="playing" />)
       expect(document.querySelector(".routine-progress-bar-wrap")).toBeInTheDocument()
+    })
+  })
+
+  describe("consistency", () => {
+    const base = createDefaultSession(() => "s1")
+    const climb = () => makeProps({ practice: "climb", bpm: 110, bpmIncrease: 5, time: { ...base.time, targetBpm: 130, everyUnit: "sec", everySec: 120 } })
+
+    it("titles the Climb box and gives Target BPM and Step − / + steppers", async () => {
+      const props = climb()
+      render(<Practice {...props} />)
+      expect(screen.getByText("Climb", { selector: ".routine-section-title" })).toBeInTheDocument()
+      await userEvent.setup().click(screen.getByRole("button", { name: "Increase Target BPM" }))
+      expect(props.onChange.mock.calls.at(-1)![0].time.targetBpm).toBe(131)
+      await userEvent.setup().click(screen.getByRole("button", { name: "Decrease Step" }))
+      expect(props.onChange.mock.calls.at(-1)![0].bpmIncrease).toBe(4)
+    })
+
+    it("hides Routine's progress bar while stopped, like Climb", () => {
+      render(<Practice {...makeProps({ practice: "routine" })} />)
+      expect(document.querySelector(".routine-progress-bar-wrap")).not.toBeInTheDocument()
     })
   })
 })

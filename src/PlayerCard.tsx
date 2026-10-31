@@ -16,8 +16,9 @@ const PRACTICES: { value: Practice; label: string }[] = [
   { value: "routine", label: "Routine" },
 ]
 
-// A settings row whose number commits on blur or Enter; an empty or non-numeric entry is dropped
-function NumberRow(props: { id: string; label: string; value: number; onCommit(n: number): void }) {
+// A settings row with the same − / value / + stepper as the rest of the settings; the value can also be typed,
+// committing on blur or Enter (an empty or non-numeric entry is dropped)
+function NumberRow(props: { id: string; label: string; value: number; min: number; onCommit(n: number): void }) {
   const [text, setText] = useState<string | null>(null)
   const ref = useRef<string | null>(null)
   function commit() {
@@ -32,16 +33,20 @@ function NumberRow(props: { id: string; label: string; value: number; onCommit(n
   return (
     <div className="routine-row">
       <label className="routine-row-label" htmlFor={props.id}>{props.label}</label>
-      <input
-        id={props.id}
-        className="climb-input"
-        inputMode="numeric"
-        value={text ?? String(props.value)}
-        onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
-        onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-      />
+      <div className="routine-stepper">
+        <button type="button" aria-label={`Decrease ${props.label}`} onClick={() => props.onCommit(Math.max(props.min, props.value - 1))}>−</button>
+        <input
+          id={props.id}
+          className="routine-stepper-val stepper-input"
+          inputMode="numeric"
+          value={text ?? String(props.value)}
+          onFocus={() => { ref.current = String(props.value); setText(String(props.value)) }}
+          onChange={(e) => { ref.current = e.target.value; setText(e.target.value) }}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+        />
+        <button type="button" aria-label={`Increase ${props.label}`} onClick={() => props.onCommit(props.value + 1)}>+</button>
+      </div>
     </div>
   )
 }
@@ -105,7 +110,9 @@ export function PlayerCard(props: {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
     subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
     roundLine = `Round ${roundN}/${roundPasses}${round.enabled && set.enabled ? ` · Set ${setN}/${setPasses}` : ""}`
-    progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
+    // Like Climb, the bar only appears once the routine is running
+    progress = props.status === "stopped" ? null
+      : Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
     if (climb) {
@@ -140,7 +147,7 @@ export function PlayerCard(props: {
     const rest = round.enabled && routine.restDuration > 0 ? ` + ${length(routine.restDuration)} rest` : ""
     return [
       round.enabled ? `${round.count} rounds of ${length(routine.playDuration)}${rest}` : length(routine.playDuration),
-      round.enabled && set.enabled ? `${set.count} sets` : null,
+      round.enabled && set.enabled ? `${set.count} sets${set.restDuration > 0 ? `, ${formatClock(set.restDuration)} between` : ""}` : null,
       top > first ? `${first} → ${top} BPM` : `${first} BPM`,
       `${formatClock(Math.round(total))} total`,
     ].filter(Boolean).join(" · ")
@@ -226,8 +233,9 @@ export function PlayerCard(props: {
 
       {practice === "climb" && (
         <div className="routine-box climb-settings">
-          <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
-          <NumberRow id="climb-step" label="Step" value={session.bpmIncrease}
+          <div className="routine-section-title">Climb</div>
+          <NumberRow id="climb-target" label="Target BPM" value={session.time.targetBpm} min={40} onCommit={(n) => setTime({ targetBpm: clampBpm(n) })} />
+          <NumberRow id="climb-step" label="Step" value={session.bpmIncrease} min={0}
             onCommit={(n) => props.onChange(clampSession({ ...session, bpmIncrease: Math.max(0, Math.round(n)) }))} />
           <div className="routine-row">
             <span className="routine-row-label">Every</span>

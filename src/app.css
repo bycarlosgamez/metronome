@@ -198,21 +198,6 @@ button.beat-sq { font: inherit; font-size: 26px; font-weight: 700; padding: 0; c
 .player-switch { margin: 14px 0 10px; }
 .player-switch-note { margin: -4px 4px 8px; font-size: 13px; color: var(--ink-muted); }
 .player-switch .routine-seg-btn { flex: 1; padding: 9px 0; font-size: 13px; }
-/* Climb settings: Target BPM and Step inputs match the MIN:SEC boxes */
-.climb-input {
-  width: 56px;
-  text-align: center;
-  background: var(--surface-raised);
-  border: 1px solid var(--control-edge);
-  border-radius: 8px;
-  color: var(--ink);
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  padding: 4px 0;
-}
-.climb-input:focus { outline: none; border-color: var(--blue); }
 
 .routine-progress-bar-wrap {
   height: 3px;
@@ -298,6 +283,9 @@ button.beat-sq { font: inherit; font-size: 26px; font-weight: 700; padding: 0; c
   justify-content: center;
 }
 .routine-stepper button:hover { color: var(--ink); }
+/* A typeable stepper value looks like the other stepper values */
+.stepper-input { width: 56px; height: 28px; box-sizing: border-box; background: none; border: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); text-align: center; }
+.stepper-input:focus { outline: none; background: var(--surface-raised); }
 .routine-stepper-val {
   min-width: 56px;
   white-space: nowrap;
@@ -636,15 +624,3 @@ button.beat-sq { font: inherit; font-size: 26px; font-weight: 700; padding: 0; c
 }
 .subdiv-opt__name { font-size: 10px; color: var(--ink-muted); text-align: center; }
 .subdiv-opt[aria-pressed="true"] .subdiv-opt__name { color: var(--ink); }
-/* Visually hidden (for aria labels) */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
