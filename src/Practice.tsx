@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
-import { clampBpm, clampSession, sharedSubdivision, toggleClick } from "./session"
+import { clampBpm, clampSession, sharedSubdivision, toggleAccent, toggleClick } from "./session"
 import { Icon } from "./Icon"
 import { SubdivIcon } from "./SubdivIcon"
 import { ClickSheet } from "./ClickSheet"
@@ -118,14 +118,20 @@ export function Practice(props: {
             const isAccent = segment.kind !== "count-in" && props.session.accents.includes(beat)
             return (
               <div key={beat} className="beat-col">
-                <div
+                {/* Tap a square to accent that beat (also set in the Sound sheet) */}
+                <button
+                  type="button"
                   className={`beat-sq${isAccent ? " accent" : ""}${isLit ? " lit" : ""}`}
                   data-testid={`beat-${beat}`}
                   data-current={isLit ? "true" : "false"}
                   data-accent={isAccent ? "true" : "false"}
+                  aria-label={`Beat ${beat}`}
+                  aria-pressed={props.session.accents.includes(beat)}
+                  title="Tap to accent this beat"
+                  onClick={() => props.onChange(toggleAccent(props.session, beat))}
                 >
                   {beat}
-                </div>
+                </button>
                 {/* Tap a dot to mute or unmute that click, same as in the Subdivision sheet */}
                 <div className="beat-subs">
                   {(beats[i]?.slots ?? []).map((slot, si) => (
@@ -135,6 +141,7 @@ export function Practice(props: {
                       className={`beat-sub${slot === "off" ? " muted" : ""}${isLit && si === activeSubSlot ? " lit" : ""}`}
                       aria-label={`Beat ${beat} click ${si + 1}`}
                       aria-pressed={slot !== "off"}
+                      title="Tap to mute or unmute this click"
                       tabIndex={dotIndex(i, si) === dotFocus ? 0 : -1}
                       onFocus={() => setDotFocus(dotIndex(i, si))}
                       onKeyDown={(event) => onDotKey(event, dotIndex(i, si))}
@@ -146,7 +153,6 @@ export function Practice(props: {
             )
           })}
         </div>
-        <p className="beat-hint">Tap a dot to mute that click</p>
         </div>
 
         <div className="pick-row">

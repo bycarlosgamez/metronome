@@ -107,9 +107,12 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
   border: 1.5px solid var(--control-edge);
   transition: background 0.06s, border-color 0.06s, transform 0.06s;
 }
-button.beat-sub { padding: 0; cursor: pointer; }
-/* A muted click: hollow and faint, so the beat's rhythm still reads */
-.beat-sub.muted { background: transparent; border-style: dashed; opacity: 0.6; }
+/* Dots stay 12px to look at but take a 24px tap area */
+button.beat-sub { position: relative; padding: 0; cursor: pointer; }
+button.beat-sub::before { content: ""; position: absolute; inset: -6px; }
+/* A muted click: a clear hollow ring at full edge contrast */
+.beat-sub.muted { background: transparent; border-color: var(--ink-muted); }
+button.beat-sq { font: inherit; font-size: 26px; font-weight: 700; padding: 0; cursor: pointer; }
 .beat-sub.lit {
   background: var(--blue);
   border-color: var(--blue);
@@ -232,7 +235,6 @@ button.beat-sub { padding: 0; cursor: pointer; }
 }
 .routine-section:last-child { border-bottom: none; }
 .routine-section-hint { margin: -4px 0 10px; font-size: 13px; color: var(--ink-muted); }
-.beat-hint { margin: -6px 0 0; font-size: 12px; color: var(--ink-muted); }
 /* The whole routine in one line, above its settings */
 .routine-summary { margin: 16px 4px 4px; font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Round and Set: each a bordered box; a Repeat switch opens a darker panel with the settings it controls */

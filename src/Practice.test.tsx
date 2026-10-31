@@ -57,6 +57,15 @@ describe("Practice", () => {
     expect(dots.getByRole("button", { name: "Beat 1 click 2" })).not.toHaveClass("lit")
   })
 
+  it("accents a beat by tapping its square", async () => {
+    const props = makeProps()
+    render(<Practice {...props} />)
+    const square = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 3" })
+    expect(square).toHaveAttribute("aria-pressed", "false")
+    await userEvent.setup().click(square)
+    expect(props.onChange.mock.calls.at(-1)![0].accents).toEqual([1, 3])
+  })
+
   it("mutes a click by tapping its dot under the beat", async () => {
     const props = makeProps()
     render(<Practice {...props} />)
@@ -933,7 +942,7 @@ describe("Practice", () => {
     it("makes the beat dots one tab stop, moved with the arrow keys", async () => {
       const user = userEvent.setup()
       render(<Practice {...makeProps()} />)
-      const dots = within(screen.getByRole("region", { name: "Beat display" })).getAllByRole("button")
+      const dots = within(screen.getByRole("region", { name: "Beat display" })).getAllByRole("button", { name: / click / })
       expect(dots.filter((dot) => dot.tabIndex === 0)).toHaveLength(1)
       dots[0].focus()
       await user.keyboard("{ArrowRight}")
@@ -977,9 +986,11 @@ describe("Practice", () => {
       expect(screen.getByText("All the rounds, played again")).toBeInTheDocument()
     })
 
-    it("says the beat dots can be tapped to mute", () => {
+    it("tells you the dots mute on the dots themselves, not with a permanent hint", () => {
       render(<Practice {...makeProps()} />)
-      expect(screen.getByText("Tap a dot to mute that click")).toBeInTheDocument()
+      expect(screen.queryByText("Tap a dot to mute that click")).not.toBeInTheDocument()
+      const dot = within(screen.getByRole("region", { name: "Beat display" })).getByRole("button", { name: "Beat 1 click 1" })
+      expect(dot).toHaveAttribute("title", "Tap to mute or unmute this click")
     })
   })
 
