@@ -53,6 +53,27 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
   })
 
+  it("lets Space press a focused switch instead of starting playback", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const user = userEvent.setup()
+    render(<App />)
+    const countIn = screen.getByRole("switch", { name: "Count-in" })
+    countIn.focus()
+    await user.keyboard(" ")
+    expect(countIn).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument()
+  })
+
+  it("doesn't start playback with Space while a popup is open", async () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext)
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole("button", { name: /^Click: Sound 1/ }))
+    ;(document.activeElement as HTMLElement).blur()
+    await user.keyboard(" ")
+    expect(screen.getByRole("button", { name: "Play", hidden: true })).toBeInTheDocument()
+  })
+
   it("starts again from the beginning when Play is pressed at the end", async () => {
     const session = createDefaultSession(() => "cycle-1")
     session.practice = "routine"

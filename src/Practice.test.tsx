@@ -735,11 +735,12 @@ describe("Practice", () => {
       expect(props.onChange).toHaveBeenCalledWith(expect.objectContaining({ practice: "climb", bpmIncrease: 5 }))
     })
 
-    it("locks the practice switch while playing so a misclick can't end the session", () => {
+    it("locks the practice switch while playing and says why on screen", () => {
       render(<Practice {...makeProps()} status="playing" />)
       for (const name of ["Steady", "Climb", "Routine"]) {
         expect(screen.getByRole("button", { name })).toBeDisabled()
       }
+      expect(screen.getByText("Stop to change how you practise")).toBeVisible()
     })
 
     it("tells Routine apart when stopped or paused", () => {

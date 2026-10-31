@@ -198,11 +198,13 @@ export function PlayerCard(props: {
       <div className="routine-seg player-switch" role="group" aria-label="How to practice">
         {PRACTICES.map(({ value, label }) => (
           <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} disabled={isPlaying}
-            title={isPlaying ? "Stop to change how you practise" : undefined} onClick={() => choose(value)}>
+            onClick={() => choose(value)}>
             {label}
           </button>
         ))}
       </div>
+
+      {isPlaying && <p className="player-switch-note">Stop to change how you practise</p>}
 
       {/* Applies to every practice: one 4-beat bar before the first play */}
       <div className="routine-row count-in-row">

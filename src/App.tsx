@@ -117,6 +117,9 @@ export function App() {
         return
       }
       if (event.key === " ") {
+        // Space presses a focused control as usual, and does nothing behind an open popup
+        if (target instanceof Element && target.closest("button, a, [role=switch], [role=dialog]")) return
+        if (document.querySelector(".sheet-overlay.open")) return
         event.preventDefault()
         if (!event.repeat) toggleRef.current()
       } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {

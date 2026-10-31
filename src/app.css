@@ -179,6 +179,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .player-panel.is-rest .routine-progress-bar-fill { background: var(--rest-ink); }
 .player-panel .play-controls { margin: 28px 0 0; }
 .player-switch { margin: 14px 0 10px; }
+.player-switch-note { margin: -4px 4px 8px; font-size: 13px; color: var(--ink-muted); }
 .player-switch .routine-seg-btn { flex: 1; padding: 9px 0; font-size: 13px; }
 /* Climb settings: Target BPM and Step inputs match the MIN:SEC boxes */
 .climb-input {
@@ -579,7 +580,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .beat-tile__select strong { font-size: 18px; }
 .beat-tile__select span { font-size: 10px; color: var(--ink-muted); }
 .beat-tile__dots { display: flex; justify-content: center; gap: 4px; }
-.beat-dot { width: 12px; height: 12px; padding: 0; border-radius: 50%; border: 1.5px solid var(--surface-high); background: none; cursor: pointer; }
+.beat-dot { width: 12px; height: 12px; padding: 0; border-radius: 50%; border: 1.5px solid var(--control-edge); background: none; cursor: pointer; }
 .beat-dot[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
 .beat-dot.first[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); }
 .all-beats {
