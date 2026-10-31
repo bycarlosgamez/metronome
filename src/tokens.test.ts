@@ -28,6 +28,6 @@ describe("tokens", () => {
     expect(css).toContain("--radius-card: 16px;")
     expect(css).toContain("--radius-field: 12px;")
     expect(css).toContain("--radius-pill: 999px;")
-    expect(css).toContain("--time-size: clamp(4.5rem, 18vw, 9rem);")
+    expect(css).toContain("--time-size: clamp(4.5rem, 8vw, 8rem);")
   })
 })

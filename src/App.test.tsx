@@ -252,12 +252,10 @@ describe("App", () => {
     await act(async () => {
       tick?.((countInSec + 30) * 1000)
     })
-    const bpm = screen.getByTestId("bpm-current")
-    expect(bpm).toHaveValue("80")
-    await user.clear(bpm)
-    await user.type(bpm, "150")
-    await user.tab()
-    expect(screen.getByTestId("bpm-current")).toHaveValue("150")
+    // While a Climb plays the tempo shows the live BPM; + still raises Start, which moves the live BPM with it
+    const live = Number((screen.getByTestId("bpm-current") as HTMLInputElement).value)
+    await user.click(screen.getByRole("button", { name: "Increase BPM" }))
+    expect(screen.getByTestId("bpm-current")).toHaveValue(String(live + 1))
   })
 
   it("keeps playing an Off session and keeps a typed BPM at the same moment", async () => {
@@ -311,13 +309,11 @@ describe("App", () => {
     await act(async () => {
       tick?.(10_000)
     })
-    const bpm = screen.getByTestId("bpm-current")
-    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
-    await user.clear(bpm)
-    await user.type(bpm, "60")
-    await user.tab()
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
+    // Shift+↓ ten times takes Start from 110 to 60
+    await user.keyboard("{Shift>}" + "{ArrowDown}".repeat(10) + "{/Shift}")
     // 4 bars at 60 is 16s, so without carrying the step 10s would land back on the first step (60)
-    expect(screen.getByTestId("player-bpm")).toHaveTextContent("65")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("65")
   })
 
   it("keeps the current Climb step when Every changes while playing", async () => {
@@ -341,13 +337,13 @@ describe("App", () => {
     await act(async () => {
       tick?.(150_000)
     })
-    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
     const minutes = screen.getByRole("textbox", { name: "Every minutes" })
     await user.clear(minutes)
     await user.type(minutes, "1")
     await user.tab()
     // With 1:00 windows, 150s would be the third step (120) without carrying the step
-    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
+    expect(screen.getByTestId("bpm-current")).toHaveValue("115")
     // The practice clock keeps counting from where it was; only the climb position moves
     expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
   })

@@ -110,7 +110,7 @@ export function Practice(props: {
       </header>
 
       <div className="practice-body">
-        {/* Beat grid */}
+        <div className="practice-beats">
         <div className="beat-grid" role="region" aria-label="Beat display">
           {Array.from({ length: beatCount }, (_, i) => {
             const beat = i + 1
@@ -147,35 +147,6 @@ export function Practice(props: {
           })}
         </div>
         <p className="beat-hint">Tap a dot to mute that click</p>
-
-        {/* Tempo first: small round − / + either side of the BPM; settings as a chip row below */}
-        <div className="bpm-block">
-          <button
-            type="button"
-            className="bpm-round-btn"
-            aria-label="Decrease BPM"
-            {...stepProps(-1)}
-          >−</button>
-          <div className="bpm-center">
-            <input
-              className="bpm-current"
-              data-testid="bpm-current"
-              inputMode="numeric"
-              aria-label="BPM"
-              value={bpmText ?? String(props.session.bpm)}
-              onFocus={() => { bpmRef.current = String(props.session.bpm); setBpmText(String(props.session.bpm)) }}
-              onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
-              onBlur={commitBpm}
-              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-            />
-            <span className="bpm-label">{props.session.practice === "steady" ? "BPM" : "Start BPM"}</span>
-          </div>
-          <button
-            type="button"
-            className="bpm-round-btn"
-            aria-label="Increase BPM"
-            {...stepProps(1)}
-          >+</button>
         </div>
 
         <div className="pick-row">
@@ -218,6 +189,24 @@ export function Practice(props: {
           snapshot={props.snapshot}
           status={props.status}
           clockShiftSec={props.clockShiftSec ?? 0}
+          renderTempo={(bpm, live) => (
+            <div className="tempo-control">
+              <button type="button" className="bpm-round-btn" aria-label="Decrease BPM" {...stepProps(-1)}>−</button>
+              <input
+                className="bpm-current"
+                data-testid="bpm-current"
+                inputMode="numeric"
+                aria-label={live ? "Playing BPM" : "BPM"}
+                readOnly={live}
+                value={live ? String(bpm) : bpmText ?? String(bpm)}
+                onFocus={() => { if (live) return; bpmRef.current = String(bpm); setBpmText(String(bpm)) }}
+                onChange={(e) => { bpmRef.current = e.target.value; setBpmText(e.target.value) }}
+                onBlur={commitBpm}
+                onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+              />
+              <button type="button" className="bpm-round-btn" aria-label="Increase BPM" {...stepProps(1)}>+</button>
+            </div>
+          )}
           onToggle={props.onToggle}
           onReset={props.onReset}
           onChange={props.onChange}

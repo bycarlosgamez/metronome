@@ -26,5 +26,5 @@
   --radius-card: 16px;
   --radius-field: 12px;
   --radius-pill: 999px;
-  --time-size: clamp(4.5rem, 18vw, 9rem);
+  --time-size: clamp(4.5rem, 8vw, 8rem); /* the stage clock; the live BPM is 70% of it */
 }

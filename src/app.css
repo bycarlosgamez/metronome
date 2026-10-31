@@ -8,7 +8,7 @@ button, input, select { font: inherit; color: inherit; }
 button:disabled { opacity: 0.4; cursor: default; }
 h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 .practice { width: 100%; margin-inline: auto; min-height: 100vh; }
-.practice { max-width: 960px; display: flex; flex-direction: column; }
+.practice { max-width: 1240px; display: flex; flex-direction: column; }
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 16px 0; width: 100%; max-width: 552px; margin-inline: auto; box-sizing: border-box; }
 .visually-hidden {
   position: absolute;
@@ -24,14 +24,36 @@ h1 { font-size: 1rem; font-weight: 600; margin: 0; }
 }
 
 /* ─── Practice redesign ───────────────────────────── */
+/* One column on narrow screens: beats and the stage first, then the setup */
 .practice-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 520px);
+  grid-template-areas: "beats" "stage" "picks" "settings" "status";
+  justify-content: center;
+  justify-items: center;
   padding: 20px 16px 40px;
   gap: 14px;
   width: 100%;
   box-sizing: border-box;
+}
+.practice-beats { grid-area: beats; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.practice-stage { grid-area: stage; }
+.pick-row { grid-area: picks; }
+.practice-settings { grid-area: settings; width: 100%; }
+.practice-body > [role="status"] { grid-area: status; }
+/* Laptop and up: setup on the left, the stage fills the right and stays in view while you scroll the setup */
+@media (min-width: 1000px) {
+  .topbar { max-width: 1240px; }
+  .practice-body {
+    grid-template-columns: 420px minmax(0, 1fr);
+    grid-template-areas: "picks beats" "settings stage" "status stage";
+    align-items: start;
+    column-gap: 40px;
+  }
+  .practice-beats, .practice-stage { justify-self: stretch; }
+  .practice-beats .beat-grid { max-width: none; }
+  .player-card.practice-stage { position: sticky; top: 20px; max-width: none; width: 100%; }
+  .practice-stage .player-panel { padding: 28px 36px 36px; }
 }
 
 /* Beat grid */
@@ -96,22 +118,13 @@ button.beat-sub { padding: 0; cursor: pointer; }
 
 /* BPM + pick row */
 /* BPM card: − / + are small round buttons either side of the number */
-.bpm-block {
-  width: 100%;
-  max-width: 520px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-card);
-}
-.bpm-block:focus-within { border-color: var(--blue); }
-.bpm-center { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
-.bpm-center .bpm-current { text-align: center; }
+/* The one tempo control, in the stage: − / BPM / + */
+/* The number sets the baseline the clock shares; the round buttons centre on it */
+.tempo-control { display: inline-flex; align-items: baseline; gap: 12px; }
+.tempo-control .bpm-round-btn { align-self: center; }
+.tempo-control .bpm-current { width: 3.2ch; text-align: center; font-size: calc(var(--time-size) * 0.7); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tempo-control .bpm-current[readonly] { cursor: default; }
+.tempo-control .bpm-current[readonly]:focus { color: inherit; }
 .bpm-round-btn {
   flex: none;
   width: 44px;
@@ -169,12 +182,13 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .player-status { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .player-phase { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
 .player-round { font-size: 16px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
-.player-readout { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; margin-top: 8px; }
-.player-number, .player-bpm { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
-.player-number { font-size: 72px; }
-.player-tempo { text-align: right; }
-.player-bpm { font-size: 56px; }
-.player-sub { margin-top: 8px; font-size: 15px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+/* Two rows: time and tempo on one baseline, then their sub-lines */
+.player-readout { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 16px; row-gap: 8px; margin-top: 8px; }
+.player-number { font-size: var(--time-size); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--ink); }
+.player-tempo { justify-self: end; }
+.player-sub { font-size: clamp(15px, 1.7vw, 22px); color: var(--ink); font-variant-numeric: tabular-nums; }
+.player-tempo-sub { justify-self: end; color: var(--ink-muted); }
+.player-tempo-sub .bpm-label { font-size: inherit; letter-spacing: 0.04em; }
 .player-panel.is-rest .player-phase, .player-panel.is-rest .player-number { color: var(--rest-ink); }
 .player-panel.is-rest .routine-progress-bar-fill { background: var(--rest-ink); }
 .player-panel .play-controls { margin: 28px 0 0; }

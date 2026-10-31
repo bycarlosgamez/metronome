@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import type { ReactNode } from "react"
 import { climbProgress } from "./climb"
 import { Icon } from "./Icon"
 import { bpmAt, type ClockSnapshot } from "./clock"
@@ -53,6 +54,8 @@ export function PlayerCard(props: {
   snapshot: ClockSnapshot
   status: PlaybackStatus
   clockShiftSec: number
+  // The tempo control (− / BPM / +), drawn by the page; `live` means it shows the playing BPM and can't be typed in
+  renderTempo(bpm: number, live: boolean): ReactNode
   onToggle(): void
   onReset(): void
   onChange(session: Session): void
@@ -151,8 +154,16 @@ export function PlayerCard(props: {
     props.onChange(clampSession({ ...session, routine: { ...routine, ...next } }))
   }
 
+  // One tempo display: the playing BPM once playback has started (outside Steady), otherwise Start BPM
+  const live = props.status !== "stopped" && practice !== "steady"
+  const routineTop = practice === "routine" && increase.mode === "round"
+    ? props.segments.reduce((max, s) => s.kind === "play" ? Math.max(max, s.bpm) : max, session.bpm)
+    : null
+  const tempoTarget = target ?? (!live && routineTop !== null && routineTop > session.bpm ? routineTop : null)
+
   return (
-    <div className="player-card">
+    <>
+    <section className="player-card practice-stage">
       {/* Screen readers hear phase, tempo and round changes, not every tick of the timer */}
       <div className="visually-hidden" aria-live="polite" data-testid="player-announce">
         {isPlaying ? [phaseLabel, `${playingBpm} BPM`, practice === "routine" ? `Round ${roundN} of ${roundPasses}` : null].filter(Boolean).join(", ") : ""}
@@ -163,16 +174,14 @@ export function PlayerCard(props: {
           <span className="player-phase" data-testid="player-phase">{phaseLabel}</span>
           {roundLine && <span className="player-round" data-testid="player-round">{roundLine}</span>}
         </div>
+        {/* Time and tempo share a baseline; their sub-lines share the row below */}
         <div className="player-readout">
-          <div className="player-time">
-            <div className="player-number" data-testid="player-number">{bigNumber}</div>
-            {subLine && <div className="player-sub" data-testid="player-sub">{subLine}</div>}
-          </div>
-          <div className="player-tempo">
-            <div className="player-bpm" data-testid="player-bpm">{playingBpm}</div>
-            <div className="player-sub">
-              BPM{target !== null && <> <span data-testid="player-target">→ {target}</span></>}
-            </div>
+          <div className="player-number" data-testid="player-number">{bigNumber}</div>
+          <div className="player-tempo">{props.renderTempo(live ? playingBpm : session.bpm, live)}</div>
+          {subLine ? <div className="player-sub" data-testid="player-sub">{subLine}</div> : <div />}
+          <div className="player-sub player-tempo-sub">
+            <span className="bpm-label">{live || practice === "steady" ? "BPM" : "Start BPM"}</span>
+            {tempoTarget !== null && <span data-testid="player-target"> → {tempoTarget}</span>}
           </div>
         </div>
         {progress !== null && (
@@ -194,7 +203,9 @@ export function PlayerCard(props: {
           </button>
         </div>
       </div>
+    </section>
 
+    <section className="practice-settings">
       <div className="routine-seg player-switch" role="group" aria-label="How to practice">
         {PRACTICES.map(({ value, label }) => (
           <button key={value} type="button" className="routine-seg-btn" aria-pressed={practice === value} disabled={isPlaying}
@@ -362,6 +373,7 @@ export function PlayerCard(props: {
           )}
         </>
       )}
-    </div>
+    </section>
+    </>
   )
 }
