@@ -247,11 +247,13 @@ describe("Practice", () => {
       return { ...props, snapshot: snapshotAt(props.segments, elapsed), status }
     }
 
-    it("shows Start BPM and no Now when the increase is Off", () => {
+    it("shows Start BPM in the BPM card and the playing BPM in the timer card, with no Now in the BPM card", () => {
       render(<Practice {...routineProps({})} />)
       expect(screen.getByTestId("bpm-current")).toHaveValue("80")
       expect(screen.getByText("Start BPM")).toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      expect(document.querySelector(".player-panel")).toContainElement(screen.getByTestId("player-bpm"))
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("80")
+      expect(document.querySelector(".bpm-block")).not.toHaveTextContent(/Now/i)
     })
 
     it("keeps Start in the input and shows the playing BPM as Now", () => {
@@ -262,8 +264,7 @@ describe("Practice", () => {
       }, 13, "playing")
       render(<Practice {...props} />)
       expect(screen.getByTestId("bpm-current")).toHaveValue("80")
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
-      expect(screen.getByText("Now")).toBeInTheDocument()
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("85")
     })
 
     it("shows the next play's BPM as Now during a rest", () => {
@@ -274,7 +275,7 @@ describe("Practice", () => {
         increase: increase({ mode: "round", roundStep: 5 }),
       }, 12, "playing")
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("85")
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("85")
     })
 
     it("shows Start as Now when stopped", () => {
@@ -283,7 +284,7 @@ describe("Practice", () => {
         increase: increase({ mode: "round", roundStep: 5 }),
       })
       render(<Practice {...props} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("80")
     })
 
     it("shows Start as Now after the routine has finished", () => {
@@ -293,13 +294,13 @@ describe("Practice", () => {
       })
       const total = props.segments.reduce((sum, s) => sum + s.durationSec, 0)
       render(<Practice {...props} snapshot={snapshotAt(props.segments, total)} />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("80")
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("80")
     })
 
     it("keeps the BPM label and no Now in Simple mode", () => {
       render(<Practice {...makeProps()} />)
       expect(screen.queryByText("Start BPM")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("player-bpm")).not.toBeInTheDocument()
     })
 
   })
@@ -689,7 +690,7 @@ describe("Practice", () => {
       // Default 4 bars at 110 is about 8.7s, so 10s is in the second round
       const props = roundProps({}, { mode: "round", roundStep: 5 })
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 10)} status="playing" />)
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
     })
   })
 
@@ -826,16 +827,16 @@ describe("Practice", () => {
       expect(document.querySelector(".bpm-block")).not.toContainElement(screen.getByRole("textbox", { name: "Target BPM" }))
     })
 
-    it("labels the BPM card BPM in Steady and Start BPM in Climb, with Now in Climb", () => {
+    it("labels the BPM card BPM in Steady and Start BPM in Climb, with the playing BPM in the timer card", () => {
       const { unmount } = render(<Practice {...makeProps()} />)
       expect(screen.getByText("BPM", { selector: ".bpm-label" })).toBeInTheDocument()
-      expect(screen.queryByTestId("bpm-now")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("player-bpm")).not.toBeInTheDocument()
       unmount()
       const props = climb()
       render(<Practice {...props} snapshot={snapshotAt(props.segments, 150)} status="playing" />)
       expect(screen.getByText("Start BPM")).toBeInTheDocument()
       expect(screen.getByTestId("bpm-current")).toHaveValue("110")
-      expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+      expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
     })
   })
 })

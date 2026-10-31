@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { bpmAt, type ClockSnapshot } from "./clock"
+import type { ClockSnapshot } from "./clock"
 import type { Segment } from "./expandSession"
 import { clampBpm, clampSession, sessionTitle, sharedSubdivision, toggleClick } from "./session"
 import { SubdivIcon } from "./SubdivIcon"
@@ -42,23 +42,11 @@ export function Practice(props: {
   const { beats } = props.session
   const subsInBeat = (beat: number) => beats[Math.min(beat, beats.length) - 1]?.slots.length ?? 1
   const shared = sharedSubdivision(beats)
-  const intoSec = props.snapshot.segmentElapsedSec
-  const currentBpm = bpmAt(segment, intoSec)
 
   // Current beat subdivision dot index (0-based within beat)
   // Timed from the same beat as the lit square, so the dot can't drift after rests or tempo steps
   const subs = subsInBeat(Math.max(1, props.snapshot.beat))
   const activeSubSlot = isPlaying ? Math.min(subs - 1, Math.floor(props.snapshot.beatFraction * subs)) : -1
-
-  // Routine Now: stopped (including after the routine ends) shows where it will start; during a rest, the play coming up
-  const { increase } = props.session.routine
-  const routineEnabled = props.session.practice === "routine"
-  const showNow = props.session.practice === "climb" || (routineEnabled && increase.mode !== "off")
-  const nowBpm = props.status === "stopped"
-    ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? props.session.bpm
-    : segment.kind === "rest"
-    ? props.segments.slice(props.snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
-    : currentBpm
 
   const { accents } = props.session
   const accentLabel = accents.length === 0 ? "no accent" : `accent beat${accents.length > 1 ? "s" : ""} ${accents.join(", ")}`
@@ -124,12 +112,6 @@ export function Practice(props: {
                 />
                 <span className="bpm-label">{props.session.practice === "steady" ? "BPM" : "Start BPM"}</span>
               </div>
-              {showNow && (
-                <div className="bpm-right bpm-now">
-                  <span className="bpm-now-value" data-testid="bpm-now">{nowBpm}</span>
-                  <span className="bpm-field-label">Now</span>
-                </div>
-              )}
             </div>
             <div className="bpm-step-bar">
               <button

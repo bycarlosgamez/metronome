@@ -291,12 +291,12 @@ describe("App", () => {
       tick?.(10_000)
     })
     const bpm = screen.getByTestId("bpm-current")
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
     await user.clear(bpm)
     await user.type(bpm, "60")
     await user.tab()
     // 4 bars at 60 is 16s, so without carrying the step 10s would land back on the first step (60)
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("65")
+    expect(screen.getByTestId("player-bpm")).toHaveTextContent("65")
   })
 
   it("keeps the current Climb step when Every changes while playing", async () => {
@@ -320,13 +320,13 @@ describe("App", () => {
     await act(async () => {
       tick?.(150_000)
     })
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
     const minutes = screen.getByRole("textbox", { name: "Every minutes" })
     await user.clear(minutes)
     await user.type(minutes, "1")
     await user.tab()
     // With 1:00 windows, 150s would be the third step (120) without carrying the step
-    expect(screen.getByTestId("bpm-now")).toHaveTextContent("115")
+    expect(screen.getByTestId("player-bpm")).toHaveTextContent("115")
     // The practice clock keeps counting from where it was; only the climb position moves
     expect(screen.getByTestId("player-number")).toHaveTextContent("2:30")
   })

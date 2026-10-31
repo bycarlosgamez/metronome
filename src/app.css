@@ -232,19 +232,6 @@ button.beat-sub { padding: 0; cursor: pointer; }
 .bpm-current:focus { color: var(--blue); }
 .bpm-label { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 1px; }
 .bpm-left { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 0; }
-.bpm-right { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
-.bpm-now { justify-content: flex-end; }
-.bpm-now-value { font-size: 15px; font-weight: 600; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.bpm-field-label { font-size: 9px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
-.bpm-ramp { display: flex; flex-direction: column; gap: 10px; }
-.bpm-ramp__top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-.bpm-ramp__right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.bpm-progress-wrap { display: flex; flex-direction: column; gap: 4px; }
 .bpm-progress-bar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .bpm-progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue), var(--stage-play)); transition: width 0.3s; }
 .bpm-progress-labels {
@@ -280,6 +267,7 @@ button.beat-sub { padding: 0; cursor: pointer; }
   align-items: flex-start;
 }
 .routine-countdown-col { display: inline-flex; flex-direction: column; }
+.player-bpm { color: var(--ink); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .routine-cycle-info {
   text-align: right;
   font-size: 12px;

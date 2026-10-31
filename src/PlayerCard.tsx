@@ -87,12 +87,20 @@ export function PlayerCard(props: {
 
   let bigNumber: string
   let subLine: string | null = null
+  // The BPM playing now: stopped (including after a routine ends) it's where playback will start; during a rest, the play coming up
+  const playingBpm = props.status === "stopped"
+    ? props.segments.find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? session.bpm
+    : isRest
+    ? props.segments.slice(snapshot.segmentIndex + 1).find((s) => s.kind === "play")?.steps?.[0]?.bpm ?? currentBpm
+    : currentBpm
+  const bpmNow = <span className="player-bpm" data-testid="player-bpm">{playingBpm}</span>
+
   let info: React.ReactNode = null
   let progress: number | null = null
   if (practice === "routine") {
     bigNumber = formatClock(Math.ceil(snapshot.segmentRemainingSec))
     subLine = `${formatClock(Math.ceil(snapshot.remainingSec))} left`
-    info = (<><div>Round {roundN}/{roundPasses}</div>{round.enabled && <div>Set {setN}/{setPasses}</div>}</>)
+    info = (<><div>{bpmNow} BPM</div><div>Round {roundN}/{roundPasses}</div>{round.enabled && <div>Set {setN}/{setPasses}</div>}</>)
     progress = Number.isFinite(segment.durationSec) && segment.durationSec > 0 ? Math.min(1, intoSec / segment.durationSec) : 0
   } else {
     bigNumber = formatClock(snapshot.elapsedSec + props.clockShiftSec)
@@ -100,14 +108,14 @@ export function PlayerCard(props: {
       const target = session.time.targetBpm
       if (atTarget) {
         subLine = "At target"
-        info = String(currentBpm)
+        info = bpmNow
       } else {
         const barSec = beatsInMeter(session.meter) * 60 / currentBpm
         const nextIn = session.time.everyUnit === "bars"
           ? `${Math.ceil(climb.nextInSec / barSec - 1e-9)} bars`
           : formatClock(Math.ceil(climb.nextInSec))
         subLine = `Next +${session.bpmIncrease} in ${nextIn}`
-        info = `${currentBpm} → ${target}`
+        info = <>{bpmNow} → {target}</>
         progress = climb.fraction
       }
     }
